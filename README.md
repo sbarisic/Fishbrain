@@ -27,7 +27,7 @@ still persisting the state change.
 Novel ordinary dialogue uses free character generation; exact memory is used only
 for seen state/input pairs. Dynamic game facts remain tool-only.
 
-Revision 5 is implemented but not yet trained through the full experiment. The
+Revision 5 is implemented and its first 40,000-step experiment is complete. The
 v4 baseline remains experimental: at the 32,000-step
 milestone, held-out intent macro-F1 was `0.1554` and 12% of sampled replies were
 invalid. The sequential curriculum exposed task interference: perception training
@@ -100,10 +100,12 @@ requested milestone. Every save prints a flushed, absolute, copy-paste PowerShel
 resume command; completed milestones also print evaluation and full-curriculum
 continuation commands.
 
-Training retains scalar autograd but skips unused query, attention, MLP, and
-vocabulary work for conditioning-only tokens and uses fused cross-entropy. On the
-development machine, the same 100-step Release fixture improved from 35.929 to
-12.727 seconds (2.82x); full-run speed depends on the CPU and sample mix.
+Training uses a packed `double[]` forward/backward implementation with fused
+matrix-vector, attention, RMSNorm, ReLU, cross-entropy, and Adam kernels. Its hot
+loops use hardware-accelerated `System.Numerics.Vector<double>` without gathering
+from scalar objects. The readable scalar graph remains the inference and forward
+reference implementation. On the development machine, the identical step-7,000
+to step-7,100 Release fixture improved from 15.611 to 2.164 seconds (7.21x).
 
 The chat CLI prints the NPC reply together with intent, affect, response
 expectation, action, rapport, mood, topic, goal, and tone.
@@ -114,17 +116,18 @@ realization metrics. It saves atomic `latest`, `best-perception`, and
 
 ### Experimental status
 
-- The first v5 run is paused at step 7,000. Full evaluation measured intent
-  macro-F1 `0.0987`, affect macro-F1 `0.7103`, and expected-response F1 `0.9695`;
-  the staged gate still fails.
-- Step 24,000 is the strongest observed cognition snapshot, but it has severe
-  language forgetting in the historical v4 run.
-- Step 32,000 is a better language/cognition compromise, but intent performance
-  regressed in v4 and the release gates still fail.
+- The first v5 run completed all 40,000 steps. Full test evaluation measured
+  intent macro-F1 `0.6184`, affect macro-F1 `0.8045`, expected-response F1
+  `0.9936`, action accuracy `0.8850`, and realization loss `1.8091`.
+- Direct/history intent macro-F1 reached `0.6047`/`0.6489`. Of 100 generated
+  replies, 2% were invalid, none were empty, and none exceeded the length limit.
+- The staged and release gates still fail because output validity is not yet
+  perfect and only one of six golden contrast cases passes.
 
 The committed v4 checkpoints preserve the historical results but are not loaded
-by the v5 runtime. The next experimental action is a fresh v5 milestone run and
-comparison against the staged gates in [INFO.md](INFO.md#revision-5-implementation).
+by the v5 runtime. Local v5 datasets and checkpoints remain ignored by Git. See
+[INFO.md](INFO.md#revision-5-implementation) for the full milestone and gate
+record.
 
 ## API
 

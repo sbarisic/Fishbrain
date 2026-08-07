@@ -54,8 +54,9 @@ INFO.md                           this engineering record
 Fishbrain/
   Program.cs                      CLI and dependency-free self-tests
   Brain.cs                        model, tokenizer, training, checkpoints, eval
+  PackedTrainer.cs                contiguous SIMD training forward/backward
   Cognition.cs                    public state types and deterministic reducer
-  Value.cs                        scalar reverse-mode autograd
+  Value.cs                        scalar inference and forward reference graph
   Tools.cs                        reflected local tool registry
 
 Fishbrain.DataGenerator/
@@ -492,7 +493,7 @@ a second layer, a 128-token attention window, or a larger corpus.
 - Deterministic uninterrupted-versus-resumed equivalence covers the new schedule
   and parameter set.
 
-### 8. Step-7,000 milestone and SIMD investigation
+### 8. Completed v5 run and SIMD training kernel
 
 The first v5 run was paused after the atomic step-7,000 checkpoint. Its trainer
 validation was:
@@ -514,8 +515,8 @@ invalid and 4% were unexpectedly empty. All six golden contrasts and both
 acceptance gates still failed.
 
 The development machine reports hardware-accelerated `System.Numerics.Vector<T>`
-with four `double` values per vector. Three variants were measured from the same
-step-7,000 checkpoint for the same deterministic 100 updates:
+with four `double` values per vector. Three initial variants were measured from
+the same step-7,000 checkpoint for the same deterministic 100 updates:
 
 | Variant | Time | Change from 15.611 s baseline |
 |---|---:|---:|
@@ -523,19 +524,58 @@ step-7,000 checkpoint for the same deterministic 100 updates:
 | Vectorized fused dot/cross-entropy only | 17.152 s | 9.9% slower |
 | Scalar graph with Adam bias correction hoisted | 15.688 s | 0.5% slower |
 
-No experimental optimization was retained. `Value[]` stores references to scalar
-objects, so SIMD requires gathering values into temporary contiguous buffers.
-For the current 16-128 element operations, that work costs more than the vector
-arithmetic saves. This matches Microsoft's warning that SIMD can regress when
-the workload or memory layout is unsuitable.
+Those variants were reverted. `Value[]` stores references to scalar objects, so
+SIMD first required gathering data into temporary arrays and lost more time than
+the arithmetic saved.
 
-The useful next optimization is an operation-level training tape with contiguous
-`double[]` activations and gradients. Keep the scalar `Value` path as the readable
-reference, then add fused matrix-vector forward/backward, RMSNorm, residual,
-ReLU, and Adam kernels over spans. Those kernels can use `Vector<double>` without
-gather/scatter overhead; outer matrix rows can then be evaluated for bounded
-multicore parallelism. Every kernel must retain numeric-gradient tests and exact
-uninterrupted-versus-resumed checkpoint tests.
+`PackedTrainer` implements the required layout change. Model weights, gradients,
+and Adam state remain in contiguous `double[]` arrays while training. Fused
+matrix-vector forward/backward, attention, RMSNorm, residual, ReLU,
+cross-entropy, and Adam kernels use `Vector<double>` directly. Scalar `Value`
+inference is synchronized only when validation or interactive use needs it.
+Checkpoint version 5 and parameter ordering did not change.
+
+The identical step-7,000 to step-7,100 fixture now measures:
+
+| Variant | Time | Relative speed |
+|---|---:|---:|
+| Original scalar graph | 15.611 s | 1.00x |
+| Packed SIMD training kernel | 2.164 s | 7.21x |
+
+Language and perception gradients have finite-difference coverage. The packed
+forward loss is also checked against the scalar forward path. Deterministic
+uninterrupted-versus-resumed checkpoint tests continue to pass.
+
+The saved step-7,000 checkpoint was then resumed through the planned step 40,000.
+Final trainer validation was:
+
+| Metric | Step 40,000 |
+|---|---:|
+| Intent macro-F1 | 0.6338 |
+| Affect macro-F1 | 0.7832 |
+| Expected-response F1 | 0.9970 |
+| Direct intent macro-F1 | 0.6577 |
+| History intent macro-F1 | 0.6682 |
+| Realization loss | 2.0685 |
+
+The independent 1,000-row test evaluation reported:
+
+| Metric | Result |
+|---|---:|
+| Intent accuracy / macro-F1 | 0.6205 / 0.6184 |
+| Affect accuracy / macro-F1 | 0.7902 / 0.8045 |
+| Expected-response precision / recall / F1 | 1.0000 / 0.9874 / 0.9936 |
+| No-response precision / recall / F1 | 0.4444 / 1.0000 / 0.6154 |
+| Action accuracy | 0.8850 |
+| Realization loss, 100 samples | 1.8091 |
+| Invalid / empty / overlength generation | 2% / 0% / 0% |
+| Direct / history intent macro-F1 | 0.6047 / 0.6489 |
+| Synthetic / external intent macro-F1 | 0.6720 / 0.3358 |
+
+The first-experiment cognition thresholds pass, but `V5_STAGE_GATE` and
+`RELEASE_GATE` still fail. One of six golden contrasts passes, and the 2% invalid
+generation rate misses the required 0%. The finished checkpoint is suitable for
+interactive testing, not a release claim.
 
 References: [.NET SIMD guidance](https://learn.microsoft.com/dotnet/standard/simd),
 [`Vector.IsHardwareAccelerated`](https://learn.microsoft.com/dotnet/api/system.numerics.vector.ishardwareaccelerated?view=net-10.0),
@@ -553,7 +593,8 @@ and [`Vector<T>.Count`](https://learn.microsoft.com/dotnet/api/system.numerics.v
   milestone resume commands.
 - **v5:** dedicated perception heads, current-turn classification, interleaved
   training, task-aware validation, source-specific supervision, and richer data
-  audit output. Full experiment results are pending.
+  audit output. The first 40,000-step experiment is complete using the packed
+  SIMD training kernel.
 
 ## Command reference
 

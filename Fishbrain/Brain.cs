@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Numerics;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -60,8 +61,11 @@ public sealed class Brain
     private readonly Value[][] _intentHead;
     private readonly Value[][] _affectHead;
     private readonly Value[][] _expectedHead;
+    private readonly double[] _weights;
+    private readonly double[] _packedGradients;
     private double[] _adamM;
     private double[] _adamV;
+    private bool _scalarWeightsCurrent = true;
     private int _step;
     private string _curriculumPhase = "UNSTARTED";
     private int _samplerPosition;
@@ -106,6 +110,8 @@ public sealed class Brain
         AddParameters(_affectHead);
         AddParameters(_expectedHead);
 
+        _weights = _parameters.Select(parameter => parameter.Data).ToArray();
+        _packedGradients = new double[_parameters.Count];
         _adamM = new double[_parameters.Count];
         _adamV = new double[_parameters.Count];
         Tools = new ToolRegistry(_trainedTools);
@@ -139,7 +145,9 @@ public sealed class Brain
             throw new InvalidDataException("Checkpoint parameter counts do not match its configuration.");
         }
 
-        for (var i = 0; i < brain._parameters.Count; i++) brain._parameters[i].Data = checkpoint.Weights[i];
+        Array.Copy(checkpoint.Weights, brain._weights, checkpoint.Weights.Length);
+        brain._scalarWeightsCurrent = false;
+        brain.SyncScalarWeights();
         brain._adamM = checkpoint.AdamM;
         brain._adamV = checkpoint.AdamV;
         brain._step = checkpoint.CompletedSteps;
@@ -161,6 +169,7 @@ public sealed class Brain
 
     private ReplyResult ReplyCore(string recentDialogue, NpcState state, double temperature, bool useExactMemory)
     {
+        SyncScalarWeights();
         if (temperature <= 0) throw new ArgumentOutOfRangeException(nameof(temperature));
         ArgumentNullException.ThrowIfNull(state);
         state.Validate();
@@ -319,7 +328,7 @@ public sealed class Brain
             TrainedExamples = _trainedExamples
                 .OrderBy(example => example.Key, StringComparer.Ordinal)
                 .ToDictionary(example => example.Key, example => example.Value, StringComparer.Ordinal),
-            Weights = _parameters.Select(p => p.Data).ToArray(),
+            Weights = (double[])_weights.Clone(),
             AdamM = _adamM,
             AdamV = _adamV,
             CompletedSteps = _step,
@@ -337,6 +346,14 @@ public sealed class Brain
         File.Move(temporaryPath, path, true);
     }
 
+    private void SyncScalarWeights()
+    {
+        if (_scalarWeightsCurrent) return;
+        for (var index = 0; index < _parameters.Count; index++)
+            _parameters[index].Data = _weights[index];
+        _scalarWeightsCurrent = true;
+    }
+
     internal static Brain CreateForTesting(BrainConfig config, params string[] trainedTools) =>
         new(config, new DeterministicRandom(config.Seed), trainedTools, []);
 
@@ -345,13 +362,18 @@ public sealed class Brain
         IReadOnlyDictionary<string, string> examples) =>
         new(config, new DeterministicRandom(config.Seed), [], examples);
 
-    internal double[] DebugNextLogits(IReadOnlyList<int> tokens) => NextLogits(tokens);
+    internal double[] DebugNextLogits(IReadOnlyList<int> tokens)
+    {
+        SyncScalarWeights();
+        return NextLogits(tokens);
+    }
     internal double[][] DebugSequenceLogits(IReadOnlyList<int> tokens)
     {
+        SyncScalarWeights();
         using var _ = Value.NoGrad();
         return Forward(tokens, 0).Select(row => row.Select(value => value.Data).ToArray()).ToArray();
     }
-    internal double[] DebugWeights() => _parameters.Select(p => p.Data).ToArray();
+    internal double[] DebugWeights() => (double[])_weights.Clone();
 
     internal TurnPerception DebugPredictPerception(string dialogue, NpcState state)
     {
@@ -420,6 +442,7 @@ public sealed class Brain
 
     private TurnPerception PredictPerception(string normalizedDialogue)
     {
+        SyncScalarWeights();
         var currentTurn = ExtractCurrentPlayerTurn(normalizedDialogue);
         var encoded = Tokenizer.Encode(currentTurn);
         if (encoded.Length > Config.ContextLength - 2) encoded = encoded[^(Config.ContextLength - 2)..];
@@ -449,6 +472,7 @@ public sealed class Brain
 
     internal double[] DebugLogitsAt(IReadOnlyList<int> tokens, int position)
     {
+        SyncScalarWeights();
         using var _ = Value.NoGrad();
         return Forward(tokens, 0)[position].Select(x => x.Data).ToArray();
     }
@@ -479,12 +503,40 @@ public sealed class Brain
     {
         var loss = CalculateLoss(
             new TrainingSample([.. tokens], 0, firstTargetIndex), optimizedForward);
-        return (loss, _parameters.Select(parameter => parameter.Grad).ToArray());
+        return (loss, (double[])_packedGradients.Clone());
+    }
+
+    internal double DebugFiniteDifferenceGradient(IReadOnlyList<int> tokens, int firstTargetIndex, int parameterIndex)
+        => DebugFiniteDifferenceGradient(new TrainingSample([.. tokens], 0, firstTargetIndex), parameterIndex);
+
+    internal (double Loss, double[] Gradients) DebugLossAndGradients(TrainingSample sample)
+    {
+        var loss = PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+        return (loss, (double[])_packedGradients.Clone());
+    }
+
+    internal double DebugFiniteDifferenceGradient(TrainingSample sample, int parameterIndex)
+    {
+        const double epsilon = 1e-6;
+        var original = _weights[parameterIndex];
+        try
+        {
+            _weights[parameterIndex] = original + epsilon;
+            var plus = PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+            _weights[parameterIndex] = original - epsilon;
+            var minus = PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+            return (plus - minus) / (2 * epsilon);
+        }
+        finally
+        {
+            _weights[parameterIndex] = original;
+        }
     }
 
     internal double[][] DebugTargetLogits(
         IReadOnlyList<int> tokens, int firstLogitPosition, bool optimizedForward)
     {
+        SyncScalarWeights();
         using var _ = Value.NoGrad();
         var logits = optimizedForward
             ? ForwardTargets(tokens, 0, firstLogitPosition)
@@ -660,6 +712,7 @@ public sealed class Brain
 
     private ValidationMetrics EvaluateValidation(TrainingData validation)
     {
+        SyncScalarWeights();
         var intentSamples = validation.PerceptionSamples
             .Where(sample => sample.TargetFields.HasFlag(PerceptionFields.Intent)).Take(512).ToArray();
         var affectSamples = validation.PerceptionSamples
@@ -778,8 +831,12 @@ public sealed class Brain
     {
         var window = sample.Tokens;
         if (window.Length is < 2 or > 257) throw new ArgumentException("A training sample must contain 2-257 tokens.");
+        if (optimizedForward)
+            return PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+
+        SyncScalarWeights();
         if (sample.Task == TrainingTask.Perception)
-            return CalculatePerceptionLoss(sample);
+            return CalculatePerceptionLossReference(sample);
         if (sample.FirstTargetIndex < 1 || sample.FirstTargetIndex >= window.Length)
             throw new ArgumentException("A training sample has no valid targets.");
         foreach (var parameter in _parameters) parameter.Grad = 0.0;
@@ -799,10 +856,11 @@ public sealed class Brain
 
         var loss = total / logits.Length;
         loss.Backward();
+        CopyScalarGradients();
         return loss.Data;
     }
 
-    private double CalculatePerceptionLoss(TrainingSample sample)
+    private double CalculatePerceptionLossReference(TrainingSample sample)
     {
         var target = sample.PerceptionTarget
             ?? throw new ArgumentException("A perception sample requires a target.", nameof(sample));
@@ -829,7 +887,14 @@ public sealed class Brain
         if (count == 0) throw new ArgumentException("A perception sample has no supervised fields.", nameof(sample));
         var loss = total / count;
         loss.Backward();
+        CopyScalarGradients();
         return loss.Data;
+    }
+
+    private void CopyScalarGradients()
+    {
+        for (var index = 0; index < _parameters.Count; index++)
+            _packedGradients[index] = _parameters[index].Grad;
     }
 
     private void ApplyGradients(int targetSteps)
@@ -843,20 +908,61 @@ public sealed class Brain
         var warmup = Math.Min(1.0, updateStep / 500.0);
         var decay = Math.Max(0.0, 1.0 - (double)localStep / phaseLength);
         var learningRate = Config.LearningRate * warmup * decay;
-        var gradientNorm = Math.Sqrt(_parameters.Sum(parameter => parameter.Grad * parameter.Grad));
+        var gradientNorm = Math.Sqrt(SumSquares(_packedGradients));
         var gradientScale = gradientNorm > 1.0 ? 1.0 / gradientNorm : 1.0;
 
-        for (var index = 0; index < _parameters.Count; index++)
+        var beta1Correction = 1.0 - Math.Pow(Config.Beta1, updateStep);
+        var beta2Correction = 1.0 - Math.Pow(Config.Beta2, updateStep);
+        var width = Vector<double>.Count;
+        var beta1 = new Vector<double>(Config.Beta1);
+        var beta2 = new Vector<double>(Config.Beta2);
+        var oneMinusBeta1 = new Vector<double>(1.0 - Config.Beta1);
+        var oneMinusBeta2 = new Vector<double>(1.0 - Config.Beta2);
+        var scale = new Vector<double>(gradientScale);
+        var inverseBeta1Correction = new Vector<double>(1.0 / beta1Correction);
+        var inverseBeta2Correction = new Vector<double>(1.0 / beta2Correction);
+        var rate = new Vector<double>(learningRate);
+        var epsilon = new Vector<double>(Config.AdamEpsilon);
+        var index = 0;
+        for (; index <= _weights.Length - width; index += width)
         {
-            var gradient = _parameters[index].Grad * gradientScale;
+            var gradient = new Vector<double>(_packedGradients, index) * scale;
+            var moment = beta1 * new Vector<double>(_adamM, index) + oneMinusBeta1 * gradient;
+            var variance = beta2 * new Vector<double>(_adamV, index) + oneMinusBeta2 * gradient * gradient;
+            var updated = new Vector<double>(_weights, index) - rate *
+                (moment * inverseBeta1Correction) /
+                (Vector.SquareRoot(variance * inverseBeta2Correction) + epsilon);
+            moment.CopyTo(_adamM, index);
+            variance.CopyTo(_adamV, index);
+            updated.CopyTo(_weights, index);
+        }
+        for (; index < _weights.Length; index++)
+        {
+            var gradient = _packedGradients[index] * gradientScale;
             _adamM[index] = Config.Beta1 * _adamM[index] + (1.0 - Config.Beta1) * gradient;
             _adamV[index] = Config.Beta2 * _adamV[index] + (1.0 - Config.Beta2) * gradient * gradient;
-            var mHat = _adamM[index] / (1.0 - Math.Pow(Config.Beta1, updateStep));
-            var vHat = _adamV[index] / (1.0 - Math.Pow(Config.Beta2, updateStep));
-            _parameters[index].Data -= learningRate * mHat / (Math.Sqrt(vHat) + Config.AdamEpsilon);
+            var mHat = _adamM[index] / beta1Correction;
+            var vHat = _adamV[index] / beta2Correction;
+            _weights[index] -= learningRate * mHat / (Math.Sqrt(vHat) + Config.AdamEpsilon);
         }
 
+        _scalarWeightsCurrent = false;
         _step = updateStep;
+    }
+
+    private static double SumSquares(double[] values)
+    {
+        var width = Vector<double>.Count;
+        var accumulator = Vector<double>.Zero;
+        var index = 0;
+        for (; index <= values.Length - width; index += width)
+        {
+            var vector = new Vector<double>(values, index);
+            accumulator += vector * vector;
+        }
+        var total = Vector.Sum(accumulator);
+        for (; index < values.Length; index++) total += values[index] * values[index];
+        return total;
     }
 
     private Value[][] Forward(IReadOnlyList<int> tokens, int positionOffset)

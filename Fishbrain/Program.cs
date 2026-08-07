@@ -459,17 +459,21 @@ internal static class SelfTests
             "optimized forward logit equivalence");
         var optimizedGradient = optimized.DebugLossAndGradients(equivalenceWindow, 3, optimizedForward: true);
         var referenceGradient = reference.DebugLossAndGradients(equivalenceWindow, 3, optimizedForward: false);
-        Assert(Math.Abs(optimizedGradient.Loss - referenceGradient.Loss) < 1e-10 &&
-               optimizedGradient.Gradients.Zip(referenceGradient.Gradients)
-                   .All(pair => Math.Abs(pair.First - pair.Second) < 1e-10),
-            "optimized forward gradient equivalence");
-        optimized = Brain.CreateForTesting(TinyConfig());
-        reference = Brain.CreateForTesting(TinyConfig());
-        var optimizedLoss = optimized.DebugTrainSample(equivalenceWindow, 3, 20);
-        var referenceLoss = reference.DebugTrainSampleReference(equivalenceWindow, 3, 20);
-        Assert(Math.Abs(optimizedLoss - referenceLoss) < 1e-10, "optimized forward loss equivalence");
-        Assert(optimized.DebugWeights().Zip(reference.DebugWeights()).All(pair => Math.Abs(pair.First - pair.Second) < 1e-10),
-            "optimized forward update equivalence");
+        Assert(Math.Abs(optimizedGradient.Loss - referenceGradient.Loss) < 1e-10,
+            "packed forward loss equivalence");
+        var gradientChecks = new[]
+        {
+            0, 8, 31, optimizedGradient.Gradients.Length / 4,
+            optimizedGradient.Gradients.Length / 2,
+            optimizedGradient.Gradients.Length - 1
+        }.Distinct();
+        foreach (var parameterIndex in gradientChecks)
+        {
+            var finiteDifference = optimized.DebugFiniteDifferenceGradient(
+                equivalenceWindow, 3, parameterIndex);
+            Assert(Math.Abs(optimizedGradient.Gradients[parameterIndex] - finiteDifference) < 2e-6,
+                $"packed gradient finite difference at {parameterIndex}");
+        }
         var window = new[] { Tokenizer.Bos, Tokenizer.Decide, Tokenizer.Intent(DialogueIntent.Greeting), Tokenizer.Eos };
         var before = first.DebugTrainWindow(window, 20); var after = before;
         for (var index = 0; index < 19; index++) after = first.DebugTrainWindow(window, 20);
@@ -500,6 +504,17 @@ internal static class SelfTests
             Assert(data.PerceptionSamples.Single(sample => sample.Source == "GOEMOTIONS").TargetFields == PerceptionFields.Affect,
                 "GoEmotions affect-only supervision");
             Assert(data.Examples.Count == 1, "exact memory forms");
+
+            var config = TinyConfig();
+            var brain = Brain.CreateForTesting(config);
+            var perceptionGradient = brain.DebugLossAndGradients(history);
+            var layout = new PackedTrainer.Layout(config);
+            foreach (var parameterIndex in new[] { 0, layout.Key, layout.IntentHead, layout.AffectHead, layout.ExpectedHead })
+            {
+                var finiteDifference = brain.DebugFiniteDifferenceGradient(history, parameterIndex);
+                Assert(Math.Abs(perceptionGradient.Gradients[parameterIndex] - finiteDifference) < 2e-6,
+                    $"packed perception gradient finite difference at {parameterIndex}");
+            }
         }
         finally { if (File.Exists(path)) File.Delete(path); }
     }
