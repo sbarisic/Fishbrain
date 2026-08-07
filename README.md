@@ -6,7 +6,7 @@ NuGet dependencies. The project is based on the idea demonstrated by
 [martinskuta/microgpt](https://github.com/martinskuta/microgpt), adapted to teach
 explicit dialogue perception, persistent NPC behavior, and local C# tool calls.
 
-## Revision 4
+## Revision 5
 
 The model now learns three visible tasks:
 
@@ -19,21 +19,23 @@ It uses one 64-dimensional Transformer layer, four attention heads, a
 limited to 256 characters. The vocabulary accepts uppercase letters, digits,
 spaces, and `. , ? ! ' - :`; normal input is canonicalized automatically.
 
-Perception predicts intent, user affect, and whether the utterance expects a
-response. C# deterministically selects the action and updates `NpcState`. A
-no-response turn returns an empty string while still persisting the state change.
+Three dedicated perception heads predict intent, user affect, and whether the
+utterance expects a response. Perception classifies only the final player turn;
+response generation retains the full dialogue. C# deterministically selects the
+action and updates `NpcState`. A no-response turn returns an empty string while
+still persisting the state change.
 Novel ordinary dialogue uses free character generation; exact memory is used only
 for seen state/input pairs. Dynamic game facts remain tool-only.
 
-Revision 4 is experimental rather than release-ready. At the 32,000-step
+Revision 5 is implemented but not yet trained through the full experiment. The
+v4 baseline remains experimental: at the 32,000-step
 milestone, held-out intent macro-F1 was `0.1554` and 12% of sampled replies were
 invalid. The sequential curriculum exposed task interference: perception training
 forgot language, while joint training repaired language and weakened intent
 classification.
 
 See [INFO.md](INFO.md) for the complete architecture and token layout, state and
-tool semantics, data policy, milestone measurements, conclusions, and proposed v5
-revision.
+tool semantics, data policy, v4 measurements, and the implemented v5 experiment.
 
 ## Build and test
 
@@ -68,27 +70,28 @@ datasets/compiled/test.jsonl         1000
 datasets/compiled/review.jsonl       ambiguous rows excluded from training
 ```
 
-## Teach and evaluate
+## Teach and evaluate v5
 
-Version 4 deliberately starts from fresh 64-dimensional weights. Keep older
-checkpoints as archives; they are not migrated.
+Version 5 starts from fresh 64-dimensional weights because its dedicated
+classifier heads cannot be migrated from v4 vocabulary rows. Keep older
+checkpoints as archives.
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v4.json
-dotnet run -c Release --project Fishbrain -- chat model-v4.json
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v5-latest.json
+dotnet run -c Release --project Fishbrain -- chat model-v5-latest.json
 ```
 
-`teach` runs 40,000 deterministic steps: 8,000 language, 16,000 balanced
-perception, then 16,000 joint behavior steps. Calling the same command again
-resumes an incomplete checkpoint with its optimizer, RNG, phase, sampler, and
-validation-best metadata intact.
+`teach` runs 40,000 deterministic steps: 2,000 language warmup steps, then
+38,000 steps that alternate balanced perception and realization. Calling the
+same command again resumes an incomplete checkpoint with its optimizer, RNG,
+phase, sampler, and best-metric metadata intact.
 
 Pause at evaluation milestones without changing the 40,000-step schedule:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json --planned 40000 --until 8000
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json --planned 40000 --until 16000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 2000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 10000
 ```
 
 The checkpoint stores the planned schedule and rejects an incompatible
@@ -105,22 +108,28 @@ development machine, the same 100-step Release fixture improved from 35.929 to
 The chat CLI prints the NPC reply together with intent, affect, response
 expectation, action, rapport, mood, topic, goal, and tone.
 
-### Current experimental status
+At each 1,000-step milestone, teaching reports task-specific perception and
+realization metrics. It saves atomic `latest`, `best-perception`, and
+`best-realization` checkpoint roles.
 
+### Experimental status
+
+- The first v5 run is paused at step 7,000. Full evaluation measured intent
+  macro-F1 `0.0987`, affect macro-F1 `0.7103`, and expected-response F1 `0.9695`;
+  the staged gate still fails.
 - Step 24,000 is the strongest observed cognition snapshot, but it has severe
-  language forgetting.
+  language forgetting in the historical v4 run.
 - Step 32,000 is a better language/cognition compromise, but intent performance
-  regressed and the release gates still fail.
+  regressed in v4 and the release gates still fail.
 
-Preserve checkpoints locally before continuing an experiment. Files matching
-`model.*.json` are intentionally ignored by Git. Continuing the unchanged v4
-schedule to 40,000 steps is not expected to solve the measured intent problem;
-the recommended work is the [v5 plan](INFO.md#next-revision-recommended-v5).
+The committed v4 checkpoints preserve the historical results but are not loaded
+by the v5 runtime. The next experimental action is a fresh v5 milestone run and
+comparison against the staged gates in [INFO.md](INFO.md#revision-5-implementation).
 
 ## API
 
 ```csharp
-var brain = Brain.Load("model-v4.json");
+var brain = Brain.Load("model-v5-latest.json");
 var state = NpcState.Initial;
 
 ReplyResult result = brain.Reply("PLAYER HELLO, HOW ARE YOU?", state);

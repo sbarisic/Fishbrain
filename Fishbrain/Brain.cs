@@ -40,7 +40,7 @@ public sealed class BrainConfig
 /// <summary>A deliberately tiny, character-level GPT for uppercase video-game dialogue.</summary>
 public sealed class Brain
 {
-    private const int CheckpointVersion = 4;
+    private const int CheckpointVersion = 5;
     private const int TeachingCheckpointInterval = 1_000;
     private const string SafeFallback = "I DO NOT KNOW.";
     private static readonly int[] TextTokens = [.. Enumerable.Range(0, Tokenizer.VisibleCount), Tokenizer.Eos];
@@ -57,13 +57,18 @@ public sealed class Brain
     private readonly Value[][] _attentionOutput;
     private readonly Value[][] _mlpIn;
     private readonly Value[][] _mlpOut;
+    private readonly Value[][] _intentHead;
+    private readonly Value[][] _affectHead;
+    private readonly Value[][] _expectedHead;
     private double[] _adamM;
     private double[] _adamV;
     private int _step;
     private string _curriculumPhase = "UNSTARTED";
     private int _samplerPosition;
-    private double _bestValidationLoss = double.MaxValue;
-    private int _bestValidationStep;
+    private double _bestPerceptionScore = -1.0;
+    private int _bestPerceptionStep;
+    private double _bestRealizationLoss = double.MaxValue;
+    private int _bestRealizationStep;
 
     private Brain(
         BrainConfig config,
@@ -85,6 +90,9 @@ public sealed class Brain
         _attentionOutput = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
         _mlpIn = CreateMatrix(config.MlpSize, config.EmbeddingSize);
         _mlpOut = CreateMatrix(config.EmbeddingSize, config.MlpSize);
+        _intentHead = CreateMatrix(Enum.GetValues<DialogueIntent>().Length, config.EmbeddingSize);
+        _affectHead = CreateMatrix(Enum.GetValues<UserAffect>().Length, config.EmbeddingSize);
+        _expectedHead = CreateMatrix(2, config.EmbeddingSize);
 
         AddParameters(_tokenEmbedding);
         AddParameters(_positionEmbedding);
@@ -94,6 +102,9 @@ public sealed class Brain
         AddParameters(_attentionOutput);
         AddParameters(_mlpIn);
         AddParameters(_mlpOut);
+        AddParameters(_intentHead);
+        AddParameters(_affectHead);
+        AddParameters(_expectedHead);
 
         _adamM = new double[_parameters.Count];
         _adamV = new double[_parameters.Count];
@@ -109,8 +120,8 @@ public sealed class Brain
     {
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
-        if (checkpoint.Version is 2 or 3)
-            throw new InvalidDataException("Fishbrain v4 requires a fresh 64-dimensional checkpoint; retain the old checkpoint as an archive.");
+        if (checkpoint.Version is 2 or 3 or 4)
+            throw new InvalidDataException("Fishbrain v5 requires fresh dedicated perception heads; retain the older checkpoint as an archive.");
         if (checkpoint.Version != CheckpointVersion)
             throw new InvalidDataException($"Unsupported checkpoint version {checkpoint.Version}.");
         checkpoint.Config.Validate();
@@ -135,8 +146,10 @@ public sealed class Brain
         brain._random.State = checkpoint.RandomState;
         brain._curriculumPhase = checkpoint.CurriculumPhase;
         brain._samplerPosition = checkpoint.SamplerPosition;
-        brain._bestValidationLoss = checkpoint.BestValidationLoss;
-        brain._bestValidationStep = checkpoint.BestValidationStep;
+        brain._bestPerceptionScore = checkpoint.BestPerceptionScore;
+        brain._bestPerceptionStep = checkpoint.BestPerceptionStep;
+        brain._bestRealizationLoss = checkpoint.BestRealizationLoss;
+        brain._bestRealizationStep = checkpoint.BestRealizationStep;
         return brain;
     }
 
@@ -154,29 +167,17 @@ public sealed class Brain
         var input = Tokenizer.Normalize(recentDialogue);
         if (input.Length == 0) throw new ArgumentException("Dialogue cannot be empty.", nameof(recentDialogue));
 
+        var perception = PredictPerception(input);
+        var expectedAction = Cognition.ActionFor(perception);
+        var decision = new TurnDecision(expectedAction);
+
         var decisionPrompt = StartPrompt(input);
         AppendState(decisionPrompt, state);
         decisionPrompt.Add(Tokenizer.Decide);
-        var decisionSession = new InferenceSession(this, decisionPrompt);
-        var intentToken = Greedy(
-            decisionSession.Logits,
-            Enumerable.Range(Tokenizer.IntentStart, Enum.GetValues<DialogueIntent>().Length).ToArray());
-        decisionPrompt.Add(intentToken);
-        decisionSession.Append(intentToken);
-        var intent = Tokenizer.DecodeIntent(intentToken);
-        var affectToken = Greedy(
-            decisionSession.Logits,
-            Enumerable.Range(Tokenizer.AffectStart, Enum.GetValues<UserAffect>().Length).ToArray());
-        decisionPrompt.Add(affectToken);
-        decisionSession.Append(affectToken);
-        var affect = Tokenizer.DecodeAffect(affectToken);
-        var expectedToken = Greedy(decisionSession.Logits, [Tokenizer.ExpectedFalse, Tokenizer.ExpectedTrue]);
-        decisionPrompt.Add(expectedToken);
-        var perception = new TurnPerception(intent, affect, expectedToken == Tokenizer.ExpectedTrue);
-        var expectedAction = Cognition.ActionFor(perception);
-        var actionToken = Tokenizer.Action(expectedAction);
-        decisionPrompt.Add(actionToken);
-        var decision = new TurnDecision(expectedAction);
+        decisionPrompt.Add(Tokenizer.Intent(perception.Intent));
+        decisionPrompt.Add(Tokenizer.Affect(perception.Affect));
+        decisionPrompt.Add(perception.ResponseExpected ? Tokenizer.ExpectedTrue : Tokenizer.ExpectedFalse);
+        decisionPrompt.Add(Tokenizer.Action(expectedAction));
 
         var toolSucceeded = false;
         var toolResult = string.Empty;
@@ -325,8 +326,10 @@ public sealed class Brain
             RandomState = _random.State,
             CurriculumPhase = _curriculumPhase,
             SamplerPosition = _samplerPosition,
-            BestValidationLoss = _bestValidationLoss,
-            BestValidationStep = _bestValidationStep
+            BestPerceptionScore = _bestPerceptionScore,
+            BestPerceptionStep = _bestPerceptionStep,
+            BestRealizationLoss = _bestRealizationLoss,
+            BestRealizationStep = _bestRealizationStep
         };
 
         var temporaryPath = path + ".tmp";
@@ -352,24 +355,83 @@ public sealed class Brain
 
     internal TurnPerception DebugPredictPerception(string dialogue, NpcState state)
     {
+        ArgumentNullException.ThrowIfNull(state);
+        state.Validate();
         var input = Tokenizer.Normalize(dialogue);
-        var prompt = StartPrompt(input);
-        AppendState(prompt, state);
-        prompt.Add(Tokenizer.Decide);
-        var session = new InferenceSession(this, prompt);
-        var intentToken = Greedy(session.Logits,
-            Enumerable.Range(Tokenizer.IntentStart, Enum.GetValues<DialogueIntent>().Length).ToArray());
-        prompt.Add(intentToken);
-        session.Append(intentToken);
-        var affectToken = Greedy(session.Logits,
-            Enumerable.Range(Tokenizer.AffectStart, Enum.GetValues<UserAffect>().Length).ToArray());
-        prompt.Add(affectToken);
-        session.Append(affectToken);
-        var expectedToken = Greedy(session.Logits, [Tokenizer.ExpectedFalse, Tokenizer.ExpectedTrue]);
-        return new TurnPerception(
-            Tokenizer.DecodeIntent(intentToken),
-            Tokenizer.DecodeAffect(affectToken),
-            expectedToken == Tokenizer.ExpectedTrue);
+        if (input.Length == 0) throw new ArgumentException("Dialogue cannot be empty.", nameof(dialogue));
+        return PredictPerception(input);
+    }
+
+    internal static string ExtractCurrentPlayerTurn(string normalizedDialogue)
+    {
+        if (string.IsNullOrWhiteSpace(normalizedDialogue))
+            throw new ArgumentException("Dialogue cannot be empty.", nameof(normalizedDialogue));
+
+        var npcMarker = FindLastRoleMarker(normalizedDialogue, "NPC");
+        if (npcMarker >= 0)
+        {
+            var playerMarker = FindRoleMarker(normalizedDialogue, "PLAYER", npcMarker + 4);
+            if (playerMarker < 0)
+                throw new ArgumentException("Role-marked history must end with a PLAYER utterance.", nameof(normalizedDialogue));
+            return TextAfterRoleMarker(normalizedDialogue, playerMarker, "PLAYER");
+        }
+
+        return normalizedDialogue.StartsWith("PLAYER ", StringComparison.Ordinal) || normalizedDialogue == "PLAYER"
+            ? TextAfterRoleMarker(normalizedDialogue, 0, "PLAYER")
+            : normalizedDialogue;
+    }
+
+    private static int FindRoleMarker(string dialogue, string role, int startIndex)
+    {
+        var marker = " " + role;
+        for (var index = dialogue.IndexOf(marker, startIndex, StringComparison.Ordinal);
+             index >= 0;
+             index = dialogue.IndexOf(marker, index + marker.Length, StringComparison.Ordinal))
+        {
+            var before = index > 0 ? dialogue[index - 1] : '\0';
+            var after = index + marker.Length;
+            if ((before is '.' or '?' or '!') && (after == dialogue.Length || dialogue[after] == ' '))
+                return index + 1;
+        }
+        return -1;
+    }
+
+    private static int FindLastRoleMarker(string dialogue, string role)
+    {
+        var last = -1;
+        var search = 0;
+        while (search < dialogue.Length)
+        {
+            var found = FindRoleMarker(dialogue, role, search);
+            if (found < 0) return last;
+            last = found;
+            search = found + role.Length;
+        }
+        return last;
+    }
+
+    private static string TextAfterRoleMarker(string dialogue, int markerIndex, string role)
+    {
+        var turn = dialogue[(markerIndex + role.Length)..].Trim();
+        if (turn.Length == 0)
+            throw new ArgumentException($"The final {role} marker must be followed by an utterance.", nameof(dialogue));
+        return turn;
+    }
+
+    private TurnPerception PredictPerception(string normalizedDialogue)
+    {
+        var currentTurn = ExtractCurrentPlayerTurn(normalizedDialogue);
+        var encoded = Tokenizer.Encode(currentTurn);
+        if (encoded.Length > Config.ContextLength - 2) encoded = encoded[^(Config.ContextLength - 2)..];
+        var tokens = new List<int>(encoded.Length + 2) { Tokenizer.Bos };
+        tokens.AddRange(encoded);
+        tokens.Add(Tokenizer.Sep);
+        using var _ = Value.NoGrad();
+        var representation = ForwardLastHidden(tokens, 0);
+        var intent = (DialogueIntent)ArgMax(Linear(representation, _intentHead));
+        var affect = (UserAffect)ArgMax(Linear(representation, _affectHead));
+        var expected = ArgMax(Linear(representation, _expectedHead)) == 1;
+        return new TurnPerception(intent, affect, expected);
     }
 
     internal double DebugAverageLoss(IEnumerable<TrainingSample> samples)
@@ -487,42 +549,40 @@ public sealed class Brain
     {
         Config.PlannedSteps = plannedSteps;
         var language = data.LanguageSamples.ToArray();
-        var perceptionBuckets = data.PerceptionSamples
-            .GroupBy(x => x.Bucket, StringComparer.Ordinal)
-            .OrderBy(x => x.Key, StringComparer.Ordinal)
-            .Select(x => x.ToArray())
-            .ToArray();
+        var perceptionBuckets = new[]
+        {
+            PerceptionBuckets(data.PerceptionSamples.Where(sample => sample.TargetFields.HasFlag(PerceptionFields.Intent)),
+                sample => ((int)sample.PerceptionTarget!.Intent).ToString(CultureInfo.InvariantCulture)),
+            PerceptionBuckets(data.PerceptionSamples.Where(sample => sample.TargetFields.HasFlag(PerceptionFields.Affect)),
+                sample => ((int)sample.PerceptionTarget!.Affect).ToString(CultureInfo.InvariantCulture)),
+            PerceptionBuckets(data.PerceptionSamples.Where(sample => sample.TargetFields.HasFlag(PerceptionFields.Expected)),
+                sample => sample.PerceptionTarget!.ResponseExpected ? "1" : "0")
+        };
         var tools = data.ToolSamples.ToArray();
         var lastSavedStep = -1;
         while (_step < untilStep)
         {
-            var languageEnd = plannedSteps / 5;
-            var perceptionEnd = plannedSteps * 3 / 5;
+            var languageEnd = Math.Max(1, plannedSteps / 20);
             TrainingSample sample;
             string phase;
             if (_step < languageEnd)
             {
-                phase = "LANGUAGE";
+                phase = "WARMUP";
                 sample = language[DeterministicIndex(_step, language.Length, 101)];
             }
-            else if (_step < perceptionEnd)
+            else if ((_step - languageEnd) % 2 == 0)
             {
-                phase = "PERCEPTION";
-                sample = BalancedPerception(perceptionBuckets, _step - languageEnd);
+                phase = "INTERLEAVED";
+                sample = BalancedPerception(perceptionBuckets, (_step - languageEnd) / 2);
             }
-            else if (tools.Length > 0 && _step % 20 == 19)
+            else if (tools.Length > 0 && (_step - languageEnd) % 20 == 19)
             {
-                phase = "BEHAVIOR";
+                phase = "INTERLEAVED";
                 sample = tools[DeterministicIndex(_step, tools.Length, 307)];
-            }
-            else if ((_step - perceptionEnd) % 5 < 3)
-            {
-                phase = "BEHAVIOR";
-                sample = BalancedPerception(perceptionBuckets, _step - perceptionEnd);
             }
             else
             {
-                phase = "BEHAVIOR";
+                phase = "INTERLEAVED";
                 sample = language[DeterministicIndex(_step, language.Length, 503)];
             }
 
@@ -534,15 +594,30 @@ public sealed class Brain
                 Console.WriteLine($"STEP {_step,6} OF {plannedSteps,6} PHASE {phase,-10} LOSS {loss:F4}");
             if (_step % 1000 == 0)
             {
-                var validationSamples = validation.PerceptionSamples.Take(8)
-                    .Concat(validation.LanguageSamples.Take(8)).ToArray();
-                var validationLoss = DebugAverageLoss(validationSamples);
-                if (validationLoss < _bestValidationLoss)
+                var metrics = EvaluateValidation(validation);
+                var bestPerception = metrics.IntentMacroF1 > _bestPerceptionScore;
+                var bestRealization = metrics.RealizationLoss < _bestRealizationLoss;
+                if (bestPerception)
                 {
-                    _bestValidationLoss = validationLoss;
-                    _bestValidationStep = _step;
+                    _bestPerceptionScore = metrics.IntentMacroF1;
+                    _bestPerceptionStep = _step;
                 }
-                Console.WriteLine($"VALIDATION STEP {_step,6} LOSS {validationLoss:F4} BEST {_bestValidationLoss:F4} AT {_bestValidationStep}");
+                if (bestRealization)
+                {
+                    _bestRealizationLoss = metrics.RealizationLoss;
+                    _bestRealizationStep = _step;
+                }
+                Console.WriteLine(
+                    $"VALIDATION STEP {_step,6} INTENT_MACRO_F1 {metrics.IntentMacroF1:F4} " +
+                    $"AFFECT_MACRO_F1 {metrics.AffectMacroF1:F4} EXPECTED_F1 {metrics.ExpectedF1:F4} " +
+                    $"DIRECT_INTENT_MACRO_F1 {metrics.DirectIntentMacroF1:F4} " +
+                    $"HISTORY_INTENT_MACRO_F1 {metrics.HistoryIntentMacroF1:F4} " +
+                    $"REALIZATION_LOSS {metrics.RealizationLoss:F4}");
+                Console.WriteLine(
+                    $"BEST PERCEPTION {_bestPerceptionScore:F4} AT {_bestPerceptionStep} " +
+                    $"REALIZATION {_bestRealizationLoss:F4} AT {_bestRealizationStep}");
+                if (bestPerception) Save(CheckpointRolePath(checkpointPath, "best-perception"));
+                if (bestRealization) Save(CheckpointRolePath(checkpointPath, "best-realization"));
             }
             if (_step % TeachingCheckpointInterval == 0)
             {
@@ -559,8 +634,11 @@ public sealed class Brain
         Save(checkpointPath);
         if (recovery is null) return;
         Console.WriteLine($"CHECKPOINT SAVED STEP {_step}: {recovery.CheckpointPath}");
-        Console.WriteLine("RESUME IF INTERRUPTED:");
-        Console.WriteLine(recovery.TeachCommand(recovery.UntilStep));
+        if (_step < recovery.UntilStep)
+        {
+            Console.WriteLine("RESUME IF INTERRUPTED:");
+            Console.WriteLine(recovery.TeachCommand(recovery.UntilStep));
+        }
         Console.Out.Flush();
     }
 
@@ -580,10 +658,102 @@ public sealed class Brain
         TrainingData data, string checkpointPath, int plannedSteps, int untilStep) =>
         TrainCurriculum(data, data, checkpointPath, plannedSteps, untilStep, recovery: null);
 
-    private static TrainingSample BalancedPerception(TrainingSample[][] buckets, int index)
+    private ValidationMetrics EvaluateValidation(TrainingData validation)
     {
-        var bucket = buckets[index % buckets.Length];
-        return bucket[DeterministicIndex(index / buckets.Length, bucket.Length, 211)];
+        var intentSamples = validation.PerceptionSamples
+            .Where(sample => sample.TargetFields.HasFlag(PerceptionFields.Intent)).Take(512).ToArray();
+        var affectSamples = validation.PerceptionSamples
+            .Where(sample => sample.TargetFields.HasFlag(PerceptionFields.Affect)).Take(512).ToArray();
+        var expectedSamples = validation.PerceptionSamples
+            .Where(sample => sample.TargetFields.HasFlag(PerceptionFields.Expected)).Take(512).ToArray();
+        var intentPredicted = intentSamples.Select(PredictPerceptionSample).ToArray();
+        var affectPredicted = affectSamples.Select(PredictPerceptionSample).ToArray();
+        var expectedPredicted = expectedSamples.Select(PredictPerceptionSample).ToArray();
+        var realizationLoss = DebugAverageLoss(validation.LanguageSamples.Take(64));
+        return new ValidationMetrics(
+            MacroF1(intentSamples.Select(sample => sample.PerceptionTarget!.Intent), intentPredicted.Select(value => value.Intent)),
+            MacroF1(affectSamples.Select(sample => sample.PerceptionTarget!.Affect), affectPredicted.Select(value => value.Affect)),
+            BinaryF1(expectedSamples.Select(sample => sample.PerceptionTarget!.ResponseExpected), expectedPredicted.Select(value => value.ResponseExpected)),
+            SubsetIntentMacroF1(intentSamples, intentPredicted, sample => sample.Family.EndsWith("_DIRECT", StringComparison.Ordinal)),
+            SubsetIntentMacroF1(intentSamples, intentPredicted, sample => sample.Family.EndsWith("_HISTORY", StringComparison.Ordinal)),
+            realizationLoss);
+    }
+
+    private TurnPerception PredictPerceptionSample(TrainingSample sample)
+    {
+        using var _ = Value.NoGrad();
+        var representation = ForwardLastHidden(sample.Tokens, sample.PositionOffset);
+        return new TurnPerception(
+            (DialogueIntent)ArgMax(Linear(representation, _intentHead)),
+            (UserAffect)ArgMax(Linear(representation, _affectHead)),
+            ArgMax(Linear(representation, _expectedHead)) == 1);
+    }
+
+    private static double SubsetIntentMacroF1(
+        IReadOnlyList<TrainingSample> samples,
+        IReadOnlyList<TurnPerception> predicted,
+        Func<TrainingSample, bool> include)
+    {
+        var indices = Enumerable.Range(0, samples.Count).Where(index => include(samples[index])).ToArray();
+        return indices.Length == 0
+            ? double.NaN
+            : MacroF1(indices.Select(index => samples[index].PerceptionTarget!.Intent),
+                indices.Select(index => predicted[index].Intent));
+    }
+
+    private static double MacroF1<T>(IEnumerable<T> expectedValues, IEnumerable<T> predictedValues) where T : struct, Enum
+    {
+        var pairs = expectedValues.Zip(predictedValues).ToArray();
+        if (pairs.Length == 0) return double.NaN;
+        return pairs.Select(pair => pair.First).Distinct().Select(label =>
+        {
+            var tp = pairs.Count(pair => pair.First.Equals(label) && pair.Second.Equals(label));
+            var fp = pairs.Count(pair => !pair.First.Equals(label) && pair.Second.Equals(label));
+            var fn = pairs.Count(pair => pair.First.Equals(label) && !pair.Second.Equals(label));
+            return 2.0 * tp / Math.Max(1, 2 * tp + fp + fn);
+        }).Average();
+    }
+
+    private static double BinaryF1(IEnumerable<bool> expectedValues, IEnumerable<bool> predictedValues)
+    {
+        var pairs = expectedValues.Zip(predictedValues).ToArray();
+        var tp = pairs.Count(pair => pair.First && pair.Second);
+        var fp = pairs.Count(pair => !pair.First && pair.Second);
+        var fn = pairs.Count(pair => pair.First && !pair.Second);
+        return 2.0 * tp / Math.Max(1, 2 * tp + fp + fn);
+    }
+
+    private static string CheckpointRolePath(string checkpointPath, string role)
+    {
+        var directory = Path.GetDirectoryName(checkpointPath) ?? "";
+        var extension = Path.GetExtension(checkpointPath);
+        var stem = Path.GetFileNameWithoutExtension(checkpointPath);
+        if (stem.EndsWith("-latest", StringComparison.OrdinalIgnoreCase))
+            stem = stem[..^"-latest".Length];
+        return Path.Combine(directory, $"{stem}-{role}{extension}");
+    }
+
+    private sealed record ValidationMetrics(
+        double IntentMacroF1,
+        double AffectMacroF1,
+        double ExpectedF1,
+        double DirectIntentMacroF1,
+        double HistoryIntentMacroF1,
+        double RealizationLoss);
+
+    private static TrainingSample[][] PerceptionBuckets(
+        IEnumerable<TrainingSample> samples, Func<TrainingSample, string> key) =>
+        samples.GroupBy(key, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => group.ToArray())
+            .ToArray();
+
+    private static TrainingSample BalancedPerception(TrainingSample[][][] dimensions, int index)
+    {
+        var buckets = dimensions[index % dimensions.Length];
+        var dimensionIndex = index / dimensions.Length;
+        var bucket = buckets[dimensionIndex % buckets.Length];
+        return bucket[DeterministicIndex(dimensionIndex / buckets.Length, bucket.Length, 211)];
     }
 
     private static int DeterministicIndex(int step, int count, int salt)
@@ -608,6 +778,8 @@ public sealed class Brain
     {
         var window = sample.Tokens;
         if (window.Length is < 2 or > 257) throw new ArgumentException("A training sample must contain 2-257 tokens.");
+        if (sample.Task == TrainingTask.Perception)
+            return CalculatePerceptionLoss(sample);
         if (sample.FirstTargetIndex < 1 || sample.FirstTargetIndex >= window.Length)
             throw new ArgumentException("A training sample has no valid targets.");
         foreach (var parameter in _parameters) parameter.Grad = 0.0;
@@ -630,13 +802,42 @@ public sealed class Brain
         return loss.Data;
     }
 
+    private double CalculatePerceptionLoss(TrainingSample sample)
+    {
+        var target = sample.PerceptionTarget
+            ?? throw new ArgumentException("A perception sample requires a target.", nameof(sample));
+        foreach (var parameter in _parameters) parameter.Grad = 0.0;
+
+        var representation = ForwardLastHidden(sample.Tokens, sample.PositionOffset);
+        var total = new Value(0.0);
+        var count = 0;
+        if (sample.TargetFields.HasFlag(PerceptionFields.Intent))
+        {
+            total += Value.CrossEntropy(Linear(representation, _intentHead), (int)target.Intent);
+            count++;
+        }
+        if (sample.TargetFields.HasFlag(PerceptionFields.Affect))
+        {
+            total += Value.CrossEntropy(Linear(representation, _affectHead), (int)target.Affect);
+            count++;
+        }
+        if (sample.TargetFields.HasFlag(PerceptionFields.Expected))
+        {
+            total += Value.CrossEntropy(Linear(representation, _expectedHead), target.ResponseExpected ? 1 : 0);
+            count++;
+        }
+        if (count == 0) throw new ArgumentException("A perception sample has no supervised fields.", nameof(sample));
+        var loss = total / count;
+        loss.Backward();
+        return loss.Data;
+    }
+
     private void ApplyGradients(int targetSteps)
     {
         var updateStep = _step + 1;
-        var languageEnd = targetSteps / 5;
-        var perceptionEnd = targetSteps * 3 / 5;
-        var phaseStart = _step < languageEnd ? 0 : _step < perceptionEnd ? languageEnd : perceptionEnd;
-        var phaseEnd = _step < languageEnd ? languageEnd : _step < perceptionEnd ? perceptionEnd : targetSteps;
+        var languageEnd = Math.Max(1, targetSteps / 20);
+        var phaseStart = _step < languageEnd ? 0 : languageEnd;
+        var phaseEnd = _step < languageEnd ? languageEnd : targetSteps;
         var localStep = _step - phaseStart;
         var phaseLength = Math.Max(1, phaseEnd - phaseStart);
         var warmup = Math.Min(1.0, updateStep / 500.0);
@@ -645,14 +846,14 @@ public sealed class Brain
         var gradientNorm = Math.Sqrt(_parameters.Sum(parameter => parameter.Grad * parameter.Grad));
         var gradientScale = gradientNorm > 1.0 ? 1.0 / gradientNorm : 1.0;
 
-        for (var i = 0; i < _parameters.Count; i++)
+        for (var index = 0; index < _parameters.Count; index++)
         {
-            var gradient = _parameters[i].Grad * gradientScale;
-            _adamM[i] = Config.Beta1 * _adamM[i] + (1.0 - Config.Beta1) * gradient;
-            _adamV[i] = Config.Beta2 * _adamV[i] + (1.0 - Config.Beta2) * gradient * gradient;
-            var mHat = _adamM[i] / (1.0 - Math.Pow(Config.Beta1, updateStep));
-            var vHat = _adamV[i] / (1.0 - Math.Pow(Config.Beta2, updateStep));
-            _parameters[i].Data -= learningRate * mHat / (Math.Sqrt(vHat) + Config.AdamEpsilon);
+            var gradient = _parameters[index].Grad * gradientScale;
+            _adamM[index] = Config.Beta1 * _adamM[index] + (1.0 - Config.Beta1) * gradient;
+            _adamV[index] = Config.Beta2 * _adamV[index] + (1.0 - Config.Beta2) * gradient * gradient;
+            var mHat = _adamM[index] / (1.0 - Math.Pow(Config.Beta1, updateStep));
+            var vHat = _adamV[index] / (1.0 - Math.Pow(Config.Beta2, updateStep));
+            _parameters[index].Data -= learningRate * mHat / (Math.Sqrt(vHat) + Config.AdamEpsilon);
         }
 
         _step = updateStep;
@@ -670,6 +871,19 @@ public sealed class Brain
         for (var position = 0; position < tokens.Count; position++)
             result[position] = ForwardToken(tokens[position], positionOffset + position, keys, values);
         return result;
+    }
+
+    private Value[] ForwardLastHidden(IReadOnlyList<int> tokens, int positionOffset)
+    {
+        if (tokens.Count is < 1 || tokens.Count > Config.ContextLength)
+            throw new ArgumentOutOfRangeException(nameof(tokens));
+        if (positionOffset < 0) throw new ArgumentOutOfRangeException(nameof(positionOffset));
+
+        var keys = new List<Value[]>(tokens.Count);
+        var values = new List<Value[]>(tokens.Count);
+        for (var position = 0; position < tokens.Count - 1; position++)
+            PrepareContextToken(tokens[position], positionOffset + position, keys, values);
+        return ForwardHiddenToken(tokens[^1], positionOffset + tokens.Count - 1, keys, values);
     }
 
     private Value[][] ForwardTargets(IReadOnlyList<int> tokens, int positionOffset, int firstLogitPosition)
@@ -694,6 +908,9 @@ public sealed class Brain
     }
 
     private Value[] ForwardToken(int token, int position, List<Value[]> keys, List<Value[]> values)
+        => Linear(ForwardHiddenToken(token, position, keys, values), _tokenEmbedding);
+
+    private Value[] ForwardHiddenToken(int token, int position, List<Value[]> keys, List<Value[]> values)
     {
         var (x, normalized) = PrepareToken(token, position, keys, values);
         var residual = x;
@@ -730,8 +947,7 @@ public sealed class Brain
         for (var i = 0; i < x.Length; i++) x[i] += residual[i];
         x = RmsNorm(x);
 
-        // The token embedding matrix is deliberately reused as the language-model head.
-        return Linear(x, _tokenEmbedding);
+        return x;
     }
 
     private void PrepareContextToken(int token, int position, List<Value[]> keys, List<Value[]> values) =>
@@ -920,6 +1136,15 @@ public sealed class Brain
         return allowed.OrderBy(x => x).MaxBy(x => logits[x]);
     }
 
+    private static int ArgMax(IReadOnlyList<Value> logits)
+    {
+        if (logits.Count == 0) throw new ArgumentException("Logits cannot be empty.", nameof(logits));
+        var best = 0;
+        for (var index = 1; index < logits.Count; index++)
+            if (logits[index].Data > logits[best].Data) best = index;
+        return best;
+    }
+
     private int Sample(IReadOnlyList<double> logits, IReadOnlyCollection<int> allowed, double temperature)
     {
         var tokens = allowed.Distinct().OrderBy(x => x).ToArray();
@@ -995,8 +1220,10 @@ public sealed class Brain
         public ulong RandomState { get; set; }
         public string CurriculumPhase { get; set; } = "UNSTARTED";
         public int SamplerPosition { get; set; }
-        public double BestValidationLoss { get; set; } = double.MaxValue;
-        public int BestValidationStep { get; set; }
+        public double BestPerceptionScore { get; set; } = -1.0;
+        public int BestPerceptionStep { get; set; }
+        public double BestRealizationLoss { get; set; } = double.MaxValue;
+        public int BestRealizationStep { get; set; }
     }
 
 }
@@ -1186,13 +1413,19 @@ internal static class Tokenizer
 
 internal enum TrainingTask { Language, Perception, Tool }
 
+[Flags]
+internal enum PerceptionFields { None = 0, Intent = 1, Affect = 2, Expected = 4, All = Intent | Affect | Expected }
+
 internal sealed record TrainingSample(
     int[] Tokens,
     int PositionOffset,
     int FirstTargetIndex,
-    TrainingTask Task = TrainingTask.Perception,
+    TrainingTask Task = TrainingTask.Language,
     string Bucket = "",
-    string Source = "synthetic");
+    string Source = "synthetic",
+    TurnPerception? PerceptionTarget = null,
+    string Family = "",
+    PerceptionFields TargetFields = PerceptionFields.All);
 
 #if false
 internal static class DialogueKeys
@@ -1578,8 +1811,7 @@ internal sealed class TrainingData
             throw new InvalidDataException("The same state and input cannot have competing supervision.");
         rows[rowKey] = rowValue;
 
-        AddSamples(SerializePerception(input, row.State, perception, decision), samples,
-            TrainingTask.Perception, bucket, source);
+        samples.Add(CreatePerceptionSample(input, perception, bucket, source, row.Family));
 
         var transition = Cognition.Apply(row.State, perception, decision, hasAllTool);
         if (!hasAllTool)
@@ -1610,16 +1842,24 @@ internal sealed class TrainingData
             tool, arguments, result, response), samples, TrainingTask.Language, bucket, source);
     }
 
-    private static SerializedStream SerializePerception(
-        string input, NpcState state, TurnPerception perception, TurnDecision decision)
+    private static TrainingSample CreatePerceptionSample(
+        string input, TurnPerception perception, string bucket, string source, string? family)
     {
-        var tokens = Start(input);
-        Brain.AppendState(tokens, state);
-        tokens.Add(Tokenizer.Decide);
-        var target = tokens.Count;
-        AddPerception(tokens, perception, decision);
-        tokens.Add(Tokenizer.Eos);
-        return new(tokens.ToArray(), target);
+        var currentTurn = Brain.ExtractCurrentPlayerTurn(input);
+        var encoded = Tokenizer.Encode(currentTurn);
+        var maximumText = 254;
+        if (encoded.Length > maximumText) encoded = encoded[^maximumText..];
+        var tokens = new List<int>(encoded.Length + 2) { Tokenizer.Bos };
+        tokens.AddRange(encoded);
+        tokens.Add(Tokenizer.Sep);
+        var fields = source switch
+        {
+            "CLINC150" => PerceptionFields.Intent,
+            "GOEMOTIONS" => PerceptionFields.Affect,
+            _ => PerceptionFields.All
+        };
+        return new TrainingSample(
+            tokens.ToArray(), 0, 1, TrainingTask.Perception, bucket, source, perception, family ?? "", fields);
     }
 
     private static SerializedStream SerializeResponse(
@@ -1724,6 +1964,7 @@ internal sealed class TrainingData
         public string? Source { get; set; }
         public string? Split { get; set; }
         public string? GroupId { get; set; }
+        public string? Family { get; set; }
         public string? Tool { get; set; }
         public string[]? Arguments { get; set; }
         public string? Result { get; set; }

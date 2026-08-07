@@ -28,7 +28,8 @@ internal sealed record Candidate(
     TurnPerception Perception,
     string? Response,
     string Source,
-    string GroupId);
+    string GroupId,
+    string? Family = null);
 
 internal static class CorpusPipeline
 {
@@ -141,8 +142,34 @@ internal static class CorpusPipeline
         }
 
         Console.WriteLine($"AUDIT OK {rows.Count} RECORDS");
-        foreach (var group in rows.GroupBy(x => x.Source).OrderBy(x => x.Key)) Console.WriteLine($"SOURCE {group.Key} {group.Count()}");
-        foreach (var group in rows.GroupBy(x => x.Split).OrderBy(x => x.Key)) Console.WriteLine($"SPLIT {group.Key} {group.Count()}");
+        Console.WriteLine("SUPERVISION SYNTHETIC INTENT,AFFECT,EXPECTED,LANGUAGE");
+        Console.WriteLine("SUPERVISION OASST1 INTENT,AFFECT,EXPECTED,LANGUAGE");
+        Console.WriteLine("SUPERVISION CLINC150 INTENT");
+        Console.WriteLine("SUPERVISION GOEMOTIONS AFFECT");
+        ReportGroups(rows, "SPLIT", row => row.Split);
+        ReportGroups(rows, "SOURCE", row => row.Source);
+        ReportGroups(rows, "INTENT", row => row.Perception.Intent.ToString().ToUpperInvariant());
+        ReportGroups(rows, "AFFECT", row => row.Perception.Affect.ToString().ToUpperInvariant());
+        ReportGroups(rows, "EXPECTED", row => row.Perception.ResponseExpected ? "TRUE" : "FALSE");
+        ReportGroups(rows, "TURN_FORM", TurnForm);
+        ReportGroups(rows.Where(row => !string.IsNullOrWhiteSpace(row.Family)), "FAMILY", row => row.Family!);
+    }
+
+    private static void ReportGroups(
+        IEnumerable<TeachingRow> rows, string dimension, Func<TeachingRow, string> key)
+    {
+        foreach (var group in rows.GroupBy(key, StringComparer.Ordinal).OrderBy(group => group.Key, StringComparer.Ordinal))
+        {
+            var example = group.OrderBy(row => row.Input, StringComparer.Ordinal).First().Input;
+            Console.WriteLine($"{dimension} {group.Key} COUNT {group.Count()} EXAMPLE {JsonSerializer.Serialize(example)}");
+        }
+    }
+
+    private static string TurnForm(TeachingRow row)
+    {
+        return row.Family?.EndsWith("_HISTORY", StringComparison.Ordinal) == true
+            ? "HISTORY"
+            : "DIRECT";
     }
 
     internal static IReadOnlyList<TeachingRow> BuildSynthetic(int count, int seed)
@@ -284,7 +311,8 @@ internal static class CorpusPipeline
             if (text is null || label is null || !mapping.TryGetValue(label, out var intent) || !TryExternal(text, out var normalized)) continue;
             var affect = Templates.Annotate(normalized, true).Affect;
             var perception = new TurnPerception(intent, affect, true);
-            yield return new Candidate("PLAYER " + normalized, StateFor(index), perception, null, "CLINC150", $"{split}-{index++:D6}");
+            yield return new Candidate("PLAYER " + normalized, StateFor(index), perception, null, "CLINC150",
+                $"{split}-{index++:D6}", "CLINC150_" + label.ToUpperInvariant());
         }
     }
 
@@ -302,7 +330,8 @@ internal static class CorpusPipeline
             var expected = normalized.EndsWith('?') || annotated.Intent is DialogueIntent.Greeting or DialogueIntent.Farewell or DialogueIntent.Clarification;
             var perception = new TurnPerception(annotated.Intent, affect, expected);
             var id = parts[2].Length == 0 ? $"go-{index:D7}" : parts[2];
-            yield return new Candidate("PLAYER " + normalized, StateFor(index++), perception, null, "GOEMOTIONS", id);
+            yield return new Candidate("PLAYER " + normalized, StateFor(index++), perception, null, "GOEMOTIONS", id,
+                "GOEMOTIONS_" + affect.ToString().ToUpperInvariant());
         }
     }
 
@@ -331,7 +360,8 @@ internal static class CorpusPipeline
             {
                 var group = groups[groupOffset++].OrderBy(x => StableKey(seed, x.GroupId, x.Input), StringComparer.Ordinal).ToArray();
                 foreach (var candidate in group.Take(remaining))
-                    rows.Add(Make(candidate.Input, candidate.State, candidate.Perception, candidate.Response, candidate.Source, split, candidate.GroupId));
+                    rows.Add(Make(candidate.Input, candidate.State, candidate.Perception, candidate.Response, candidate.Source,
+                        split, candidate.GroupId, candidate.Family));
                 remaining -= Math.Min(remaining, group.Length);
             }
             if (remaining != 0) throw new InvalidDataException($"{sourceName} could not fill the {split} split; {remaining} records short.");

@@ -8,6 +8,7 @@
 
 # Local training experiments; keep the final model.json checkpoint only.
 model.*.json
+model-v5-*.json
 
 # Downloaded and externally-derived teaching corpora stay local.
 datasets/raw/

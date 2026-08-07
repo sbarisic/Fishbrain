@@ -165,6 +165,7 @@ internal static class Evaluation
         var expectedResponse = new List<bool>();
         var predictedResponse = new List<bool>();
         var actionCorrect = 0;
+        var actionTotal = 0;
         var sourceStats = new Dictionary<string, (int Correct, int Total)>(StringComparer.Ordinal);
         foreach (var row in rows)
         {
@@ -176,10 +177,17 @@ internal static class Evaluation
             predictedAffect.Add(predicted.Affect);
             expectedResponse.Add(row.Perception.ResponseExpected);
             predictedResponse.Add(predicted.ResponseExpected);
-            if (Cognition.ActionFor(predicted) == row.Action) actionCorrect++;
+            if (HasAllPerceptionTargets(row))
+            {
+                actionTotal++;
+                if (Cognition.ActionFor(predicted) == row.Action) actionCorrect++;
+            }
             var source = row.Source ?? "unknown";
-            var current = sourceStats.GetValueOrDefault(source);
-            sourceStats[source] = (current.Correct + (predicted.Intent == row.Perception.Intent ? 1 : 0), current.Total + 1);
+            if (HasIntentTarget(row))
+            {
+                var current = sourceStats.GetValueOrDefault(source);
+                sourceStats[source] = (current.Correct + (predicted.Intent == row.Perception.Intent ? 1 : 0), current.Total + 1);
+            }
         }
 
         var trainingData = TrainingData.Load(testPath);
@@ -196,38 +204,64 @@ internal static class Evaluation
             catch (ArgumentException) { invalid++; }
         }
 
-        var syntheticMacro = SubsetMacro(rows, expectedIntent, predictedIntent, row => row.Source == "SYNTHETIC");
-        var externalMacro = SubsetMacro(rows, expectedIntent, predictedIntent, row => row.Source != "SYNTHETIC");
-        var affectMacro = MacroF1(expectedAffect, predictedAffect);
-        var expectedF1 = BinaryMetrics(expectedResponse, predictedResponse, true).F1;
-        var goldenPass = GoldenCases(brain);
+        var syntheticMacro = SubsetMacro(rows, expectedIntent, predictedIntent, row => row.Source == "SYNTHETIC" && HasIntentTarget(row));
+        var externalMacro = SubsetMacro(rows, expectedIntent, predictedIntent, row => row.Source != "SYNTHETIC" && HasIntentTarget(row));
+        var directMacro = SubsetMacro(rows, expectedIntent, predictedIntent, row => HasIntentTarget(row) && !IsHistory(row));
+        var historyMacro = SubsetMacro(rows, expectedIntent, predictedIntent, row => HasIntentTarget(row) && IsHistory(row));
+        var intentIndices = Enumerable.Range(0, rows.Length).Where(index => HasIntentTarget(rows[index])).ToArray();
+        var affectIndices = Enumerable.Range(0, rows.Length).Where(index => HasAffectTarget(rows[index])).ToArray();
+        var expectedIndices = Enumerable.Range(0, rows.Length).Where(index => HasExpectedTarget(rows[index])).ToArray();
+        var scoredIntentExpected = intentIndices.Select(index => expectedIntent[index]).ToArray();
+        var scoredIntentPredicted = intentIndices.Select(index => predictedIntent[index]).ToArray();
+        var scoredAffectExpected = affectIndices.Select(index => expectedAffect[index]).ToArray();
+        var scoredAffectPredicted = affectIndices.Select(index => predictedAffect[index]).ToArray();
+        var scoredResponseExpected = expectedIndices.Select(index => expectedResponse[index]).ToArray();
+        var scoredResponsePredicted = expectedIndices.Select(index => predictedResponse[index]).ToArray();
+        var intentMacro = MacroF1(scoredIntentExpected, scoredIntentPredicted);
+        var affectMacro = MacroF1(scoredAffectExpected, scoredAffectPredicted);
+        var expectedF1 = BinaryMetrics(scoredResponseExpected, scoredResponsePredicted, true).F1;
+        var goldenResults = GoldenCases(brain);
+        var goldenPass = goldenResults.All(result => result.Pass);
         var releasePass = syntheticMacro >= 0.85 && externalMacro >= 0.70 && affectMacro >= 0.75 &&
                           expectedF1 >= 0.90 && invalid == 0 && overlength == 0 && goldenPass;
+        var v5StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
+                          affectMacro >= 0.65 && expectedF1 >= 0.94 && languageLoss < 3.0 &&
+                          invalid == 0 && unexpectedEmpty == 0 && overlength == 0 && goldenPass;
 
         Console.WriteLine($"RECORDS {rows.Length}");
-        Console.WriteLine($"INTENT_ACCURACY {Accuracy(expectedIntent, predictedIntent):F4}");
-        Console.WriteLine($"INTENT_MACRO_F1 {MacroF1(expectedIntent, predictedIntent):F4}");
-        Console.WriteLine($"AFFECT_ACCURACY {Accuracy(expectedAffect, predictedAffect):F4}");
-        Console.WriteLine($"AFFECT_MACRO_F1 {MacroF1(expectedAffect, predictedAffect):F4}");
-        PrintBinary("RESPONSE_EXPECTED", expectedResponse, predictedResponse, true);
-        PrintBinary("NO_RESPONSE", expectedResponse, predictedResponse, false);
-        Console.WriteLine($"ACTION_ACCURACY {(double)actionCorrect / rows.Length:F4}");
+        Console.WriteLine($"INTENT_SCORED {intentIndices.Length}");
+        Console.WriteLine($"INTENT_ACCURACY {Accuracy(scoredIntentExpected, scoredIntentPredicted):F4}");
+        Console.WriteLine($"INTENT_MACRO_F1 {intentMacro:F4}");
+        Console.WriteLine($"AFFECT_SCORED {affectIndices.Length}");
+        Console.WriteLine($"AFFECT_ACCURACY {Accuracy(scoredAffectExpected, scoredAffectPredicted):F4}");
+        Console.WriteLine($"AFFECT_MACRO_F1 {affectMacro:F4}");
+        Console.WriteLine($"EXPECTED_SCORED {expectedIndices.Length}");
+        PrintBinary("RESPONSE_EXPECTED", scoredResponseExpected, scoredResponsePredicted, true);
+        PrintBinary("NO_RESPONSE", scoredResponseExpected, scoredResponsePredicted, false);
+        Console.WriteLine($"ACTION_ACCURACY {(double)actionCorrect / Math.Max(1, actionTotal):F4}");
         Console.WriteLine($"REALIZATION_LOSS {languageLoss:F4}");
         Console.WriteLine($"REALIZATION_LOSS_SAMPLES {lossSamples.Length}");
         Console.WriteLine($"GENERATED {generated} INVALID_RATE {(double)invalid / Math.Max(1, generated):F4} EMPTY_RATE {(double)unexpectedEmpty / Math.Max(1, generated):F4} OVERLENGTH_RATE {(double)overlength / Math.Max(1, generated):F4}");
         foreach (var pair in sourceStats.OrderBy(x => x.Key, StringComparer.Ordinal))
             Console.WriteLine($"SOURCE {pair.Key} INTENT_ACCURACY {(double)pair.Value.Correct / pair.Value.Total:F4} N {pair.Value.Total}");
-        PrintSubset("SYNTHETIC_HELD_OUT", rows, expectedIntent, predictedIntent, row => row.Source == "SYNTHETIC");
-        PrintSubset("EXTERNAL_HELD_OUT", rows, expectedIntent, predictedIntent, row => row.Source != "SYNTHETIC");
+        PrintSubset("SYNTHETIC_HELD_OUT", rows, expectedIntent, predictedIntent, row => row.Source == "SYNTHETIC" && HasIntentTarget(row));
+        PrintSubset("EXTERNAL_HELD_OUT", rows, expectedIntent, predictedIntent, row => row.Source != "SYNTHETIC" && HasIntentTarget(row));
+        PrintSubset("DIRECT_TURNS", rows, expectedIntent, predictedIntent, row => HasIntentTarget(row) && !IsHistory(row));
+        PrintSubset("HISTORY_TURNS", rows, expectedIntent, predictedIntent, row => HasIntentTarget(row) && IsHistory(row));
         foreach (var family in rows.Where(x => x.Family is not null).Select(x => x.Family!).Distinct().Order(StringComparer.Ordinal))
-            PrintSubset("FAMILY_" + family, rows, expectedIntent, predictedIntent, row => row.Family == family);
+            PrintSubset("FAMILY_" + family, rows, expectedIntent, predictedIntent,
+                row => row.Family == family && HasIntentTarget(row));
         foreach (var expected in Enum.GetValues<DialogueIntent>())
         foreach (var predicted in Enum.GetValues<DialogueIntent>())
         {
-            var count = expectedIntent.Zip(predictedIntent).Count(pair => pair.First == expected && pair.Second == predicted);
+            var count = scoredIntentExpected.Zip(scoredIntentPredicted).Count(pair => pair.First == expected && pair.Second == predicted);
             if (count > 0) Console.WriteLine($"CONFUSION {expected} {predicted} {count}");
         }
+        foreach (var result in goldenResults)
+            Console.WriteLine($"GOLDEN {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
+                              $"EXPECTED {result.Expected} PREDICTED {result.Predicted}");
         Console.WriteLine($"GOLDEN_CASES {(goldenPass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V5_STAGE_GATE {(v5StagePass ? "PASS" : "FAIL")}");
         Console.WriteLine($"RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
     }
 
@@ -275,23 +309,39 @@ internal static class Evaluation
     private static double SubsetMacro(IReadOnlyList<Row> rows, IReadOnlyList<DialogueIntent> expected, IReadOnlyList<DialogueIntent> predicted, Func<Row, bool> include)
     {
         var indices = Enumerable.Range(0, rows.Count).Where(index => include(rows[index])).ToArray();
-        return MacroF1(indices.Select(index => expected[index]).ToArray(), indices.Select(index => predicted[index]).ToArray());
+        return indices.Length == 0
+            ? double.NaN
+            : MacroF1(indices.Select(index => expected[index]).ToArray(), indices.Select(index => predicted[index]).ToArray());
     }
 
-    private static bool GoldenCases(Brain brain)
+    private static bool IsHistory(Row row) =>
+        row.Family?.EndsWith("_HISTORY", StringComparison.Ordinal) == true;
+
+    private static bool HasIntentTarget(Row row) => row.Source != "GOEMOTIONS";
+    private static bool HasAffectTarget(Row row) => row.Source != "CLINC150";
+    private static bool HasExpectedTarget(Row row) => row.Source is not "CLINC150" and not "GOEMOTIONS";
+    private static bool HasAllPerceptionTargets(Row row) => HasIntentTarget(row) && HasAffectTarget(row) && HasExpectedTarget(row);
+
+    private static GoldenResult[] GoldenCases(Brain brain)
     {
-        var cases = new (string Input, DialogueIntent Intent, UserAffect Affect, bool Expected)[]
+        var cases = new (string Name, string Input, DialogueIntent Intent, UserAffect Affect, bool Expected)[]
         {
-            ("PLAYER HELLO, HOW ARE YOU?", DialogueIntent.Wellbeing, UserAffect.Friendly, true),
-            ("PLAYER THAT IS NOT WHAT I ASKED.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
-            ("PLAYER WHAT?", DialogueIntent.Clarification, UserAffect.Neutral, true),
-            ("PLAYER THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true),
-            ("PLAYER I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
-            ("PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false)
+            ("WELLBEING_OVER_GREETING", "PLAYER HELLO, HOW ARE YOU?", DialogueIntent.Wellbeing, UserAffect.Friendly, true),
+            ("FRUSTRATED_CLARIFICATION", "PLAYER THAT IS NOT WHAT I ASKED.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
+            ("SHORT_CLARIFICATION", "PLAYER WHAT?", DialogueIntent.Clarification, UserAffect.Neutral, true),
+            ("HOSTILE_GRATITUDE", "PLAYER THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true),
+            ("NEGATED_GRATITUDE", "PLAYER I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
+            ("NO_RESPONSE_ACTIVITY", "PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false)
         };
-        return cases.All(item => brain.DebugPredictPerception(item.Input, NpcState.Initial) ==
-                                 new TurnPerception(item.Intent, item.Affect, item.Expected));
+        return cases.Select(item =>
+        {
+            var expected = new TurnPerception(item.Intent, item.Affect, item.Expected);
+            var predicted = brain.DebugPredictPerception(item.Input, NpcState.Initial);
+            return new GoldenResult(item.Name, expected, predicted, expected == predicted);
+        }).ToArray();
     }
+
+    private sealed record GoldenResult(string Name, TurnPerception Expected, TurnPerception Predicted, bool Pass);
 
     private static JsonSerializerOptions CreateOptions()
     {
@@ -356,10 +406,17 @@ internal static class SelfTests
     {
         const string visible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,?!'-:";
         Assert(new string(Tokenizer.Encode(visible).Select(Tokenizer.DecodeVisible).ToArray()) == visible, "roundtrip");
-        Assert(Tokenizer.VocabularySize == 105 && Tokenizer.AffectStart == 97, "v4 token layout");
+        Assert(Tokenizer.VocabularySize == 105 && Tokenizer.AffectStart == 97, "stable language token layout");
         Assert(Tokenizer.Action(ResponseAction.NoResponse) == 104, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
         Assert(Tokenizer.Normalize("it’s ready — now??") == "IT'S READY-NOW?", "unicode punctuation normalization");
+        Assert(Brain.ExtractCurrentPlayerTurn("HELLO, FRIEND!") == "HELLO, FRIEND!", "plain current turn");
+        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC GREETINGS. PLAYER WHAT?") == "WHAT?", "history current turn");
+        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER WAIT. NPC YES. PLAYER THANKS.") == "THANKS.", "multi-turn current turn");
+        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER I AM A PLAYER.") == "I AM A PLAYER.", "player noun is not a role marker");
+        Assert(Brain.ExtractCurrentPlayerTurn("PLAYERISH WORD") == "PLAYERISH WORD", "marker word boundary");
+        AssertThrows<ArgumentException>(() => Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT. PLAYER"));
+        AssertThrows<ArgumentException>(() => Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT."));
         AssertThrows<ArgumentException>(() => Tokenizer.Normalize("HELLO; FRIEND"));
     }
 
@@ -421,31 +478,43 @@ internal static class SelfTests
 
     private static void TrainingDataChecks()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v4-{Guid.NewGuid():N}.jsonl");
+        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v5-{Guid.NewGuid():N}.jsonl");
         try
         {
             File.WriteAllLines(path,
             [
                 Row("PLAYER HELLO!", "GREETING", "FRIENDLY", true, "RESPOND", "HELLO, TRAVELER!"),
                 Row("PLAYER I AM LOOKING AROUND.", "ACTIVITY", "NEUTRAL", false, "NORESPONSE", ""),
-                Row("PLAYER WHAT?", "CLARIFICATION", "FRUSTRATED", true, "RESPOND", null)
+                Row("PLAYER HELLO. NPC GREETINGS. PLAYER WHAT?", "CLARIFICATION", "FRUSTRATED", true, "RESPOND", null),
+                Row("PLAYER WHERE ARE YOU FROM?", "IDENTITY", "NEUTRAL", true, "RESPOND", null, "CLINC150"),
+                Row("PLAYER I AM WORRIED.", "UNKNOWN", "DISTRESSED", false, "NORESPONSE", "", "GOEMOTIONS")
             ]);
             var data = TrainingData.Load(path);
             Assert(data.PerceptionSamples.Count >= 3 && data.LanguageSamples.Count >= 1, "task streams");
+            Assert(data.PerceptionSamples.All(sample => sample.PerceptionTarget is not null), "dedicated perception targets");
+            var history = data.PerceptionSamples.Single(sample => sample.PerceptionTarget?.Intent == DialogueIntent.Clarification);
+            var classifiedText = new string(history.Tokens[1..^1].Select(Tokenizer.DecodeVisible).ToArray());
+            Assert(classifiedText == "WHAT?", "perception classifies current turn only");
+            Assert(data.PerceptionSamples.Single(sample => sample.Source == "CLINC150").TargetFields == PerceptionFields.Intent,
+                "CLINC intent-only supervision");
+            Assert(data.PerceptionSamples.Single(sample => sample.Source == "GOEMOTIONS").TargetFields == PerceptionFields.Affect,
+                "GoEmotions affect-only supervision");
             Assert(data.Examples.Count == 1, "exact memory forms");
         }
         finally { if (File.Exists(path)) File.Delete(path); }
     }
 
-    private static string Row(string input, string intent, string affect, bool expected, string action, string? response)
+    private static string Row(
+        string input, string intent, string affect, bool expected, string action, string? response,
+        string source = "synthetic")
     {
         var responseJson = response is null ? "null" : JsonSerializer.Serialize(response);
-        return $"{{\"input\":{JsonSerializer.Serialize(input)},\"state\":{{\"rapport\":1,\"mood\":\"NEUTRAL\",\"lastIntent\":\"UNKNOWN\",\"lastAffect\":\"NEUTRAL\",\"activeTopic\":\"NONE\",\"activeGoal\":\"NONE\"}},\"perception\":{{\"intent\":\"{intent}\",\"affect\":\"{affect}\",\"responseExpected\":{expected.ToString().ToLowerInvariant()}}},\"action\":\"{action}\",\"response\":{responseJson},\"source\":\"synthetic\"}}";
+        return $"{{\"input\":{JsonSerializer.Serialize(input)},\"state\":{{\"rapport\":1,\"mood\":\"NEUTRAL\",\"lastIntent\":\"UNKNOWN\",\"lastAffect\":\"NEUTRAL\",\"activeTopic\":\"NONE\",\"activeGoal\":\"NONE\"}},\"perception\":{{\"intent\":\"{intent}\",\"affect\":\"{affect}\",\"responseExpected\":{expected.ToString().ToLowerInvariant()}}},\"action\":\"{action}\",\"response\":{responseJson},\"source\":{JsonSerializer.Serialize(source)}}}";
     }
 
     private static void CheckpointChecks()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v4-{Guid.NewGuid():N}.json");
+        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v5-{Guid.NewGuid():N}.json");
         try
         {
             var brain = Brain.CreateForTesting(TinyConfig()); brain.Save(path);

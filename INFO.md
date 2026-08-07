@@ -1,8 +1,8 @@
 # Fishbrain Project Notes
 
-This is the detailed engineering record for Fishbrain: its goals, revision 4
-architecture, data and training pipelines, experimental results, known problems,
-and the recommended next revision. The [README](README.md) remains the quick-start
+This is the detailed engineering record for Fishbrain: its goals, revision 5
+architecture, data and training pipelines, historical v4 results, current
+experiment, and known problems. The [README](README.md) remains the quick-start
 guide.
 
 ## Purpose and boundaries
@@ -14,7 +14,7 @@ of [martinskuta/microgpt](https://github.com/martinskuta/microgpt): keep the ent
 learning system small enough for one person to inspect and modify.
 
 The project began as a character-level next-token model, then added local tool
-calls and explicit dialogue state. Revision 4 separates three concerns:
+calls and explicit dialogue state. Revision 5 separates three concerns:
 
 ```text
 LANGUAGE -> PERCEPTION -> BEHAVIOR
@@ -70,7 +70,7 @@ Downloaded data, compiled datasets, experiment checkpoints, and intermediate
 models are ignored by Git. This avoids redistributing external text and keeps the
 repository small.
 
-## Current model: checkpoint version 4
+## Current model: checkpoint version 5
 
 ### Transformer
 
@@ -92,9 +92,11 @@ repository small.
 | Planned teaching steps | 40,000 |
 
 The layer uses learned token and positional embeddings, RMSNorm, causal
-multi-head attention, residual connections, and a ReLU MLP. Output weights are
-tied to token embeddings. There are no biases, dropout, batches, GPU paths,
-tensor libraries, or external ML packages.
+multi-head attention, residual connections, and a ReLU MLP. Language output
+weights are tied to token embeddings. Three independent linear heads read the
+final current-turn representation for 15 intent, 5 affect, and 2 expectation
+classes. There are no biases, dropout, batches, GPU paths, tensor libraries, or
+external ML packages.
 
 Autograd is scalar reverse mode. Fused dot products and stable fused softmax
 cross-entropy reduce graph size. For the single layer, conditioning-only tokens
@@ -111,7 +113,7 @@ The 44 visible characters are:
 ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,?!'-:
 ```
 
-Vocabulary version 4 contains 105 tokens:
+The v5 language vocabulary retains the 105-token v4 layout:
 
 | IDs | Meaning |
 |---:|---|
@@ -143,7 +145,7 @@ arguments remain uppercase alphanumeric identifiers.
 ## Stateful API and cognition
 
 ```csharp
-var brain = Brain.Load("model-v4.json");
+var brain = Brain.Load("model-v5-latest.json");
 var state = NpcState.Initial;
 
 ReplyResult result = brain.Reply(
@@ -177,6 +179,12 @@ The intents are unknown, greeting, farewell, wellbeing, identity, assistance,
 clarification, activity, silence, gratitude, apology, agreement, refusal,
 hostility, and game fact. User affect is neutral, friendly, distressed,
 frustrated, or hostile.
+
+Perception removes a leading `PLAYER` role marker for direct input. For history,
+it finds the final `NPC ... PLAYER ...` transition and classifies only that last
+player utterance. Response generation still receives the complete normalized
+dialogue. Malformed role history is rejected instead of silently classifying an
+NPC turn.
 
 Action selection is constrained and deterministic:
 
@@ -245,6 +253,13 @@ attributions, and quotas. Raw and externally derived records stay in ignored
 | CLINC150, CC BY 3.0 | 800 | decision-only intent supervision |
 | GoEmotions, Apache-2.0 | 1,200 | decision-only affect supervision |
 
+V5 applies source-specific head masks. Synthetic and OASST1 rows supervise all
+three perception heads; CLINC150 supervises intent only; GoEmotions supervises
+affect only. This prevents heuristic labels from one imported ontology from
+becoming authoritative targets for unrelated heads. `audit` reports counts and
+examples for every split, source, intent, affect, expectation, direct/history
+form, CLINC150 label family, and GoEmotions affect family.
+
 Compilation produces deterministic 8,000/1,000/1,000 train, validation, and
 test splits. Splitting occurs by source conversation, source record, or synthetic
 contrast group before expansion so related paraphrases cannot leak across splits.
@@ -274,26 +289,26 @@ then neutral.
 ## Teaching, checkpoints, and recovery
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json
 ```
 
 The planned curriculum is:
 
 | Steps | Phase | Sampling |
 |---:|---|---|
-| 1-8,000 | language | realization only |
-| 8,001-24,000 | perception | intent/affect/expectation buckets balanced |
-| 24,001-40,000 | joint behavior | 60% perception, 40% realization; periodic tools if present |
+| 1-2,000 | language warmup | realization only |
+| 2,001-40,000 | interleaved | alternating 50% perception and 50% realization; periodic tools |
 
-Each phase has a 500-step warmup and phase-local linear learning-rate decay.
+Each phase has a 500-step learning-rate warmup and phase-local linear decay.
 Global gradient norm is clipped to 1.0. Checkpoints store Adam moments, RNG,
-phase, sampler position, step, planned schedule, and validation-best metadata.
+phase, sampler position, step, planned schedule, classifier-head state, and
+separate best-perception and best-realization metadata.
 
 Milestones pause without changing the schedule:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json --planned 40000 --until 8000
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json --planned 40000 --until 24000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 2000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 10000
 ```
 
 `--planned` controls phase boundaries and decay; `--until` only pauses. A resumed
@@ -301,17 +316,20 @@ checkpoint rejects a conflicting plan. Teaching saves atomically every 1,000
 steps and at a requested milestone, then flushes an absolute PowerShell resume
 command. A hard crash loses at most 999 steps.
 
-The displayed checkpoint validation loss averages only eight perception and
-eight language samples. It is a smoke signal, not a model-selection metric. Use:
+Every 1,000 steps, validation scores up to 512 supervised examples per
+perception head and 64 realization samples. It reports direct/history intent
+macro-F1, affect macro-F1, expectation F1, and realization loss. Intent macro-F1
+selects `best-perception`; realization loss selects `best-realization`. Use the
+full evaluator for milestone acceptance:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v4.json
+dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v5-latest.json
 ```
 
 Evaluation disables memory and reports intent and affect accuracy/macro-F1,
 response/no-response precision and recall, action accuracy, realization loss,
 generation validity, source and synthetic-family breakdowns, confusion matrix,
-golden cases, and release gates.
+individual golden contrasts, the staged v5 gate, and the long-term release gate.
 
 ## Revision 4 experiment record
 
@@ -362,14 +380,15 @@ is 32,000. Step 24,000 is the strongest observed cognition snapshot; step 32,000
 is the better compromise. Checkpoints match `model.*.json`, are ignored by Git,
 and should be backed up elsewhere if important.
 
-## Next revision: recommended v5
+## Revision 5 implementation
 
-Fix the learning interface before increasing model capacity. The primary
+V5 changes the learning interface before increasing model capacity. The working
 hypothesis is that generating classification symbols through the same tied
-105-way character output matrix creates avoidable competition between perception
-and language.
+105-way character output matrix caused avoidable competition between perception
+and language. The implementation is complete; a full 40,000-step experiment has
+not yet been run.
 
-### 1. Add three dedicated perception heads
+### 1. Three dedicated perception heads
 
 Keep the small Transformer and read a hidden representation through:
 
@@ -380,24 +399,24 @@ current player utterance -> shared representation
                               `-> expected logits      (2)
 ```
 
-Train each with fused cross-entropy. Do not add an action head: action remains
+Each uses fused cross-entropy. There is no action head: action remains
 deterministic. Symbolic cognition tokens may still condition response generation,
 but perception should no longer be trained through the language vocabulary.
 
-### 2. Classify the current turn, generate from full context
+### 2. Current-turn classification and full-context generation
 
-Perception should see the latest player utterance; realization may see the full
+Perception sees the latest player utterance; realization sees the full
 available history, updated state, perception, action, tone, and tool result.
 
-For the current string API, use one deterministic rule: if role-marked history
-contains `PLAYER`, classify text after the final marker; otherwise classify the
-whole normalized input. Preserve the original complete input for generation.
-Test malformed histories. This directly targets the direct/history performance
-gap without first increasing the attention window.
+The string API uses deterministic role parsing and rejects malformed histories.
+The original complete input is preserved for generation. Tests cover direct,
+multi-turn, malformed, and ordinary uses of the word `PLAYER`. This directly
+targets the direct/history performance gap without first increasing the
+attention window.
 
-### 3. Interleave tasks throughout training
+### 3. Interleaved training
 
-Start a fresh v5 checkpoint. First experiment:
+The first fresh-checkpoint experiment is:
 
 1. 2,000 language warmup steps.
 2. 38,000 interleaved steps with 50% perception and 50% realization.
@@ -409,13 +428,14 @@ If interference persists, compare one controlled variant that freezes the shared
 encoder on some realization updates. Do not change capacity, corpus, and schedule
 simultaneously because the cause would become unmeasurable.
 
-### 4. Use task-aware validation and checkpoint selection
+### 4. Task-aware validation and checkpoint selection
 
-Evaluate a meaningful deterministic validation subset at every milestone. Track
-intent macro-F1 with direct/history and synthetic/external breakdowns, affect
-macro-F1, expected/no-response F1, realization loss, and generation validity.
+The trainer evaluates a meaningful deterministic validation subset at every
+milestone. It tracks direct/history intent macro-F1, affect macro-F1,
+expected-response F1, and realization loss. The full evaluator adds
+synthetic/external breakdowns, no-response F1, and generation validity.
 
-Maintain atomic roles such as:
+It maintains atomic roles:
 
 ```text
 model-v5-latest.json
@@ -423,14 +443,16 @@ model-v5-best-perception.json
 model-v5-best-realization.json
 ```
 
-Choose best perception primarily by intent macro-F1. Choose best realization by
-loss subject to valid output. Retire the 16-sample averaged validation loss as a
-selection criterion.
+Best perception is selected by intent macro-F1. Best realization is selected by
+loss; the full milestone evaluator separately enforces valid output. The old
+16-sample averaged validation loss is no longer a selection criterion.
 
-### 5. Audit and strengthen supervision
+### 5. Supervision audit
 
-- Report counts and examples for every split, source, intent, affect, and
-  direct/history family.
+- `audit` reports counts and examples for every split, source, intent, affect,
+  expectation, direct/history form, and external label family.
+- CLINC150 trains only intent; GoEmotions trains only affect. Their heuristic
+  cross-task labels remain in the stable schema but do not produce gradients.
 - Inspect why apology, wellbeing, and assistance attract unrelated examples.
 - Add contrast groups for gratitude/apology, clarification/unknown,
   identity/wellbeing, agreement/refusal, and hostile intent/hostile affect.
@@ -443,9 +465,10 @@ selection criterion.
 - Add linguistic variety rather than duplicating rows; duplication lowers loss
   without adding semantic coverage.
 
-### 6. Add staged acceptance gates
+### 6. Staged acceptance gates
 
-Keep the original release gates as long-term goals. For the first v5 experiment:
+The evaluator keeps the original release gates as long-term goals and reports a
+separate first-experiment v5 gate:
 
 - Intent macro-F1 must beat the v4 peak of 0.214 and rise at milestones.
 - History intent performance must be materially above zero and close the direct
@@ -459,14 +482,64 @@ Keep the original release gates as long-term goals. For the first v5 experiment:
 Only after this succeeds should the project consider 96-dimensional embeddings,
 a second layer, a 128-token attention window, or a larger corpus.
 
-### 7. Checkpoint and compatibility work
+### 7. Checkpoint and compatibility
 
-- Increment the checkpoint version for new head weights and Adam moments.
-- Start fresh; do not pretend v4 vocabulary rows are trained classifier heads.
-- Preserve `Reply`, `NpcState`, reducer, tool API, visible alphabet, and dataset
-  schema where possible.
-- Persist head optimizer state, exact sampler state, and separate best metrics.
-- Extend deterministic uninterrupted-versus-resumed equivalence tests.
+- Checkpoint version 5 includes head weights, Adam moments, exact sampler state,
+  and separate best metrics.
+- V4 checkpoints fail with an explicit fresh-start message; they remain archives.
+- `Reply`, `NpcState`, the reducer, tool API, visible alphabet, and dataset schema
+  are preserved.
+- Deterministic uninterrupted-versus-resumed equivalence covers the new schedule
+  and parameter set.
+
+### 8. Step-7,000 milestone and SIMD investigation
+
+The first v5 run was paused after the atomic step-7,000 checkpoint. Its trainer
+validation was:
+
+| Metric | Step 7,000 |
+|---|---:|
+| Intent macro-F1 | 0.0919 |
+| Affect macro-F1 | 0.6658 |
+| Expected-response F1 | 0.9706 |
+| Direct intent macro-F1 | 0.0625 |
+| History intent macro-F1 | 0.0560 |
+| Realization loss | 2.4176 |
+| Best realization loss so far | 2.1436 at step 2,000 |
+
+The full 1,000-row evaluator at the same checkpoint reported intent macro-F1
+`0.0987`, affect macro-F1 `0.7103`, expected-response F1 `0.9695`, no-response
+F1 `0.2295`, and realization loss `2.1201`. Of 100 generated replies, 3% were
+invalid and 4% were unexpectedly empty. All six golden contrasts and both
+acceptance gates still failed.
+
+The development machine reports hardware-accelerated `System.Numerics.Vector<T>`
+with four `double` values per vector. Three variants were measured from the same
+step-7,000 checkpoint for the same deterministic 100 updates:
+
+| Variant | Time | Change from 15.611 s baseline |
+|---|---:|---:|
+| Vectorized fused dot/cross-entropy and gathered Adam buffers | 16.439 s | 5.3% slower |
+| Vectorized fused dot/cross-entropy only | 17.152 s | 9.9% slower |
+| Scalar graph with Adam bias correction hoisted | 15.688 s | 0.5% slower |
+
+No experimental optimization was retained. `Value[]` stores references to scalar
+objects, so SIMD requires gathering values into temporary contiguous buffers.
+For the current 16-128 element operations, that work costs more than the vector
+arithmetic saves. This matches Microsoft's warning that SIMD can regress when
+the workload or memory layout is unsuitable.
+
+The useful next optimization is an operation-level training tape with contiguous
+`double[]` activations and gradients. Keep the scalar `Value` path as the readable
+reference, then add fused matrix-vector forward/backward, RMSNorm, residual,
+ReLU, and Adam kernels over spans. Those kernels can use `Vector<double>` without
+gather/scatter overhead; outer matrix rows can then be evaluated for bounded
+multicore parallelism. Every kernel must retain numeric-gradient tests and exact
+uninterrupted-versus-resumed checkpoint tests.
+
+References: [.NET SIMD guidance](https://learn.microsoft.com/dotnet/standard/simd),
+[`Vector.IsHardwareAccelerated`](https://learn.microsoft.com/dotnet/api/system.numerics.vector.ishardwareaccelerated?view=net-10.0),
+and [`Vector<T>.Count`](https://learn.microsoft.com/dotnet/api/system.numerics.vector-1.count?view=net-10.0).
 
 ## Revision history
 
@@ -478,8 +551,9 @@ a second layer, a 128-token attention window, or a larger corpus.
 - **v4:** 64-dimensional model, user affect, response expectation, manifest data
   pipeline, 10,000-row curriculum, evaluation, training optimizations, and safe
   milestone resume commands.
-- **proposed v5:** dedicated perception heads, current-turn classification,
-  interleaved training, task-aware validation, and targeted data audit.
+- **v5:** dedicated perception heads, current-turn classification, interleaved
+  training, task-aware validation, source-specific supervision, and richer data
+  audit output. Full experiment results are pending.
 
 ## Command reference
 
@@ -494,10 +568,10 @@ dotnet run --project Fishbrain.DataGenerator -- fetch
 dotnet run --project Fishbrain.DataGenerator -- compile --count 10000 --seed 42
 dotnet run --project Fishbrain.DataGenerator -- audit
 
-# Revision 4
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v4.json
-dotnet run -c Release --project Fishbrain -- chat model-v4.json
+# Revision 5
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v5-latest.json
+dotnet run -c Release --project Fishbrain -- chat model-v5-latest.json
 
 # Generic JSONL workflow
 dotnet run --project Fishbrain -- train data.jsonl model.json 10000
@@ -506,7 +580,8 @@ dotnet run --project Fishbrain -- resume data.jsonl model.json
 
 ## Known limitations
 
-- Revision 4 checkpoints are experimental and fail cognition release gates.
+- Revision 4 checkpoints are historical archives and do not load in the v5 runtime.
+- Revision 5 has not completed its first full 40,000-step experiment.
 - One layer and 64 character dimensions provide little semantic capacity.
 - The active 64-token window discards older detail despite a 256-token context.
 - Character learning is simple but inefficient for word-level semantics.
