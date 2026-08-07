@@ -1,79 +1,97 @@
 # Fishbrain
 
 Fishbrain is a deliberately tiny, hackable character-level GPT written in C# and
-.NET 10 for short video-game NPC conversations. It is CPU-only, dependency-free,
-and keeps the model, scalar autograd engine, tokenizer, training loop, checkpoint
-format, and local tool calling small enough to read and modify.
+.NET 10 for short video-game NPC conversations. It is CPU-only and has no external
+NuGet dependencies. The project is based on the idea demonstrated by
+[martinskuta/microgpt](https://github.com/martinskuta/microgpt), adapted to teach
+explicit dialogue perception, persistent NPC behavior, and local C# tool calls.
 
-This project is based on the ideas demonstrated by
-[martinskuta/microgpt](https://github.com/martinskuta/microgpt), adapted for
-uppercase NPC dialogue and simple registered C# tools rather than name generation.
+## Revision 4
 
-## Features
-
-- One-layer, four-head character Transformer with 32-dimensional embeddings
-- Scalar reverse-mode autograd and Adam training
-- `A-Z`, `0-9`, and space tokenizer with internal control tokens
-- Rolling 256-token context and replies capped at 256 characters
-- Focused training on authoritative NPC response tokens
-- Checkpointed response vocabulary and exact dialogue memory
-- One synchronous, reflected C# tool call per reply
-- Intent-conditioned Markov training-data generator
-- No external NuGet packages
-
-## Try the included checkpoint
-
-```powershell
-dotnet run --project Fishbrain -- chat model.json
-```
-
-Example:
+The model now learns three visible tasks:
 
 ```text
-> PLAYER HELLO
-HELLO TRAVELER
-> PLAYER HOW ARE YOU DOING
-I AM DOING WELL
-> PLAYER CAN YOU HELP ME
-TELL ME WHAT YOU NEED
+LANGUAGE -> PERCEPTION -> BEHAVIOR
 ```
 
-Input is normalized to uppercase. Only letters, digits, and whitespace are
-accepted; punctuation and other symbols are intentionally unsupported.
+It uses one 64-dimensional Transformer layer, four attention heads, a
+128-dimensional MLP, and a 64-character attention window. Inputs and replies are
+limited to 256 characters. The vocabulary accepts uppercase letters, digits,
+spaces, and `. , ? ! ' - :`; normal input is canonicalized automatically.
 
-## Generate training data
+Perception predicts intent, user affect, and whether the utterance expects a
+response. C# deterministically selects the action and updates `NpcState`. A
+no-response turn returns an empty string while still persisting the state change.
+Novel ordinary dialogue uses free character generation; exact memory is used only
+for seen state/input pairs. Dynamic game facts remain tool-only.
 
-Generate the default 2,000-row catalog:
+## Build and test
 
 ```powershell
-dotnet run --project Fishbrain.DataGenerator -- generate
+dotnet build Fishbrain.slnx
+dotnet run --project Fishbrain -- selftest
+dotnet run --project Fishbrain.DataGenerator -- selftest
 ```
 
-Generate the smaller 300-row corpus used by the included checkpoint:
+## Acquire and compile teaching data
+
+Source revisions, SHA-256 hashes, licenses, attribution, and quotas are pinned in
+[`Fishbrain.DataGenerator/sources.json`](Fishbrain.DataGenerator/sources.json).
+Raw downloads and derived external records remain local and are ignored by Git.
 
 ```powershell
-dotnet run --project Fishbrain.DataGenerator -- generate --output data.jsonl --count 300 --seed 42
+dotnet run --project Fishbrain.DataGenerator -- fetch
+dotnet run --project Fishbrain.DataGenerator -- compile --count 10000 --seed 42
+dotnet run --project Fishbrain.DataGenerator -- audit
 ```
 
-The generator writes JSON Lines records such as:
+The deterministic corpus contains 6,000 project-owned synthetic contrast rows,
+2,000 OASST1-derived paired-response rows, 800 CLINC150 decision-only rows, and
+1,200 GoEmotions decision-only rows. Accepted OASST1 pairs are expanded across
+several NPC starting states; all variants from one conversation stay in the same
+split. The output is:
 
-```json
-{"input":"PLAYER HELLO","response":"HELLO TRAVELER"}
+```text
+datasets/compiled/train.jsonl        8000
+datasets/compiled/validation.jsonl   1000
+datasets/compiled/test.jsonl         1000
+datasets/compiled/review.jsonl       ambiguous rows excluded from training
 ```
 
-Questions are varied with intent-conditioned second-order word Markov chains.
-Answers use a deliberately small canonical vocabulary suited to this tiny model.
+## Teach and evaluate
 
-## Train
+Version 4 deliberately starts from fresh 64-dimensional weights. Keep older
+checkpoints as archives; they are not migrated.
 
 ```powershell
-dotnet run --project Fishbrain -- train data.jsonl model.json 3000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json
+dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v4.json
+dotnet run -c Release --project Fishbrain -- chat model-v4.json
 ```
 
-Training refuses to overwrite an existing checkpoint. Move the old checkpoint,
-choose another filename, or use `resume` with a new total step count.
+`teach` runs 40,000 deterministic steps: 8,000 language, 16,000 balanced
+perception, then 16,000 joint behavior steps. Calling the same command again
+resumes an incomplete checkpoint with its optimizer, RNG, phase, sampler, and
+validation-best metadata intact. The scalar-autograd design prioritizes clarity,
+so full CPU training is intentionally slow.
 
-## Register a tool
+The chat CLI prints the NPC reply together with intent, affect, response
+expectation, action, rapport, mood, topic, goal, and tone.
+
+## API
+
+```csharp
+var brain = Brain.Load("model-v4.json");
+var state = NpcState.Initial;
+
+ReplyResult result = brain.Reply("PLAYER HELLO, HOW ARE YOU?", state);
+state = result.State;
+
+Console.WriteLine(result.Text);
+Console.WriteLine(result.Perception);
+```
+
+Tools remain small reflected C# classes:
 
 ```csharp
 sealed class PlayerTools(PlayerState player)
@@ -82,29 +100,16 @@ sealed class PlayerTools(PlayerState player)
     public int GetGold(string playerId) => player.Gold;
 }
 
-var brain = Brain.Load("model.json");
 brain.Tools.Register(new PlayerTools(player));
-var reply = brain.Reply("PLAYER HOW MUCH GOLD");
 ```
 
-Only explicitly attributed public instance methods can be invoked. Tool-backed
-training rows bypass exact dialogue memory so inference must use the registered
-live tool rather than replaying a stale training result.
-
-## Self-tests
-
-```powershell
-dotnet run --project Fishbrain -- selftest
-dotnet run --project Fishbrain.DataGenerator -- selftest
-```
-
-The tests cover autograd, tokenization, causal behavior, checkpoint round trips,
-focused training data, tool validation, Markov generation, deterministic output,
-and atomic JSONL replacement.
+Only public instance methods explicitly marked with `GameTool` can run. A reply
+can invoke at most one registered synchronous tool, and failures return
+`I DO NOT KNOW.`
 
 ## Limits
 
-Fishbrain is an educational toy, not a general-purpose language model. Exact
-training inputs return their authoritative stored response. Unseen inputs use the
-GPT to choose among trained valid responses, so intent selection remains
-best-effort. Dynamic game facts should come from registered tools.
+Fishbrain is an educational toy, not a general-purpose language model. Its tiny
+capacity and project-scale corpus are useful for experiments, NPC barks, and
+understanding the whole stack—not for factual, medical, legal, safety-critical,
+or current-information answers.

@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "name": "OASST1",
+      "revision": "fd7dd3fc13915d6a3bba7e4e854b940b651a4032",
+      "license": "Apache-2.0",
+      "attribution": "OpenAssistant Conversations Dataset (OASST1), OpenAssistant contributors",
+      "quota": 2000,
+      "files": [
+        {
+          "path": "oasst1.jsonl.gz",
+          "url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/fd7dd3fc13915d6a3bba7e4e854b940b651a4032/2023-04-12_oasst_all.messages.jsonl.gz",
+          "sha256": "2ff4aa8999c911ffec7972ddf70359f220b3da184b731f3649f68b1391e19341"
+        }
+      ]
+    },
+    {
+      "name": "CLINC150",
+      "revision": "828f8093932c8fe6ca7936c3d2e52903b1c523de",
+      "license": "CC-BY-3.0",
+      "attribution": "An Evaluation Dataset for Intent Classification and Out-of-Scope Prediction, Larson et al.",
+      "quota": 800,
+      "files": [
+        {
+          "path": "clinc150.json",
+          "url": "https://raw.githubusercontent.com/clinc/oos-eval/828f8093932c8fe6ca7936c3d2e52903b1c523de/data/data_full.json",
+          "sha256": "36923c3705a59e08fe9c3883d8bc2dd966ef93e22cb78ac41171782a698d56e0"
+        }
+      ]
+    },
+    {
+      "name": "GOEMOTIONS",
+      "revision": "b24f2136e8ef405b900b5619760126304f190941",
+      "license": "Apache-2.0",
+      "attribution": "GoEmotions: A Dataset of Fine-Grained Emotions, Demszky et al.",
+      "quota": 1200,
+      "files": [
+        {
+          "path": "go-train.tsv",
+          "url": "https://raw.githubusercontent.com/google-research/google-research/b24f2136e8ef405b900b5619760126304f190941/goemotions/data/train.tsv",
+          "sha256": "1c254a142be5c00e80d819b9ae1bbd36d94b2eeb8f4b1271846508d57e57d9c5"
+        },
+        {
+          "path": "go-dev.tsv",
+          "url": "https://raw.githubusercontent.com/google-research/google-research/b24f2136e8ef405b900b5619760126304f190941/goemotions/data/dev.tsv",
+          "sha256": "575489c079c9de1097062a01738f998590d6b7ead66dd1c9fd1d2ba01fd8bc62"
+        },
+        {
+          "path": "go-test.tsv",
+          "url": "https://raw.githubusercontent.com/google-research/google-research/b24f2136e8ef405b900b5619760126304f190941/goemotions/data/test.tsv",
+          "sha256": "0587b2dd8b27b97352adbfc3fb083d46005c8946657fdc2b1ca8b1cc7f1f8be4"
+        }
+      ]
+    }
+  ]
+}
