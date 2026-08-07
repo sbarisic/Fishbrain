@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Fishbrain.DataGenerator/Fishbrain.DataGenerator.csproj" />
+  <Project Path="Fishbrain/Fishbrain.csproj" />
+</Solution>
