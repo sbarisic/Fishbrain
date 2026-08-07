@@ -6,29 +6,30 @@ namespace Fishbrain;
 
 public sealed partial class Brain
 {
-    private static readonly byte[] V10Magic = "FISHBRN10\n"u8.ToArray();
+    private static readonly byte[] V11Magic = "FISHBRN11\n"u8.ToArray();
 
     internal void ExportInference(string path, string corpusHash = "UNKNOWN")
     {
         SyncScalarWeights();
-        var header = new V10InferenceHeader
+        var header = new V11InferenceHeader
         {
             Format = "FISHBRAIN INFERENCE MODEL",
-            Version = 10,
+            Version = 11,
             Config = Config,
             CompletedSteps = _step,
             CorpusHash = corpusHash,
             Words = _vocabulary.Words,
             OutputWords = _vocabulary.OutputWords,
             TrainedTools = _trainedTools.Order(StringComparer.Ordinal).ToArray(),
-            ResponseCatalog = _responseCatalog,
-            LabelSchemas = V10Schemas.Labels,
+            ResponseCatalog = V11ResponseCatalog.SurfaceCatalog.ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal),
+            LabelSchemas = V11Schemas.Labels,
             ConfidenceCalibration = _confidenceCalibration,
             ToolSchemas = DemoGameTools.CreateMerchant().Schemas.OrderBy(schema => schema.Name).ToArray(),
-            CandidateCatalog = V10Candidates.OrderBy(candidate => candidate.Id).ToArray(),
+            CandidateCatalog = V11Candidates.OrderBy(candidate => candidate.Id).ToArray(),
             TransformerWeightCount = _weights.Length,
             StructuredWeightCount = _structuredHeads.WeightCount,
             StructuredUpdates = _structuredHeads.Updates,
+            StructuredLabelThresholds = _structuredHeads.SnapshotLabelThresholds(),
             WeightEncoding = "IEEE754_FLOAT32_LITTLE_ENDIAN"
         };
         var structuredWeights = _structuredHeads.Snapshot();
@@ -48,7 +49,7 @@ public sealed partial class Brain
         using (var stream = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None))
         using (var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: false))
         {
-            writer.Write(V10Magic);
+            writer.Write(V11Magic);
             writer.Write(headerBytes.Length);
             writer.Write(headerBytes);
             writer.Write(weightBytes);
@@ -60,30 +61,30 @@ public sealed partial class Brain
     internal static bool IsInferenceCheckpoint(string path)
     {
         using var stream = File.OpenRead(path);
-        if (stream.Length < V10Magic.Length) return false;
-        var magic = new byte[V10Magic.Length];
+        if (stream.Length < V11Magic.Length) return false;
+        var magic = new byte[V11Magic.Length];
         stream.ReadExactly(magic);
-        return magic.SequenceEqual(V10Magic);
+        return magic.SequenceEqual(V11Magic);
     }
 
     private static Brain LoadInferenceCheckpoint(string path)
     {
         using var stream = File.OpenRead(path);
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: false);
-        if (!reader.ReadBytes(V10Magic.Length).SequenceEqual(V10Magic))
+        if (!reader.ReadBytes(V11Magic.Length).SequenceEqual(V11Magic))
             throw new InvalidDataException("Invalid Fishbrain inference checkpoint magic.");
         var headerLength = reader.ReadInt32();
         if (headerLength is <= 0 or > 16_777_216) throw new InvalidDataException("Invalid checkpoint header length.");
         var headerBytes = reader.ReadBytes(headerLength);
         if (headerBytes.Length != headerLength) throw new EndOfStreamException("Checkpoint header is truncated.");
-        var header = JsonSerializer.Deserialize<V10InferenceHeader>(headerBytes)
+        var header = JsonSerializer.Deserialize<V11InferenceHeader>(headerBytes)
             ?? throw new InvalidDataException("Checkpoint header is empty.");
-        if (header.Version != 10 || header.WeightEncoding != "IEEE754_FLOAT32_LITTLE_ENDIAN")
+        if (header.Version != 11 || header.WeightEncoding != "IEEE754_FLOAT32_LITTLE_ENDIAN")
             throw new InvalidDataException("Unsupported Fishbrain inference checkpoint.");
         header.Config.Validate();
-        V10Schemas.Validate(header.LabelSchemas, header.ConfidenceCalibration);
+        V11Schemas.Validate(header.LabelSchemas, header.ConfidenceCalibration);
         if (!header.CandidateCatalog.Select(candidate => candidate.Id)
-                .SequenceEqual(V10Candidates.OrderBy(candidate => candidate.Id).Select(candidate => candidate.Id)))
+                .SequenceEqual(V11Candidates.OrderBy(candidate => candidate.Id).Select(candidate => candidate.Id)))
             throw new InvalidDataException("Checkpoint response candidate schema does not match this runtime.");
         var weightByteCount = checked((header.TransformerWeightCount + header.StructuredWeightCount) * sizeof(float));
         var weightBytes = reader.ReadBytes(weightByteCount);
@@ -109,7 +110,7 @@ public sealed partial class Brain
             for (var index = 0; index < brain._weights.Length; index++) brain._weights[index] = weightReader.ReadSingle();
             for (var index = 0; index < structured.Length; index++) structured[index] = weightReader.ReadSingle();
         }
-        brain._structuredHeads.Restore(structured, header.StructuredUpdates);
+        brain._structuredHeads.Restore(structured, header.StructuredUpdates, header.StructuredLabelThresholds);
         brain._confidenceCalibration = header.ConfidenceCalibration;
         brain._corpusHash = header.CorpusHash;
         brain._scalarWeightsCurrent = false;
@@ -125,12 +126,12 @@ public sealed partial class Brain
     {
         using var stream = File.OpenRead(path);
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: false);
-        if (!reader.ReadBytes(V10Magic.Length).SequenceEqual(V10Magic))
+        if (!reader.ReadBytes(V11Magic.Length).SequenceEqual(V11Magic))
             throw new InvalidDataException("Invalid Fishbrain inference checkpoint magic.");
         var length = reader.ReadInt32();
         if (length is <= 0 or > 16_777_216) throw new InvalidDataException("Invalid checkpoint header length.");
         var headerBytes = reader.ReadBytes(length);
-        var header = JsonSerializer.Deserialize<V10InferenceHeader>(headerBytes)
+        var header = JsonSerializer.Deserialize<V11InferenceHeader>(headerBytes)
             ?? throw new InvalidDataException("Checkpoint header is empty.");
         _ = LoadInferenceCheckpoint(path);
         return JsonSerializer.Serialize(new
@@ -151,13 +152,14 @@ public sealed partial class Brain
             header.TransformerWeightCount,
             header.StructuredWeightCount,
             header.StructuredUpdates,
+            header.StructuredLabelThresholds,
             header.WeightEncoding,
             header.WeightsSha256,
             Integrity = "VALID"
         }, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    private sealed class V10InferenceHeader
+    private sealed class V11InferenceHeader
     {
         public string Format { get; set; } = "";
         public int Version { get; set; }
@@ -169,18 +171,19 @@ public sealed partial class Brain
         public string[] TrainedTools { get; set; } = [];
         public Dictionary<string, string[]> ResponseCatalog { get; set; } = new(StringComparer.Ordinal);
         public Dictionary<string, string[]> LabelSchemas { get; set; } = new(StringComparer.Ordinal);
-        public Dictionary<string, V10Schemas.ConfidenceThreshold> ConfidenceCalibration { get; set; } = new(StringComparer.Ordinal);
+        public Dictionary<string, V11Schemas.ConfidenceThreshold> ConfidenceCalibration { get; set; } = new(StringComparer.Ordinal);
         public ToolSchema[] ToolSchemas { get; set; } = [];
         public ResponseCandidate[] CandidateCatalog { get; set; } = [];
         public int TransformerWeightCount { get; set; }
         public int StructuredWeightCount { get; set; }
         public int StructuredUpdates { get; set; }
+        public Dictionary<string, double> StructuredLabelThresholds { get; set; } = new(StringComparer.Ordinal);
         public string WeightEncoding { get; set; } = "";
         public string WeightsSha256 { get; set; } = "";
     }
 }
 
-internal static class V10Schemas
+internal static class V11Schemas
 {
     internal sealed record ConfidenceThreshold(double Threshold, double Margin);
 
@@ -194,6 +197,7 @@ internal static class V10Schemas
         ["policy"] = Enum.GetNames<ResponsePolicy>(),
         ["slots"] = Enum.GetNames<SlotType>(),
         ["content"] = Enum.GetNames<ContentFlag>()
+        , ["knowledgeTarget"] = Enum.GetNames<KnowledgeTarget>()
     };
 
     public static Dictionary<string, ConfidenceThreshold> DefaultCalibration => new(StringComparer.Ordinal)
@@ -203,7 +207,7 @@ internal static class V10Schemas
         ["stance"] = new(0.65, 0.12), ["policy"] = new(0.75, 0.15),
         ["slots"] = new(0.80, 0.10), ["content"] = new(0.50, 0.10),
         ["toolReadOnly"] = new(0.95, 0.05), ["toolMutating"] = new(0.99, 0.01),
-        ["responseCandidate"] = new(0.70, 0.10)
+        ["responseCandidate"] = new(0.70, 0.10), ["knowledgeTarget"] = new(0.85, 0.10)
     };
 
     public static void Validate(

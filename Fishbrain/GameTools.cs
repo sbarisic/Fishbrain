@@ -63,7 +63,6 @@ public sealed class GameToolRegistry
 
     public IReadOnlyCollection<ToolSchema> Schemas => _tools.Values.Select(tool => tool.Schema).ToArray();
     public bool Contains(string name) => _tools.ContainsKey(name);
-
     internal bool TryGet(string name, out IGameTool tool) => _tools.TryGetValue(name, out tool!);
 
     internal static string IdempotencyKey(string conversationId, string turnId)
@@ -192,95 +191,220 @@ public sealed class GameToolRegistry
         var seen = new HashSet<string>(StringComparer.Ordinal);
         if (names.Any(name => !seen.Add(name))) throw new ArgumentException($"Tool '{tool}' has duplicate {kind} names.");
     }
+}
 
-    private static IReadOnlyDictionary<string, string> EmptyFields { get; } =
-        new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
+/// <summary>Authoritative, thread-safe demo world shared by every registered demo tool.</summary>
+public sealed class DemoWorldState
+{
+    private readonly object _gate = new();
+    private readonly ConcurrentDictionary<string, GameToolResult> _completed = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, int> _merchantStock = new(StringComparer.Ordinal)
+    {
+        ["IRON SWORD"] = 20, ["HEALTH POTION"] = 50, ["ROPE"] = 30
+    };
+    private readonly Dictionary<string, int> _playerInventory = new(StringComparer.Ordinal)
+    {
+        ["HEALTH POTION"] = 1, ["ROPE"] = 2
+    };
+    private readonly Dictionary<string, int> _prices = new(StringComparer.Ordinal)
+    {
+        ["IRON SWORD"] = 25, ["HEALTH POTION"] = 8, ["ROPE"] = 3
+    };
+    private readonly Dictionary<string, string> _locations = new(StringComparer.Ordinal)
+    {
+        ["INN"] = "NORTH BY THE FOUNTAIN",
+        ["THE INN"] = "NORTH BY THE FOUNTAIN",
+        ["MARKET"] = "EAST OF THE GATE",
+        ["THE MARKET"] = "EAST OF THE GATE",
+        ["HELL"] = "DOWN BELOW",
+        ["CASTLE"] = "ON THE HILL",
+        ["THE CASTLE"] = "ON THE HILL",
+        ["ZAGREB"] = "IN CROATIA, EUROPE"
+    };
+    private readonly Dictionary<string, string> _facts = new(StringComparer.Ordinal)
+    {
+        ["CASTLE"] = "THE CASTLE STANDS ON THE HILL ABOVE THE VILLAGE",
+        ["VILLAGE"] = "THIS VILLAGE GUARDS THE EASTERN ROAD",
+        ["REACTOR"] = "THE REACTOR POWERS THE STATION"
+    };
+    private int _balance = 100;
+
+    public string CurrentLocation { get; set; } = "VILLAGE MARKET";
+
+    public int Balance { get { lock (_gate) return _balance; } }
+    public IReadOnlyDictionary<string, int> Inventory
+    {
+        get { lock (_gate) return new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(_playerInventory)); }
+    }
+
+    internal GameToolResult Once(GameToolInvocation invocation, Func<GameToolResult> action) =>
+        _completed.GetOrAdd(invocation.IdempotencyKey, _ => action());
+
+    internal GameToolResult Locate(string place) => _locations.TryGetValue(place, out var direction)
+        ? Success(("PLACE", place), ("DIRECTION", direction))
+        : Failure("NOT_FOUND", ("PLACE", place), ("REASON", "UNKNOWN PLACE"));
+
+    internal GameToolResult WorldFact(string topic) => _facts.TryGetValue(topic, out var fact)
+        ? Success(("TOPIC", topic), ("FACT", fact))
+        : Failure("NOT_FOUND", ("TOPIC", topic), ("REASON", "UNKNOWN FACT"));
+
+    internal GameToolResult ListWares()
+    {
+        lock (_gate)
+        {
+            var wares = string.Join(", ", _merchantStock.Where(item => item.Value > 0)
+                .OrderBy(item => item.Key, StringComparer.Ordinal).Select(item => $"{item.Key} ({item.Value})"));
+            return Success(("WARES", wares));
+        }
+    }
+
+    internal GameToolResult ListInventory()
+    {
+        lock (_gate)
+        {
+            var items = _playerInventory.Count == 0 ? "NOTHING" : string.Join(", ", _playerInventory
+                .Where(item => item.Value > 0).OrderBy(item => item.Key, StringComparer.Ordinal)
+                .Select(item => $"{item.Value} {item.Key}"));
+            return Success(("ITEMS", items));
+        }
+    }
+
+    internal GameToolResult Price(string item)
+    {
+        lock (_gate)
+            return _prices.TryGetValue(item, out var price)
+                ? Success(("ITEM", item), ("PRICE", Number(price)), ("CURRENCY", "GOLD"))
+                : Failure("UNKNOWN_ITEM", ("ITEM", item), ("REASON", "UNKNOWN ITEM"));
+    }
+
+    internal GameToolResult Buy(string item, int quantity)
+    {
+        lock (_gate)
+        {
+            if (quantity <= 0) return TradeFailure("INVALID_QUANTITY", item, quantity, "QUANTITY MUST BE POSITIVE");
+            if (!_prices.TryGetValue(item, out var price) || !_merchantStock.TryGetValue(item, out var stock))
+                return TradeFailure("UNKNOWN_ITEM", item, quantity, "UNKNOWN ITEM");
+            if (stock < quantity) return TradeFailure("OUT_OF_STOCK", item, quantity, "OUT OF STOCK");
+            int total;
+            try { total = checked(price * quantity); }
+            catch (OverflowException) { return TradeFailure("AMOUNT_OVERFLOW", item, quantity, "AMOUNT TOO LARGE"); }
+            if (_balance < total) return TradeFailure("INSUFFICIENT_FUNDS", item, quantity, "INSUFFICIENT FUNDS");
+            _merchantStock[item] -= quantity;
+            _playerInventory[item] = checked(_playerInventory.GetValueOrDefault(item) + quantity);
+            _balance -= total;
+            return Success(("ITEM", item), ("QUANTITY", Number(quantity)), ("PRICE", Number(total)),
+                ("CURRENCY", "GOLD"), ("BALANCE", Number(_balance)));
+        }
+    }
+
+    internal GameToolResult Sell(string item, int quantity)
+    {
+        lock (_gate)
+        {
+            if (quantity <= 0) return TradeFailure("INVALID_QUANTITY", item, quantity, "QUANTITY MUST BE POSITIVE");
+            if (!_prices.TryGetValue(item, out var price))
+                return TradeFailure("UNKNOWN_ITEM", item, quantity, "UNKNOWN ITEM");
+            if (_playerInventory.GetValueOrDefault(item) < quantity)
+                return TradeFailure("INSUFFICIENT_INVENTORY", item, quantity, "YOU DO NOT HAVE THAT MANY");
+            int total;
+            try { total = checked(Math.Max(1, price / 2) * quantity); }
+            catch (OverflowException) { return TradeFailure("AMOUNT_OVERFLOW", item, quantity, "AMOUNT TOO LARGE"); }
+            try { _balance = checked(_balance + total); }
+            catch (OverflowException) { return TradeFailure("BALANCE_OVERFLOW", item, quantity, "BALANCE TOO LARGE"); }
+            _playerInventory[item] -= quantity;
+            if (_playerInventory[item] == 0) _playerInventory.Remove(item);
+            _merchantStock[item] = checked(_merchantStock.GetValueOrDefault(item) + quantity);
+            return Success(("ITEM", item), ("QUANTITY", Number(quantity)), ("PRICE", Number(total)),
+                ("CURRENCY", "GOLD"), ("BALANCE", Number(_balance)));
+        }
+    }
+
+    private static GameToolResult TradeFailure(string code, string item, int quantity, string reason) =>
+        Failure(code, ("ITEM", item), ("QUANTITY", Number(Math.Max(0, quantity))), ("REASON", reason));
+
+    internal static GameToolResult Success(params (string Name, string Value)[] fields) =>
+        new(true, Fields(fields));
+    internal static GameToolResult Failure(string code, params (string Name, string Value)[] fields) =>
+        new(false, Fields(fields), code);
+    internal static IReadOnlyDictionary<string, string> Fields(params (string Name, string Value)[] values) =>
+        new ReadOnlyDictionary<string, string>(values.ToDictionary(item => item.Name, item => item.Value, StringComparer.Ordinal));
+    internal static string Number(int value) => value.ToString(CultureInfo.InvariantCulture);
 }
 
 public static class DemoGameTools
 {
-    public static GameToolRegistry CreateMerchant() => new(new IGameTool[]
-    {
-        new LocationTool(), new MerchantTool("LIST_WARES", false), new MerchantTool("LOOKUP_PRICE", false),
-        new MerchantTool("BUY", true), new MerchantTool("SELL", true)
-    });
+    public static GameToolRegistry CreateMerchant() => CreateMerchant(new DemoWorldState());
 
-    private sealed class LocationTool : IGameTool
+    public static GameToolRegistry CreateMerchant(DemoWorldState world)
     {
-        public ToolSchema Schema { get; } = new(
-            "LOOKUP_LOCATION",
-            [new("PLACE", ToolValueType.String)],
-            [new("PLACE", ToolValueType.String), new("DIRECTION", ToolValueType.String)],
-            false,
-            [new("FOUND", "{PLACE} IS {DIRECTION}.", ["PLACE", "DIRECTION"]),
-             new("NOT_FOUND", "I CANNOT LOCATE {PLACE}.", ["PLACE"], false)]);
-
-        public GameToolResult Execute(GameToolInvocation invocation)
+        ArgumentNullException.ThrowIfNull(world);
+        return new GameToolRegistry(new IGameTool[]
         {
-            var place = invocation.Arguments["PLACE"];
-            var direction = place switch
-            {
-                "INN" or "THE INN" => "NORTH BY THE FOUNTAIN",
-                "MARKET" or "THE MARKET" => "EAST OF THE GATE",
-                _ => null
-            };
-            return direction is null
-                ? new(false, Fields(("PLACE", place)), "NOT_FOUND")
-                : new(true, Fields(("PLACE", place), ("DIRECTION", direction)));
-        }
+            new DemoTool(world, LocationSchema, invocation => world.Locate(invocation.Arguments["PLACE"])),
+            new DemoTool(world, ListWaresSchema, _ => world.ListWares()),
+            new DemoTool(world, PriceSchema, invocation => world.Price(invocation.Arguments["ITEM"])),
+            new DemoTool(world, BuySchema, invocation => world.Buy(invocation.Arguments["ITEM"], Quantity(invocation))),
+            new DemoTool(world, SellSchema, invocation => world.Sell(invocation.Arguments["ITEM"], Quantity(invocation))),
+            new DemoTool(world, BalanceSchema, _ => DemoWorldState.Success(("BALANCE", DemoWorldState.Number(world.Balance)), ("CURRENCY", "GOLD"))),
+            new DemoTool(world, InventorySchema, _ => world.ListInventory()),
+            new DemoTool(world, CurrentLocationSchema, _ => DemoWorldState.Success(("LOCATION", DialogueText.Normalize(world.CurrentLocation)))),
+            new DemoTool(world, WorldFactSchema, invocation => world.WorldFact(invocation.Arguments["TOPIC"]))
+        });
     }
 
-    private sealed class MerchantTool(string name, bool mutates) : IGameTool
+    private static int Quantity(GameToolInvocation invocation) =>
+        int.Parse(invocation.Arguments["QUANTITY"], NumberStyles.None, CultureInfo.InvariantCulture);
+
+    private sealed class DemoTool(
+        DemoWorldState world,
+        ToolSchema schema,
+        Func<GameToolInvocation, GameToolResult> execute) : IGameTool
     {
-        private readonly ConcurrentDictionary<string, GameToolResult> _completed = new(StringComparer.Ordinal);
-        private int _stock = 20;
-
-        public ToolSchema Schema { get; } = CreateSchema(name, mutates);
-
+        public ToolSchema Schema { get; } = schema;
         public GameToolResult Execute(GameToolInvocation invocation) =>
-            _completed.GetOrAdd(invocation.IdempotencyKey, _ => ExecuteOnce(invocation));
-
-        private GameToolResult ExecuteOnce(GameToolInvocation invocation)
-        {
-            return invocation.ToolName switch
-            {
-                "LIST_WARES" => new(true, Fields(("WARES", "IRON SWORD, HEALTH POTION, ROPE"))),
-                "LOOKUP_PRICE" => Price(invocation.Arguments["ITEM"]),
-                "BUY" => Trade(invocation, buying: true),
-                "SELL" => Trade(invocation, buying: false),
-                _ => new(false, Fields(("ERROR", "UNKNOWN TOOL")), "UNKNOWN_TOOL")
-            };
-        }
-
-        private static GameToolResult Price(string item) => new(true,
-            Fields(("ITEM", item), ("PRICE", item == "IRON SWORD" ? "25" : item == "HEALTH POTION" ? "8" : "3"), ("CURRENCY", "GOLD")));
-
-        private GameToolResult Trade(GameToolInvocation invocation, bool buying)
-        {
-            var item = invocation.Arguments["ITEM"];
-            var quantity = int.Parse(invocation.Arguments["QUANTITY"], CultureInfo.InvariantCulture);
-            if (buying && quantity > _stock)
-                return new(false, Fields(("ITEM", item), ("QUANTITY", quantity.ToString(CultureInfo.InvariantCulture))), "OUT_OF_STOCK");
-            Interlocked.Add(ref _stock, buying ? -quantity : quantity);
-            return new(true, Fields(("ITEM", item), ("QUANTITY", quantity.ToString(CultureInfo.InvariantCulture))));
-        }
-
-        private static ToolSchema CreateSchema(string name, bool mutates) => name switch
-        {
-            "LIST_WARES" => new(name, [], [new("WARES", ToolValueType.String)], false,
-                [new("LIST", "I HAVE {WARES}.", ["WARES"])]),
-            "LOOKUP_PRICE" => new(name, [new("ITEM", ToolValueType.String)],
-                [new("ITEM", ToolValueType.String), new("PRICE", ToolValueType.Integer), new("CURRENCY", ToolValueType.String)], false,
-                [new("PRICE", "{ITEM} COSTS {PRICE} {CURRENCY}.", ["ITEM", "PRICE", "CURRENCY"])]),
-            "BUY" or "SELL" => new(name,
-                [new("ITEM", ToolValueType.String), new("QUANTITY", ToolValueType.Integer)],
-                [new("ITEM", ToolValueType.String), new("QUANTITY", ToolValueType.Integer)], mutates,
-                [new("DONE", name == "BUY" ? "YOU BOUGHT {QUANTITY} {ITEM}." : "YOU SOLD {QUANTITY} {ITEM}.", ["QUANTITY", "ITEM"]),
-                 new("FAILED", "I CANNOT COMPLETE THAT {ITEM} TRANSACTION.", ["ITEM"], false)]),
-            _ => throw new ArgumentOutOfRangeException(nameof(name))
-        };
+            world.Once(invocation, () => execute(invocation));
     }
 
-    private static IReadOnlyDictionary<string, string> Fields(params (string Name, string Value)[] values) =>
-        new ReadOnlyDictionary<string, string>(values.ToDictionary(item => item.Name, item => item.Value, StringComparer.Ordinal));
+    private static readonly ToolResultField Reason = new("REASON", ToolValueType.String, false);
+    private static readonly ToolResultField Item = new("ITEM", ToolValueType.String);
+    private static readonly ToolResultField QuantityField = new("QUANTITY", ToolValueType.Integer);
+    private static readonly ToolResultField PriceField = new("PRICE", ToolValueType.Integer, false);
+    private static readonly ToolResultField Currency = new("CURRENCY", ToolValueType.String, false);
+    private static readonly ToolResultField Balance = new("BALANCE", ToolValueType.Integer, false);
+
+    private static readonly ToolSchema LocationSchema = new(
+        "LOOKUP_LOCATION", [new("PLACE", ToolValueType.String)],
+        [new("PLACE", ToolValueType.String), new("DIRECTION", ToolValueType.String, false), Reason], false,
+        [new("FOUND", "{PLACE} IS {DIRECTION}.", ["PLACE", "DIRECTION"]),
+         new("NOT_FOUND", "I CANNOT LOCATE {PLACE}.", ["PLACE"], false)]);
+    private static readonly ToolSchema ListWaresSchema = new(
+        "LIST_WARES", [], [new("WARES", ToolValueType.String)], false,
+        [new("LIST", "I HAVE {WARES}.", ["WARES"])]);
+    private static readonly ToolSchema PriceSchema = new(
+        "LOOKUP_PRICE", [new("ITEM", ToolValueType.String)], [Item, PriceField, Currency, Reason], false,
+        [new("PRICE", "{ITEM} COSTS {PRICE} {CURRENCY}.", ["ITEM", "PRICE", "CURRENCY"]),
+         new("UNKNOWN", "I CANNOT PRICE {ITEM}: {REASON}.", ["ITEM", "REASON"], false)]);
+    private static readonly ToolSchema BuySchema = TradeSchema("BUY", "BOUGHT");
+    private static readonly ToolSchema SellSchema = TradeSchema("SELL", "SOLD");
+    private static ToolSchema TradeSchema(string name, string past) => new(
+        name, [new("ITEM", ToolValueType.String), new("QUANTITY", ToolValueType.Integer)],
+        [Item, QuantityField, PriceField, Currency, Balance, Reason], true,
+        [new("DONE", $"YOU {past} {{QUANTITY}} {{ITEM}} FOR {{PRICE}} {{CURRENCY}}. YOUR BALANCE IS {{BALANCE}} {{CURRENCY}}.",
+             ["QUANTITY", "ITEM", "PRICE", "CURRENCY", "BALANCE"]),
+         new("FAILED", "I CANNOT COMPLETE THE {QUANTITY} {ITEM} TRANSACTION: {REASON}.",
+             ["QUANTITY", "ITEM", "REASON"], false)]);
+    private static readonly ToolSchema BalanceSchema = new(
+        "GET_BALANCE", [], [Balance, Currency], false,
+        [new("BALANCE", "YOU HAVE {BALANCE} {CURRENCY}.", ["BALANCE", "CURRENCY"])]);
+    private static readonly ToolSchema InventorySchema = new(
+        "LIST_INVENTORY", [], [new("ITEMS", ToolValueType.String)], false,
+        [new("INVENTORY", "YOU CARRY {ITEMS}.", ["ITEMS"])]);
+    private static readonly ToolSchema CurrentLocationSchema = new(
+        "GET_CURRENT_LOCATION", [], [new("LOCATION", ToolValueType.String)], false,
+        [new("LOCATION", "YOU ARE AT {LOCATION}.", ["LOCATION"])]);
+    private static readonly ToolSchema WorldFactSchema = new(
+        "LOOKUP_WORLD_FACT", [new("TOPIC", ToolValueType.String)],
+        [new("TOPIC", ToolValueType.String), new("FACT", ToolValueType.String, false), Reason], false,
+        [new("FACT", "{FACT}.", ["FACT"]),
+         new("UNKNOWN", "I DO NOT HAVE A RELIABLE FACT ABOUT {TOPIC}.", ["TOPIC"], false)]);
 }

@@ -14,6 +14,12 @@ var tests = new (string Name, Action Test)[]
     ("OOV SLOT PRESERVATION", OovSlotPreservation),
     ("MULTI INTENT", MultiIntent),
     ("STATE CONSISTENCY", StateConsistency),
+    ("V11 TRANSCRIPT REGRESSIONS", V11TranscriptRegressions),
+    ("PERSONA FIDELITY", PersonaFidelity),
+    ("STATE HYSTERESIS", StateHysteresis),
+    ("AUTHORITATIVE DEMO WORLD", AuthoritativeDemoWorld),
+    ("REFERENCE RESOLUTION", ReferenceResolution),
+    ("RESPONSE CATALOG", ResponseCatalog),
     ("TOOL SCHEMA VALIDATION", ToolSchemaValidation),
     ("COMPACT CHECKPOINT", CompactCheckpoint)
 };
@@ -28,7 +34,7 @@ static Brain TestBrain() => Brain.CreateForTesting(new BrainConfig
 
 static ReplyRequest Request(string text, NpcDialogueState? state = null, string turnId = "1") =>
     new("TEST-CONVERSATION", turnId, [new(DialogueRole.Player, text)],
-        state ?? NpcDialogueState.Initial, 41);
+        state ?? NpcDialogueState.Initial, NpcPersona.Default, 41);
 
 static void StructuredRoles()
 {
@@ -47,7 +53,7 @@ static void BoundedHistory()
             new DialogueTurn(DialogueRole.Player, "HELLO " + index),
             new DialogueTurn(DialogueRole.Npc, "GREETINGS")
         }).Append(new DialogueTurn(DialogueRole.Player, "WHERE IS THE INN?")).ToArray();
-    var request = new ReplyRequest("LONG", "2001", turns, NpcDialogueState.Initial, 3);
+    var request = new ReplyRequest("LONG", "2001", turns, NpcDialogueState.Initial, NpcPersona.Default, 3);
     var result = TestBrain().Reply(request, DemoGameTools.CreateMerchant());
     Assert(result.Diagnostics.PackedTurnCount < turns.Length, "history bounded by complete turns");
     Assert(result.Diagnostics.PackedTokenCount >= 5, "current turn always retained");
@@ -126,6 +132,88 @@ static void StateConsistency()
         Assert(state.ActiveDomains.Count <= 4 && state.ActiveGoals.Count <= 4 && state.PendingActions.Count <= 3,
             "state bounds preserved");
     }
+}
+
+static void V11TranscriptRegressions()
+{
+    var brain = TestBrain();
+    var tools = DemoGameTools.CreateMerchant();
+    var hello = brain.Reply(Request("hello"), tools);
+    Assert(hello.Perception.SpeechActs.SequenceEqual([SpeechAct.Greet]), "HELLO is GREET without REQUEST leakage");
+    var trade = brain.Reply(Request("please trade with me"), tools);
+    Assert(trade.Perception.Domains.Contains(DialogueDomain.TradeEconomy) &&
+           trade.Perception.Policy is not (ResponsePolicy.Refuse or ResponsePolicy.Clarify) &&
+           trade.Diagnostics.ResponseSource is not ResponseSource.Fallback,
+        "trade opening is recognized without generic fallback");
+    var correction = brain.Reply(Request("you don't know what?"), tools);
+    Assert(correction.Perception.SpeechActs.Contains(SpeechAct.Correct) &&
+           !correction.Perception.SpeechActs.Contains(SpeechAct.Apologize), "correction is not apology");
+    var sword = brain.Reply(Request("i need a sword"), tools);
+    Assert(sword.Perception.Affect == UserAffect.Neutral &&
+           sword.Perception.Domains.Contains(DialogueDomain.ItemsInventory) &&
+           sword.Diagnostics.ResponseSource is not ResponseSource.Fallback,
+        "neutral item request remains relevant");
+}
+
+static void PersonaFidelity()
+{
+    var brain = TestBrain();
+    var persona = new NpcPersona("MIRA_1", "MIRA", "ENGINEER", "MARS", "ORBITAL NINE",
+        "TWO BROTHERS", "REACTOR ENGINEER", "FREE COLONIES", ["DIRECT", "LOYAL"]);
+    ReplyResult Ask(string text) => brain.Reply(Request(text) with { Persona = persona }, DemoGameTools.CreateMerchant());
+    Assert(Ask("what is your name?").Text == "MY NAME IS MIRA.", "persona name is authoritative");
+    Assert(Ask("where are you from?").Text == "I AM FROM MARS.", "persona origin is authoritative");
+    Assert(Ask("do you have family?").Text == "MY FAMILY IS TWO BROTHERS.", "persona family is authoritative");
+    var capability = Ask("what can you do?");
+    Assert(capability.Diagnostics.ResponseSource == ResponseSource.CapabilityTemplate &&
+           capability.Text.Contains("TRADE", StringComparison.Ordinal), "capabilities derive from registered tools");
+}
+
+static void StateHysteresis()
+{
+    var brain = TestBrain();
+    var state = brain.Reply(Request("you are an idiot"), GameToolRegistry.Empty).State;
+    Assert(state.Hostility == 1 && state.Mood == NpcMood.Annoyed, "hostility event persists");
+    state = brain.Reply(Request("the road is quiet", state, "2"), GameToolRegistry.Empty).State;
+    state = brain.Reply(Request("the sky is clear", state, "3"), GameToolRegistry.Empty).State;
+    Assert(state.Hostility == 1, "two calm turns do not erase hostility");
+    state = brain.Reply(Request("all is calm", state, "4"), GameToolRegistry.Empty).State;
+    Assert(state.Hostility == 0, "third calm turn reduces hostility once");
+}
+
+static void AuthoritativeDemoWorld()
+{
+    var brain = TestBrain();
+    var world = new DemoWorldState();
+    var tools = DemoGameTools.CreateMerchant(world);
+    var bought = brain.Reply(Request("buy 2 rope", turnId: "BUY-1"), tools);
+    Assert(bought.Text.Contains("YOUR BALANCE IS 94 GOLD", StringComparison.Ordinal) &&
+           world.Balance == 94 && world.Inventory["ROPE"] == 4, "buy atomically updates shared world");
+    _ = brain.Reply(Request("BUY 2 ROPE", turnId: "BUY-1"), tools);
+    Assert(world.Balance == 94 && world.Inventory["ROPE"] == 4, "replayed mutation is idempotent");
+    var failed = brain.Reply(Request("sell 999999 diamonds", turnId: "SELL-BAD"), tools);
+    Assert(!failed.Text.Contains("YOU SOLD", StringComparison.Ordinal) && world.Balance == 94,
+        "invalid sell cannot create money or inventory");
+    var balance = brain.Reply(Request("how much money do i have now?", turnId: "BALANCE"), tools);
+    Assert(balance.Text == "YOU HAVE 94 GOLD.", "balance comes from authoritative tool state");
+}
+
+static void ReferenceResolution()
+{
+    var brain = TestBrain();
+    var tools = DemoGameTools.CreateMerchant();
+    var first = brain.Reply(Request("where is the castle?", turnId: "LOC-1"), tools);
+    var second = brain.Reply(Request("how far is it?", first.State, "LOC-2"), tools);
+    Assert(second.Diagnostics.ToolInvocation?.Arguments["PLACE"] is "THE CASTLE" or "CASTLE" &&
+           second.Text.Contains("ON THE HILL", StringComparison.Ordinal),
+        $"unique place reference fills follow-up slot: REF={first.State.References.Place} TEXT={second.Text} TOOL={second.Diagnostics.ToolInvocation}");
+}
+
+static void ResponseCatalog()
+{
+    Assert(V11ResponseCatalog.Plans.Count == 200, "exactly 200 semantic response plans");
+    Assert(V11ResponseCatalog.Plans.Sum(plan => plan.Variations.Count) >= 5000,
+        "at least 5000 project-owned response variations");
 }
 
 static void ToolSchemaValidation()

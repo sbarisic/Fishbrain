@@ -8,22 +8,25 @@ namespace Fishbrain;
 
 public sealed class BrainConfig
 {
-    public int EmbeddingSize { get; set; } = 64;
-    public int HeadCount { get; set; } = 4;
-    public int MlpSize { get; set; } = 128;
-    public int ContextLength { get; set; } = 128;
-    public int AttentionWindow { get; set; } = 128;
-    public int PositionPeriod { get; set; } = 128;
+    public int LayerCount { get; set; } = 2;
+    public int EmbeddingSize { get; set; } = 128;
+    public int HeadCount { get; set; } = 8;
+    public int MlpSize { get; set; } = 256;
+    public int ContextLength { get; set; } = 256;
+    public int AttentionWindow { get; set; } = 256;
+    public int PositionPeriod { get; set; } = 256;
     public int MaximumOutputLength { get; set; } = 64;
     public double LearningRate { get; set; } = 0.005;
     public double Beta1 { get; set; } = 0.85;
     public double Beta2 { get; set; } = 0.99;
     public double AdamEpsilon { get; set; } = 1e-8;
     public int Seed { get; set; } = 42;
-    public int PlannedSteps { get; set; } = 40_000;
+    public int PlannedSteps { get; set; } = 80_000;
 
     internal void Validate()
     {
+        if (LayerCount <= 0 || LayerCount > 8)
+            throw new InvalidDataException("LayerCount must be between 1 and 8.");
         if (EmbeddingSize <= 0 || HeadCount <= 0 || EmbeddingSize % HeadCount != 0)
             throw new InvalidDataException("EmbeddingSize must be positive and divisible by HeadCount.");
         if (MlpSize <= 0 || ContextLength <= 0 || MaximumOutputLength <= 0)
@@ -41,7 +44,7 @@ public sealed class BrainConfig
 /// <summary>A deliberately tiny word-level GPT for uppercase video-game dialogue.</summary>
 public sealed partial class Brain
 {
-    private const int CheckpointVersion = 10;
+    private const int CheckpointVersion = 11;
     private const int TeachingCheckpointInterval = 1_000;
     private const string SafeFallback = "I DO NOT KNOW.";
 
@@ -56,12 +59,12 @@ public sealed partial class Brain
     private readonly Value[][] _tokenEmbedding;
     private readonly Value[][] _outputHead;
     private readonly Value[][] _positionEmbedding;
-    private readonly Value[][] _query;
-    private readonly Value[][] _key;
-    private readonly Value[][] _value;
-    private readonly Value[][] _attentionOutput;
-    private readonly Value[][] _mlpIn;
-    private readonly Value[][] _mlpOut;
+    private readonly Value[][][] _queryLayers;
+    private readonly Value[][][] _keyLayers;
+    private readonly Value[][][] _valueLayers;
+    private readonly Value[][][] _attentionOutputLayers;
+    private readonly Value[][][] _mlpInLayers;
+    private readonly Value[][][] _mlpOutLayers;
     private readonly Value[][] _intentHead;
     private readonly Value[][] _affectHead;
     private readonly Value[][] _expectedHead;
@@ -77,7 +80,7 @@ public sealed partial class Brain
     private int _bestPerceptionStep;
     private double _bestRealizationLoss = double.MaxValue;
     private int _bestRealizationStep;
-    private Dictionary<string, V10Schemas.ConfidenceThreshold> _confidenceCalibration;
+    private Dictionary<string, V11Schemas.ConfidenceThreshold> _confidenceCalibration;
     private string _corpusHash = "UNKNOWN";
 
     private Brain(
@@ -100,19 +103,29 @@ public sealed partial class Brain
             item => item.Value.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
             StringComparer.Ordinal);
         _structuredHeads = new CompositionalHeadModel(
-            ["BUY", "LIST_WARES", "LOOKUP_LOCATION", "LOOKUP_PRICE", "SELL"],
-            V10Candidates.Select(candidate => candidate.Id), config.Seed);
-        _confidenceCalibration = V10Schemas.DefaultCalibration;
+            ["BUY", "GET_BALANCE", "GET_CURRENT_LOCATION", "LIST_INVENTORY", "LIST_WARES",
+             "LOOKUP_LOCATION", "LOOKUP_PRICE", "LOOKUP_WORLD_FACT", "SELL"],
+            V11Candidates.Select(candidate => candidate.Id), config.Seed);
+        _confidenceCalibration = V11Schemas.DefaultCalibration;
 
         _tokenEmbedding = CreateMatrix(_tokenizer.VocabularySize, config.EmbeddingSize);
         _outputHead = CreateMatrix(_tokenizer.OutputSize, config.EmbeddingSize);
         _positionEmbedding = CreateMatrix(config.PositionPeriod, config.EmbeddingSize);
-        _query = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
-        _key = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
-        _value = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
-        _attentionOutput = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
-        _mlpIn = CreateMatrix(config.MlpSize, config.EmbeddingSize);
-        _mlpOut = CreateMatrix(config.EmbeddingSize, config.MlpSize);
+        _queryLayers = new Value[config.LayerCount][][];
+        _keyLayers = new Value[config.LayerCount][][];
+        _valueLayers = new Value[config.LayerCount][][];
+        _attentionOutputLayers = new Value[config.LayerCount][][];
+        _mlpInLayers = new Value[config.LayerCount][][];
+        _mlpOutLayers = new Value[config.LayerCount][][];
+        for (var layer = 0; layer < config.LayerCount; layer++)
+        {
+            _queryLayers[layer] = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
+            _keyLayers[layer] = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
+            _valueLayers[layer] = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
+            _attentionOutputLayers[layer] = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
+            _mlpInLayers[layer] = CreateMatrix(config.MlpSize, config.EmbeddingSize);
+            _mlpOutLayers[layer] = CreateMatrix(config.EmbeddingSize, config.MlpSize);
+        }
         _intentHead = CreateMatrix(Enum.GetValues<DialogueIntent>().Length, config.EmbeddingSize);
         _affectHead = CreateMatrix(Enum.GetValues<UserAffect>().Length, config.EmbeddingSize);
         _expectedHead = CreateMatrix(2, config.EmbeddingSize);
@@ -120,12 +133,15 @@ public sealed partial class Brain
         AddParameters(_tokenEmbedding);
         AddParameters(_outputHead);
         AddParameters(_positionEmbedding);
-        AddParameters(_query);
-        AddParameters(_key);
-        AddParameters(_value);
-        AddParameters(_attentionOutput);
-        AddParameters(_mlpIn);
-        AddParameters(_mlpOut);
+        for (var layer = 0; layer < config.LayerCount; layer++)
+        {
+            AddParameters(_queryLayers[layer]);
+            AddParameters(_keyLayers[layer]);
+            AddParameters(_valueLayers[layer]);
+            AddParameters(_attentionOutputLayers[layer]);
+            AddParameters(_mlpInLayers[layer]);
+            AddParameters(_mlpOutLayers[layer]);
+        }
         AddParameters(_intentHead);
         AddParameters(_affectHead);
         AddParameters(_expectedHead);
@@ -148,8 +164,8 @@ public sealed partial class Brain
         if (IsInferenceCheckpoint(path)) return LoadInferenceCheckpoint(path);
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
-        if (checkpoint.Version is >= 2 and <= 9)
-            throw new InvalidDataException("Fishbrain v10 uses OOV character tokens and compositional schemas; retain the older checkpoint as an archive.");
+        if (checkpoint.Version is >= 2 and <= 10)
+            throw new InvalidDataException("Fishbrain v11 uses contextual two-layer schemas; retain the older checkpoint as an archive.");
         if (checkpoint.Version != CheckpointVersion)
             throw new InvalidDataException($"Unsupported checkpoint version {checkpoint.Version}.");
         var expectedIntegrity = checkpoint.IntegrityChecksum;
@@ -160,7 +176,7 @@ public sealed partial class Brain
         checkpoint.IntegrityChecksum = expectedIntegrity;
         checkpoint.Config.Validate();
         if (checkpoint.Words.Length == 0 || checkpoint.OutputWords.Length == 0)
-            throw new InvalidDataException("The v10 checkpoint does not contain a word vocabulary.");
+            throw new InvalidDataException("The v11 checkpoint does not contain a word vocabulary.");
         var vocabulary = new WordVocabulary(checkpoint.Words, checkpoint.OutputWords);
 
         var brain = new Brain(
@@ -191,21 +207,22 @@ public sealed partial class Brain
         brain._bestPerceptionStep = checkpoint.BestPerceptionStep;
         brain._bestRealizationLoss = checkpoint.BestRealizationLoss;
         brain._bestRealizationStep = checkpoint.BestRealizationStep;
-        V10Schemas.Validate(V10Schemas.Labels,
-            checkpoint.ConfidenceCalibration ?? V10Schemas.DefaultCalibration);
-        brain._confidenceCalibration = checkpoint.ConfidenceCalibration ?? V10Schemas.DefaultCalibration;
+        V11Schemas.Validate(V11Schemas.Labels,
+            checkpoint.ConfidenceCalibration ?? V11Schemas.DefaultCalibration);
+        brain._confidenceCalibration = checkpoint.ConfidenceCalibration ?? V11Schemas.DefaultCalibration;
         if (checkpoint.LabelSchemas is { Count: > 0 })
-            V10Schemas.Validate(checkpoint.LabelSchemas, brain._confidenceCalibration);
+            V11Schemas.Validate(checkpoint.LabelSchemas, brain._confidenceCalibration);
         if (checkpoint.CandidateCatalog is { Length: > 0 } &&
             !checkpoint.CandidateCatalog.Select(candidate => candidate.Id)
-                .SequenceEqual(V10Candidates.OrderBy(candidate => candidate.Id).Select(candidate => candidate.Id)))
+                .SequenceEqual(V11Candidates.OrderBy(candidate => candidate.Id).Select(candidate => candidate.Id)))
             throw new InvalidDataException("Training checkpoint response candidate schema does not match this runtime.");
         if (checkpoint.ToolSchemas is { Length: > 0 } &&
             !checkpoint.ToolSchemas.Select(schema => schema.Name).Order(StringComparer.Ordinal)
                 .SequenceEqual(DemoGameTools.CreateMerchant().Schemas.Select(schema => schema.Name).Order(StringComparer.Ordinal)))
             throw new InvalidDataException("Training checkpoint tool schemas do not match this runtime.");
         brain._corpusHash = checkpoint.CorpusHash ?? "UNKNOWN";
-        brain._structuredHeads.Restore(checkpoint.StructuredWeights, checkpoint.StructuredUpdates);
+        brain._structuredHeads.Restore(checkpoint.StructuredWeights, checkpoint.StructuredUpdates,
+            checkpoint.StructuredLabelThresholds);
         return brain;
     }
 
@@ -338,7 +355,7 @@ public sealed partial class Brain
         }
         else
         {
-            plannedSteps = requestedPlannedSteps ?? 40_000;
+            plannedSteps = requestedPlannedSteps ?? 80_000;
             var config = new BrainConfig { PlannedSteps = plannedSteps };
             var vocabulary = WordVocabulary.Build(trainPath);
             var tokenizer = new DialogueTokenizer(vocabulary);
@@ -424,10 +441,11 @@ public sealed partial class Brain
             BestRealizationStep = _bestRealizationStep,
             StructuredWeights = _structuredHeads.Snapshot(),
             StructuredUpdates = _structuredHeads.Updates,
+            StructuredLabelThresholds = _structuredHeads.SnapshotLabelThresholds(),
             ConfidenceCalibration = _confidenceCalibration,
-            LabelSchemas = V10Schemas.Labels,
+            LabelSchemas = V11Schemas.Labels,
             ToolSchemas = DemoGameTools.CreateMerchant().Schemas.OrderBy(schema => schema.Name).ToArray(),
-            CandidateCatalog = V10Candidates.OrderBy(candidate => candidate.Id).ToArray(),
+            CandidateCatalog = V11Candidates.OrderBy(candidate => candidate.Id).ToArray(),
             CorpusHash = _corpusHash
         };
         checkpoint.IntegrityChecksum = ComputeCheckpointIntegrity(checkpoint);
@@ -499,10 +517,19 @@ public sealed partial class Brain
     }
 
     internal StructuredPerception DebugPredictStructuredRaw(string input) =>
-        _structuredHeads.Predict(DialogueText.Normalize(input), []);
+        _structuredHeads.Predict(DialogueText.Normalize(input), [], ContextVector(input));
 
     internal StructuredMetrics DebugEvaluateStructured(IReadOnlyList<V10TrainingExample> examples) =>
-        _structuredHeads.Evaluate(examples);
+        _structuredHeads.Evaluate(examples, example => ContextVector(example.Context));
+
+    private double[] ContextVector(string text)
+    {
+        SyncScalarWeights();
+        var normalized = DialogueText.Normalize(text);
+        var encoded = _tokenizer.Encode(normalized);
+        if (encoded.Length > Config.ContextLength) encoded = encoded[^Config.ContextLength..];
+        return PackedTrainer.ContextVector(Config, _tokenizer, _weights, encoded);
+    }
 
     internal static string ExtractCurrentPlayerTurn(string normalizedDialogue)
     {
@@ -726,7 +753,7 @@ public sealed partial class Brain
     {
         if (data.StructuredSamples.Count > 0)
         {
-            TrainV10Curriculum(data, validation, checkpointPath, plannedSteps, untilStep, recovery,
+            TrainV11Curriculum(data, validation, checkpointPath, plannedSteps, untilStep, recovery,
                 corpusHash ?? "TEST");
             return;
         }
@@ -841,7 +868,7 @@ public sealed partial class Brain
         TrainingData data, string checkpointPath, int plannedSteps, int untilStep) =>
         TrainCurriculum(data, data, checkpointPath, plannedSteps, untilStep, recovery: null);
 
-    private void TrainV10Curriculum(
+    private void TrainV11Curriculum(
         TrainingData data,
         TrainingData validation,
         string checkpointPath,
@@ -852,7 +879,7 @@ public sealed partial class Brain
     {
         Config.PlannedSteps = plannedSteps;
         var language = data.LanguageSamples.ToArray();
-        if (language.Length == 0) throw new InvalidDataException("V10 teaching requires language samples.");
+        if (language.Length == 0) throw new InvalidDataException("V11 teaching requires language samples.");
         var familiesBySource = data.StructuredSamples
             .GroupBy(example => $"{example.Source}|{string.Join(',', example.SpeechActs)}|" +
                                 $"{string.Join(',', example.Domains)}|{string.Join(',', example.Goals)}|" +
@@ -867,7 +894,7 @@ public sealed partial class Brain
         var families = Enumerable.Range(0, familiesBySource.Max(source => source.Length))
             .SelectMany(index => familiesBySource.Where(source => index < source.Length).Select(source => source[index]))
             .ToArray();
-        if (families.Length == 0) throw new InvalidDataException("V10 teaching requires structured samples.");
+        if (families.Length == 0) throw new InvalidDataException("V11 teaching requires structured samples.");
         var slotFamiliesBySource = data.StructuredSamples
             .Where(example => example.SupervisedHeads.Contains("slots"))
             .GroupBy(example => example.Source, StringComparer.Ordinal)
@@ -878,7 +905,7 @@ public sealed partial class Brain
                 .ToArray())
             .ToArray();
         if (slotFamiliesBySource.Length == 0)
-            throw new InvalidDataException("V10 teaching requires slot-supervised samples.");
+            throw new InvalidDataException("V11 teaching requires slot-supervised samples.");
         var slotFamilies = Enumerable.Range(0, slotFamiliesBySource.Max(source => source.Length))
             .SelectMany(index => slotFamiliesBySource.Where(source => index < source.Length).Select(source => source[index]))
             .ToArray();
@@ -891,21 +918,38 @@ public sealed partial class Brain
         {
             double loss;
             string phase;
-            if (_step % 10 != 9)
+            var schedule = _step % 10;
+            if (schedule <= 6)
             {
                 phase = "STRUCTURED";
-                var structuredStep = _structuredHeads.Updates;
+                var structuredStep = _step;
                 var family = families[structuredStep % families.Length];
                 var example = family[DeterministicIndex(structuredStep / families.Length,
                     family.Length, 1009)];
                 var progress = (double)_step / Math.Max(1, plannedSteps - 1);
                 var learningRate = 0.14 * (1.0 - 0.75 * progress);
-                loss = _structuredHeads.Train(example, learningRate);
+                var context = ContextVector(example.Context);
+                loss = _structuredHeads.Train(example, learningRate, context);
                 var slotFamily = slotFamilies[structuredStep % slotFamilies.Length];
                 var slotExample = slotFamily[DeterministicIndex(structuredStep / slotFamilies.Length,
                     slotFamily.Length, 1877)];
                 loss = (loss + _structuredHeads.TrainSlotsOnly(slotExample, learningRate)) * 0.5;
-                _step++;
+                var contextualLoss = CalculateLoss(ContextTrainingSample(example));
+                ApplyGradients(plannedSteps);
+                loss = (loss + contextualLoss) * 0.5;
+            }
+            else if (schedule <= 8)
+            {
+                phase = "RANKING";
+                var rankStep = _step;
+                var family = families[rankStep % families.Length];
+                var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 3253)];
+                var progress = (double)_step / Math.Max(1, plannedSteps - 1);
+                var learningRate = 0.10 * (1.0 - 0.75 * progress);
+                loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
+                var contextualLoss = CalculateLoss(ContextTrainingSample(example));
+                ApplyGradients(plannedSteps);
+                loss = (loss + contextualLoss) * 0.5;
             }
             else
             {
@@ -922,10 +966,18 @@ public sealed partial class Brain
                                   $"STRUCTURED {_structuredHeads.Updates,6}");
 
             if (_step % TeachingCheckpointInterval != 0) continue;
-            var metrics = _structuredHeads.Evaluate(validation.StructuredSamples);
-            _confidenceCalibration = _structuredHeads.Calibrate(validation.StructuredSamples);
+            var fullStage = _step is 20_000 or 40_000 or 60_000 or 80_000;
+            var evaluationExamples = fullStage
+                ? validation.StructuredSamples
+                : StratifiedMilestoneSample(validation.StructuredSamples, 1_024, _step);
+            var metrics = _structuredHeads.Evaluate(evaluationExamples,
+                example => ContextVector(example.Context));
+            _confidenceCalibration = _structuredHeads.Calibrate(evaluationExamples,
+                example => ContextVector(example.Context));
             var realizationLoss = DebugAverageLoss(validation.LanguageSamples.Take(64));
-            var bestStructured = double.IsFinite(metrics.Composite) && metrics.Composite > _bestPerceptionScore;
+            var productionEligible = double.IsFinite(metrics.Composite) &&
+                                     metrics.MutatingToolPrecision >= 0.99;
+            var bestStructured = productionEligible && metrics.Composite > _bestPerceptionScore;
             var bestGeneration = double.IsFinite(realizationLoss) && realizationLoss < _bestRealizationLoss;
             if (bestStructured)
             {
@@ -945,15 +997,15 @@ public sealed partial class Brain
                 $"TOOL_ACC {metrics.ToolAccuracy:F4} MUTATING_PRECISION {metrics.MutatingToolPrecision:F4} " +
                 $"RESPONSE_TOP1 {metrics.ResponseTop1:F4} RESPONSE_TOP3 {metrics.ResponseTop3:F4} " +
                 $"COMPOSITE {metrics.Composite:F4} GENERATION_LOSS {realizationLoss:F4}");
-            Console.WriteLine($"BEST STRUCTURED {_bestPerceptionScore:F4} AT {_bestPerceptionStep} " +
+            Console.WriteLine($"BEST PRODUCTION {_bestPerceptionScore:F4} AT {_bestPerceptionStep} " +
                               $"GENERATION {_bestRealizationLoss:F4} AT {_bestRealizationStep}");
 
             Save(checkpointPath);
-            if (bestStructured) Save(CheckpointRolePath(checkpointPath, "best-structured"));
+            if (bestStructured) Save(CheckpointRolePath(checkpointPath, "best-production"));
             if (bestGeneration) Save(CheckpointRolePath(checkpointPath, "best-generation"));
             var now = timer.Elapsed;
             WriteTrainingTelemetry(checkpointPath, corpusHash, validation.StructuredSamples, metrics, realizationLoss,
-                _step - intervalStep, now - intervalStart, _step is 10_000 or 20_000 or 30_000 or 40_000);
+                _step - intervalStep, now - intervalStart, fullStage);
             intervalStep = _step;
             intervalStart = now;
             lastSavedStep = _step;
@@ -967,14 +1019,62 @@ public sealed partial class Brain
         if (lastSavedStep != _step) SaveTeachingCheckpoint(checkpointPath, recovery);
         if (_step == plannedSteps && recovery is not null)
         {
-            var bestPath = CheckpointRolePath(checkpointPath, "best-structured");
-            if (!File.Exists(bestPath)) throw new InvalidDataException("Training completed without a best structured checkpoint.");
-            var output = Path.Combine(Path.GetDirectoryName(recovery.CorpusDirectory)!, "models", "model-v10-latest.fbm");
+            var bestPath = CheckpointRolePath(checkpointPath, "best-production");
+            if (!File.Exists(bestPath)) throw new InvalidDataException("Training completed without an eligible best production checkpoint.");
+            var output = Path.Combine(Path.GetDirectoryName(recovery.CorpusDirectory)!, "models", "model-v11-latest.fbm");
             Load(bestPath).ExportInference(output, corpusHash);
-            Console.WriteLine($"EXPORTED BEST STRUCTURED CHECKPOINT {output}");
+            Console.WriteLine($"EXPORTED BEST PRODUCTION CHECKPOINT {output}");
         }
         if (recovery is not null) PrintMilestoneCommands(recovery);
     }
+
+    private TrainingSample ContextTrainingSample(V10TrainingExample example)
+    {
+        var encoded = _tokenizer.Encode(example.Context);
+        var maximum = Math.Max(1, Config.ContextLength - 2);
+        if (encoded.Length > maximum) encoded = encoded[^maximum..];
+        var tokens = new int[encoded.Length + 2];
+        tokens[0] = Tokenizer.Bos;
+        Array.Copy(encoded, 0, tokens, 1, encoded.Length);
+        tokens[^1] = Tokenizer.Sep;
+        var intent = example.SpeechActs.FirstOrDefault() switch
+        {
+            SpeechAct.Greet => DialogueIntent.Greeting,
+            SpeechAct.Farewell => DialogueIntent.Farewell,
+            SpeechAct.Thank => DialogueIntent.Gratitude,
+            SpeechAct.Apologize => DialogueIntent.Apology,
+            SpeechAct.Refuse => DialogueIntent.Refusal,
+            SpeechAct.Order => DialogueIntent.Directive,
+            SpeechAct.Correct => DialogueIntent.Clarification,
+            SpeechAct.Threaten or SpeechAct.Challenge => DialogueIntent.Hostility,
+            _ when example.Domains.Contains(DialogueDomain.LocationNavigation) => DialogueIntent.LocationInquiry,
+            _ when example.Domains.Contains(DialogueDomain.TradeEconomy) => DialogueIntent.TradeRequest,
+            _ => DialogueIntent.Statement
+        };
+        var target = new TurnPerception(intent, example.Affect, example.Policy != ResponsePolicy.NoResponse);
+        return new TrainingSample(tokens, 0, 1, TrainingTask.Perception,
+            $"V11|{example.Source}|{example.ResponseCandidateId}", example.Source, target,
+            example.SemanticFamilyId, PerceptionFields.All);
+    }
+
+    private static IReadOnlyList<V10TrainingExample> StratifiedMilestoneSample(
+        IReadOnlyList<V10TrainingExample> examples, int maximum, int step)
+    {
+        if (examples.Count <= maximum) return examples;
+        var groups = examples.GroupBy(example => example.Source, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(group => new Queue<V10TrainingExample>(group
+                .OrderBy(example => StableTrainingKey(step, example.SemanticFamilyId), StringComparer.Ordinal)))
+            .ToArray();
+        var result = new List<V10TrainingExample>(maximum);
+        while (result.Count < maximum && groups.Any(group => group.Count > 0))
+            foreach (var group in groups)
+                if (group.Count > 0 && result.Count < maximum) result.Add(group.Dequeue());
+        return result;
+    }
+
+    private static string StableTrainingKey(int seed, string value) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes($"{seed}|{value}")));
 
     private void WriteTrainingTelemetry(
         string checkpointPath, string corpusHash, IReadOnlyList<V10TrainingExample> validation,
@@ -982,7 +1082,7 @@ public sealed partial class Brain
         int intervalSteps, TimeSpan elapsed, bool fullStage)
     {
         var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var path = Path.Combine(root, "data", "telemetry", "training-v10.jsonl");
+        var path = Path.Combine(root, "data", "telemetry", "training-v11.jsonl");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var checkpointHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
             File.ReadAllBytes(checkpointPath))).ToLowerInvariant();
@@ -993,14 +1093,14 @@ public sealed partial class Brain
         {
             var result = Reply(new ReplyRequest("TRAINING-TELEMETRY", $"STEP-{_step}-{responseSources.Values.Sum()}",
                 [new DialogueTurn(DialogueRole.Player, example.Input)], NpcDialogueState.Initial,
-                Config.Seed), tools);
+                NpcPersona.Default, Config.Seed), tools);
             responseSources[result.Diagnostics.ResponseSource] =
                 responseSources.GetValueOrDefault(result.Diagnostics.ResponseSource) + 1;
         }
         var payload = new
         {
             timestampUtc = DateTimeOffset.UtcNow,
-            milestone = fullStage ? "V10_STAGE" : "V10_CHECKPOINT",
+            milestone = fullStage ? "V11_STAGE" : "V11_CHECKPOINT",
             step = _step,
             corpusHash,
             checkpointHash,
@@ -1288,13 +1388,8 @@ public sealed partial class Brain
         if (tokens.Count is < 1 || tokens.Count > Config.ContextLength)
             throw new ArgumentOutOfRangeException(nameof(tokens));
         if (positionOffset < 0) throw new ArgumentOutOfRangeException(nameof(positionOffset));
-
-        var keys = new List<Value[]>(tokens.Count);
-        var values = new List<Value[]>(tokens.Count);
-        var result = new Value[tokens.Count][];
-        for (var position = 0; position < tokens.Count; position++)
-            result[position] = ForwardToken(tokens[position], positionOffset + position, keys, values);
-        return result;
+        return ForwardHiddenSequence(tokens, positionOffset)
+            .Select(hidden => Linear(hidden, _outputHead)).ToArray();
     }
 
     private Value[] ForwardLastHidden(IReadOnlyList<int> tokens, int positionOffset)
@@ -1303,11 +1398,7 @@ public sealed partial class Brain
             throw new ArgumentOutOfRangeException(nameof(tokens));
         if (positionOffset < 0) throw new ArgumentOutOfRangeException(nameof(positionOffset));
 
-        var keys = new List<Value[]>(tokens.Count);
-        var values = new List<Value[]>(tokens.Count);
-        for (var position = 0; position < tokens.Count - 1; position++)
-            PrepareContextToken(tokens[position], positionOffset + position, keys, values);
-        return ForwardHiddenToken(tokens[^1], positionOffset + tokens.Count - 1, keys, values);
+        return ForwardHiddenSequence(tokens, positionOffset)[^1];
     }
 
     private Value[][] ForwardTargets(IReadOnlyList<int> tokens, int positionOffset, int firstLogitPosition)
@@ -1318,78 +1409,64 @@ public sealed partial class Brain
         if ((uint)firstLogitPosition >= (uint)tokens.Count)
             throw new ArgumentOutOfRangeException(nameof(firstLogitPosition));
 
-        var keys = new List<Value[]>(tokens.Count);
-        var values = new List<Value[]>(tokens.Count);
+        var hidden = ForwardHiddenSequence(tokens, positionOffset);
         var result = new Value[tokens.Count - firstLogitPosition][];
-        // With one Transformer layer, earlier positions contribute to later predictions
-        // only through their keys and values. Their query, MLP, and vocabulary head are unused.
-        for (var position = 0; position < firstLogitPosition; position++)
-            PrepareContextToken(tokens[position], positionOffset + position, keys, values);
         for (var position = firstLogitPosition; position < tokens.Count; position++)
-            result[position - firstLogitPosition] = ForwardToken(
-                tokens[position], positionOffset + position, keys, values);
+            result[position - firstLogitPosition] = Linear(hidden[position], _outputHead);
         return result;
     }
 
-    private Value[] ForwardToken(int token, int position, List<Value[]> keys, List<Value[]> values)
-        => Linear(ForwardHiddenToken(token, position, keys, values), _outputHead);
-
-    private Value[] ForwardHiddenToken(int token, int position, List<Value[]> keys, List<Value[]> values)
+    private Value[][] ForwardHiddenSequence(IReadOnlyList<int> tokens, int positionOffset)
     {
-        var (x, normalized) = PrepareToken(token, position, keys, values);
-        var residual = x;
-        var query = Linear(normalized, _query);
-
-        var headSize = Config.EmbeddingSize / Config.HeadCount;
-        var attention = new Value[Config.EmbeddingSize];
-        var attentionStart = Math.Max(0, keys.Count - Config.AttentionWindow);
-        for (var head = 0; head < Config.HeadCount; head++)
+        var hidden = new Value[tokens.Count][];
+        for (var position = 0; position < tokens.Count; position++)
         {
-            var offset = head * headSize;
-            var scores = new Value[keys.Count - attentionStart];
-            for (var t = attentionStart; t < keys.Count; t++)
-                scores[t - attentionStart] = Value.Dot(query, offset, keys[t], offset, headSize) / Math.Sqrt(headSize);
-            var weights = Softmax(scores);
-
-            for (var j = 0; j < headSize; j++)
-            {
-                var column = new Value[values.Count - attentionStart];
-                for (var t = attentionStart; t < values.Count; t++)
-                    column[t - attentionStart] = values[t][offset + j];
-                attention[offset + j] = Value.Dot(weights, column);
-            }
+            hidden[position] = new Value[Config.EmbeddingSize];
+            for (var column = 0; column < Config.EmbeddingSize; column++)
+                hidden[position][column] = _tokenEmbedding[tokens[position]][column] +
+                    _positionEmbedding[(positionOffset + position) % Config.PositionPeriod][column];
         }
 
-        x = Linear(attention, _attentionOutput);
-        for (var i = 0; i < x.Length; i++) x[i] += residual[i];
+        for (var layer = 0; layer < Config.LayerCount; layer++)
+        {
+            var normalized = hidden.Select(RmsNorm).ToArray();
+            var keys = normalized.Select(value => Linear(value, _keyLayers[layer])).ToArray();
+            var values = normalized.Select(value => Linear(value, _valueLayers[layer])).ToArray();
+            var next = new Value[tokens.Count][];
+            for (var position = 0; position < tokens.Count; position++)
+            {
+                var query = Linear(normalized[position], _queryLayers[layer]);
+                var attention = new Value[Config.EmbeddingSize];
+                var attentionStart = Math.Max(0, position + 1 - Config.AttentionWindow);
+                var headSize = Config.EmbeddingSize / Config.HeadCount;
+                for (var head = 0; head < Config.HeadCount; head++)
+                {
+                    var offset = head * headSize;
+                    var scores = new Value[position + 1 - attentionStart];
+                    for (var context = attentionStart; context <= position; context++)
+                        scores[context - attentionStart] = Value.Dot(query, offset, keys[context], offset, headSize) /
+                            Math.Sqrt(headSize);
+                    var weights = Softmax(scores);
+                    for (var column = 0; column < headSize; column++)
+                    {
+                        var valuesForColumn = new Value[scores.Length];
+                        for (var context = attentionStart; context <= position; context++)
+                            valuesForColumn[context - attentionStart] = values[context][offset + column];
+                        attention[offset + column] = Value.Dot(weights, valuesForColumn);
+                    }
+                }
 
-        residual = x;
-        x = RmsNorm(x);
-        x = Linear(x, _mlpIn);
-        for (var i = 0; i < x.Length; i++) x[i] = x[i].Relu();
-        x = Linear(x, _mlpOut);
-        for (var i = 0; i < x.Length; i++) x[i] += residual[i];
-        x = RmsNorm(x);
-
-        return x;
-    }
-
-    private void PrepareContextToken(int token, int position, List<Value[]> keys, List<Value[]> values) =>
-        PrepareToken(token, position, keys, values);
-
-    private (Value[] X, Value[] Normalized) PrepareToken(
-        int token, int position, List<Value[]> keys, List<Value[]> values)
-    {
-        var x = new Value[Config.EmbeddingSize];
-        for (var i = 0; i < x.Length; i++)
-            x[i] = _tokenEmbedding[token][i] + _positionEmbedding[position % Config.PositionPeriod][i];
-
-        var normalized = RmsNorm(x);
-        var key = Linear(normalized, _key);
-        var value = Linear(normalized, _value);
-        keys.Add(key);
-        values.Add(value);
-        return (x, normalized);
+                var residual1 = Linear(attention, _attentionOutputLayers[layer]);
+                for (var column = 0; column < residual1.Length; column++) residual1[column] += hidden[position][column];
+                var mlp = Linear(RmsNorm(residual1), _mlpInLayers[layer]);
+                for (var column = 0; column < mlp.Length; column++) mlp[column] = mlp[column].Relu();
+                var residual2 = Linear(mlp, _mlpOutLayers[layer]);
+                for (var column = 0; column < residual2.Length; column++) residual2[column] += residual1[column];
+                next[position] = RmsNorm(residual2);
+            }
+            hidden = next;
+        }
+        return hidden;
     }
 
     private double[] NextLogits(IReadOnlyList<int> context)
@@ -1583,37 +1660,31 @@ public sealed partial class Brain
     private sealed class InferenceSession
     {
         private readonly Brain _brain;
-        private readonly List<Value[]> _keys = [];
-        private readonly List<Value[]> _values = [];
-        private int _position;
+        private readonly List<int> _context;
 
         public InferenceSession(Brain brain, IReadOnlyList<int> context)
         {
             _brain = brain;
             var retainedStart = Math.Max(0, context.Count - brain.Config.ContextLength);
-            var localStart = Math.Max(retainedStart, context.Count - brain.Config.AttentionWindow);
-            _position = localStart - retainedStart;
-            using var _ = Value.NoGrad();
-            if (localStart >= context.Count)
+            _context = context.Skip(retainedStart).ToList();
+            if (_context.Count == 0)
                 throw new ArgumentException("Inference context cannot be empty.", nameof(context));
-            for (var index = localStart; index < context.Count - 1; index++)
-                brain.PrepareContextToken(context[index], _position++, _keys, _values);
-            var logits = brain.ForwardToken(context[^1], _position++, _keys, _values);
-            Logits = logits.Select(x => x.Data).ToArray();
+            Logits = Calculate();
         }
 
         public double[] Logits { get; private set; }
 
         public void Append(int token)
         {
-            if (_keys.Count >= _brain.Config.AttentionWindow)
-            {
-                _keys.RemoveAt(0);
-                _values.RemoveAt(0);
-            }
+            _context.Add(token);
+            if (_context.Count > _brain.Config.ContextLength) _context.RemoveAt(0);
+            Logits = Calculate();
+        }
+
+        private double[] Calculate()
+        {
             using var _ = Value.NoGrad();
-            var position = Math.Min(_position++, _brain.Config.ContextLength - 1);
-            Logits = _brain.ForwardToken(token, position, _keys, _values).Select(x => x.Data).ToArray();
+            return _brain.ForwardTargets(_context, 0, _context.Count - 1)[0].Select(value => value.Data).ToArray();
         }
     }
 
@@ -1739,7 +1810,8 @@ public sealed partial class Brain
         public int BestRealizationStep { get; set; }
         public double[] StructuredWeights { get; set; } = [];
         public int StructuredUpdates { get; set; }
-        public Dictionary<string, V10Schemas.ConfidenceThreshold>? ConfidenceCalibration { get; set; }
+        public Dictionary<string, double>? StructuredLabelThresholds { get; set; }
+        public Dictionary<string, V11Schemas.ConfidenceThreshold>? ConfidenceCalibration { get; set; }
         public Dictionary<string, string[]>? LabelSchemas { get; set; }
         public ToolSchema[]? ToolSchemas { get; set; }
         public ResponseCandidate[]? CandidateCatalog { get; set; }
@@ -2453,8 +2525,8 @@ internal sealed class TrainingData
         if (row.Input is null || row.State is null || row.Perception is null || row.Action is null)
             throw new InvalidDataException("Input, state, perception, and action are required.");
         var input = Tokenizer.Normalize(row.Input);
-        if (input != row.Input || input.Length is < 1 or > 256)
-            throw new InvalidDataException("Input must be canonical and contain 1-256 characters.");
+        if (input != row.Input || input.Length is < 1 or > 1024)
+            throw new InvalidDataException("Input must be canonical and contain 1-1024 characters.");
         row.State.Validate();
         var perception = row.Perception;
         var decision = new TurnDecision(row.Action.Value);
@@ -2499,16 +2571,22 @@ internal sealed class TrainingData
                 throw new InvalidDataException("Structured perception contains an unknown label.");
             if (string.IsNullOrWhiteSpace(row.SemanticFamilyId))
                 throw new InvalidDataException("V10 structured rows require semanticFamilyId.");
-            var supervised = (row.SupervisedHeads ?? V10Schemas.Labels.Keys.Concat(["tool", "responseCandidate"]).ToArray())
+            var supervised = (row.SupervisedHeads ?? V11Schemas.Labels.Keys.Concat(["tool", "responseCandidate"]).ToArray())
                 .ToHashSet(StringComparer.Ordinal);
             var currentTurn = Brain.ExtractCurrentPlayerTurn(input);
             var currentOffset = input.LastIndexOf(currentTurn, StringComparison.Ordinal);
             var normalizedSlots = structured.Slots.Select(slot => NormalizeSlot(slot, currentTurn, currentOffset)).ToArray();
+            var turns = row.Turns is { Length: > 0 }
+                ? row.Turns.Select(turn => new DialogueTurn(turn.Role, DialogueText.Normalize(turn.Text))).ToArray()
+                : new[] { new DialogueTurn(DialogueRole.Player, currentTurn) };
+            if (turns[^1].Role != DialogueRole.Player)
+                throw new InvalidDataException("Structured turns must end with a player turn.");
             structuredSamples.Add(new V10TrainingExample(
-                currentTurn, structured.SpeechActs.ToArray(), structured.Domains.ToArray(),
+                input, currentTurn, turns, structured.SpeechActs.ToArray(), structured.Domains.ToArray(),
                 structured.Goals.ToArray(), structured.Affect, structured.Stance, structured.Policy,
                 normalizedSlots, structured.ContentFlags.ToArray(), structured.ToolSchema ?? "NONE",
-                structured.ResponseCandidateId ?? "ACKNOWLEDGE", source, row.SemanticFamilyId, supervised));
+                structured.ResponseCandidateId ?? "ACKNOWLEDGE", structured.KnowledgeTarget,
+                source, row.SemanticFamilyId, supervised));
         }
 
         var transition = Cognition.Apply(row.State, perception, decision, hasAllTool);
@@ -2690,6 +2768,7 @@ internal sealed class TrainingData
         public string? GroupId { get; set; }
         public string? Family { get; set; }
         public string? SemanticFamilyId { get; set; }
+        public DialogueTurn[]? Turns { get; set; }
         public StructuredPerception? StructuredPerception { get; set; }
         public string[]? SupervisedHeads { get; set; }
         public string? Tool { get; set; }

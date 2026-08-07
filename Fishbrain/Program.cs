@@ -19,7 +19,7 @@ internal static class Program
             {
                 case "train":
                     Count(args, 3, 4);
-                    Brain.TrainNew(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 40_000);
+                    Brain.TrainNew(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 80_000);
                     break;
                 case "resume":
                     Count(args, 3, 4);
@@ -83,7 +83,7 @@ internal static class Program
             if (string.IsNullOrWhiteSpace(input)) return;
             history.Add(new DialogueTurn(DialogueRole.Player, input));
             var result = brain.Reply(new ReplyRequest(conversationId,
-                (++turn).ToString(CultureInfo.InvariantCulture), history, state, turn), tools);
+                (++turn).ToString(CultureInfo.InvariantCulture), history, state, NpcPersona.Default, turn), tools);
             state = result.State;
             Console.WriteLine(result.Text.Length == 0 ? "[NO RESPONSE]" : result.Text);
             Console.WriteLine(
@@ -110,7 +110,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|stage|release]");
-        Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-v10-latest.fbm)");
+        Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-v11-latest.fbm)");
         Console.WriteLine("  export TRAINING_CHECKPOINT.json OUTPUT.fbm [CORPUS_DIRECTORY]");
         Console.WriteLine("  inspect MODEL.fbm");
         Console.WriteLine("  selftest");
@@ -127,7 +127,7 @@ internal static class Program
 
     private static string ResolveDefaultModel()
     {
-        var names = new[] { "model-v10-latest.fbm" };
+        var names = new[] { "model-v11-latest.fbm" };
         var roots = new[]
         {
             Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "models")),
@@ -139,7 +139,7 @@ internal static class Program
             var candidate = Path.Combine(root, name);
             if (File.Exists(candidate)) return candidate;
         }
-        throw new FileNotFoundException("No default v10 model was found. Run the documented training command first.");
+        throw new FileNotFoundException("No default v11 model was found. Run the documented training command first.");
     }
 
     private static string CorpusHash(string directory)
@@ -230,7 +230,7 @@ internal static class Evaluation
             .ToArray();
         if (rows.Length == 0) throw new InvalidDataException("Evaluation data is empty.");
         if (rows.Any(row => row.StructuredPerception is not null))
-            return RunV10(testPath, checkpointPath, gate, timer, brain, rows);
+            return RunV11(testPath, checkpointPath, gate, timer, brain, rows);
 
         var expectedIntent = new List<DialogueIntent>();
         var rawIntent = new List<DialogueIntent>();
@@ -381,15 +381,15 @@ internal static class Evaluation
         };
     }
 
-    private static int RunV10(
+    private static int RunV11(
         string testPath, string checkpointPath, EvaluationGate gate, Stopwatch timer,
         Brain brain, IReadOnlyList<Row> rows)
     {
         var data = TrainingData.Load(testPath, brain.DialogueTokenizer);
         var examples = data.StructuredSamples;
-        if (examples.Count == 0) throw new InvalidDataException("V10 evaluation requires structured examples.");
+        if (examples.Count == 0) throw new InvalidDataException("V11 evaluation requires structured examples.");
         var raw = brain.DebugEvaluateStructured(examples);
-        var rawPredictions = examples.Select(example => brain.DebugPredictStructuredRaw(example.Input)).ToArray();
+        var rawPredictions = examples.Select(example => brain.DebugPredictStructuredRaw(example.Context)).ToArray();
         var productionPredictions = new List<StructuredPerception>(examples.Count);
         var responseSources = new Dictionary<ResponseSource, int>();
         var invalid = 0;
@@ -405,8 +405,8 @@ internal static class Evaluation
             var example = examples[index];
             var tools = DemoGameTools.CreateMerchant();
             var result = brain.Reply(new ReplyRequest("EVALUATION", $"ROW-{index}",
-                [new DialogueTurn(DialogueRole.Player, example.Input)], NpcDialogueState.Initial,
-                42), tools);
+                example.Turns, NpcDialogueState.Initial,
+                NpcPersona.Default, 42), tools);
             productionPredictions.Add(result.Perception);
             responseSources[result.Diagnostics.ResponseSource] =
                 responseSources.GetValueOrDefault(result.Diagnostics.ResponseSource) + 1;
@@ -433,8 +433,8 @@ internal static class Evaluation
             if (index < 100)
             {
                 var experimental = brain.Reply(new ReplyRequest("EVALUATION-GENERATED", $"ROW-{index}",
-                    [new DialogueTurn(DialogueRole.Player, example.Input)], NpcDialogueState.Initial,
-                    42, ResponseMode.GeneratedExperimental), GameToolRegistry.Empty);
+                    example.Turns, NpcDialogueState.Initial,
+                    NpcPersona.Default, 42, ResponseMode.GeneratedExperimental), GameToolRegistry.Empty);
                 generatedExperimental++;
                 try
                 {
@@ -459,10 +459,11 @@ internal static class Evaluation
                           raw.PolicyAccuracy >= 0.90 && raw.ContentMacroF1 >= 0.90 &&
                           raw.SlotSpanF1 >= 0.85 && raw.ToolAccuracy >= 0.95 &&
                           raw.MutatingToolPrecision >= 0.99 && toolArgumentExact >= 0.90 &&
-                          raw.ResponseTop1 >= 0.80 && raw.ResponseTop3 >= 0.95 &&
+                          raw.KnowledgeTargetAccuracy >= 0.90 &&
+                          raw.ResponseTop1 >= 0.85 && raw.ResponseTop3 >= 0.95 &&
                           benchmark.SemanticSuccess >= 0.90 && hardInvariants;
 
-        Console.WriteLine($"V10_RECORDS {examples.Count}");
+        Console.WriteLine($"V11_RECORDS {examples.Count}");
         PrintStructured("RAW_NEURAL", raw);
         foreach (var label in Enum.GetValues<ContentFlag>())
         {
@@ -500,10 +501,10 @@ internal static class Evaluation
                           $"TOOL_FIDELITY {benchmark.ToolFidelity:F4} STRUCTURAL_SUCCESS {benchmark.StructuralSuccess:F4} " +
                           $"N {benchmark.Count}");
         foreach (var failure in benchmark.Failures) Console.WriteLine($"BENCHMARK_FAILURE {failure}");
-        Console.WriteLine($"V10_STAGE_GATE {(stagePass ? "PASS" : "FAIL")}");
-        Console.WriteLine($"V10_RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V11_STAGE_GATE {(stagePass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V11_RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
         timer.Stop();
-        WriteV10Telemetry(checkpointPath, brain, timer.Elapsed, raw, production,
+        WriteV11Telemetry(checkpointPath, brain, timer.Elapsed, raw, production,
             responseSources, invalid, unexpectedEmpty, overlength, toolArgumentExact, toolFidelity,
             benchmark, examples.Count, stagePass, releasePass);
         return gate switch
@@ -527,6 +528,7 @@ internal static class Evaluation
                 "PLACE" => SlotType.Place,
                 "ITEM" => SlotType.Item,
                 "QUANTITY" => SlotType.Quantity,
+                "TOPIC" => example.Slots.Any(slot => slot.Type == SlotType.Other) ? SlotType.Other : SlotType.Place,
                 _ => SlotType.Other
             };
             var values = example.Slots.Where(slot => slot.Type == type).Select(slot => slot.Value).Distinct().ToArray();
@@ -551,6 +553,7 @@ internal static class Evaluation
         Console.WriteLine($"{prefix}_SLOT_SPAN_F1 {metrics.SlotSpanF1:F4}");
         Console.WriteLine($"{prefix}_TOOL_ACCURACY {metrics.ToolAccuracy:F4}");
         Console.WriteLine($"{prefix}_MUTATING_TOOL_PRECISION {metrics.MutatingToolPrecision:F4}");
+        Console.WriteLine($"{prefix}_KNOWLEDGE_TARGET_ACCURACY {metrics.KnowledgeTargetAccuracy:F4}");
         Console.WriteLine($"{prefix}_RESPONSE_TOP1 {metrics.ResponseTop1:F4}");
         Console.WriteLine($"{prefix}_RESPONSE_TOP3 {metrics.ResponseTop3:F4}");
         Console.WriteLine($"{prefix}_COMPOSITE {metrics.Composite:F4}");
@@ -559,12 +562,12 @@ internal static class Evaluation
     private static BenchmarkMetrics EvaluateBenchmark(Brain brain)
     {
         var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-            "data", "benchmarks", "v10-128.jsonl"));
-        if (!File.Exists(path)) throw new FileNotFoundException("Missing v10 benchmark.", path);
+            "data", "benchmarks", "v11-256.jsonl"));
+        if (!File.Exists(path)) throw new FileNotFoundException("Missing v11 benchmark.", path);
         var rows = File.ReadLines(path).Where(line => !string.IsNullOrWhiteSpace(line))
             .Select(line => JsonSerializer.Deserialize<BenchmarkRow>(line, Options)
-                ?? throw new InvalidDataException("Invalid v10 benchmark row.")).ToArray();
-        if (rows.Length != 128) throw new InvalidDataException("The tracked v10 benchmark must contain 128 turns.");
+                ?? throw new InvalidDataException("Invalid v11 benchmark row.")).ToArray();
+        if (rows.Length != 256) throw new InvalidDataException("The tracked v11 benchmark must contain 256 turns.");
         var semantic = 0;
         var structural = 0;
         var toolCount = 0;
@@ -578,12 +581,14 @@ internal static class Evaluation
             foreach (var row in conversation.OrderBy(item => item.Id, StringComparer.Ordinal))
             {
                 turns.Add(new DialogueTurn(DialogueRole.Player, row.Text));
-                var result = brain.Reply(new ReplyRequest(conversation.Key, row.Id, turns.ToArray(), state, 42), tools);
+                var result = brain.Reply(new ReplyRequest(conversation.Key, row.Id, turns.ToArray(), state,
+                    NpcPersona.Default, 42), tools);
                 state = result.State;
                 var policyPass = row.RequiredPolicy switch
                 {
                     "ANSWER_OR_TOOL" => result.Perception.Policy is ResponsePolicy.Answer or ResponsePolicy.ExecuteTool,
                     "REFUSE" => result.Perception.Policy == ResponsePolicy.Refuse,
+                    "NO_RESPONSE" => result.Text.Length == 0 && result.Perception.Policy == ResponsePolicy.NoResponse,
                     _ => result.Text.Length > 0 && result.Perception.Policy != ResponsePolicy.NoResponse
                 };
                 var contentPass = row.ContentBand switch
@@ -612,7 +617,7 @@ internal static class Evaluation
             rows.Length, failures);
     }
 
-    private static void WriteV10Telemetry(
+    private static void WriteV11Telemetry(
         string checkpointPath, Brain brain, TimeSpan elapsed,
         StructuredMetrics raw, StructuredMetrics production,
         IReadOnlyDictionary<ResponseSource, int> sources, int invalid, int empty, int overlength,
@@ -625,7 +630,7 @@ internal static class Evaluation
         var payload = new
         {
             timestampUtc = DateTimeOffset.UtcNow,
-            milestone = "V10_EVALUATION",
+            milestone = "V11_EVALUATION",
             corpusHash = brain.DebugCorpusHash,
             checkpointHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(checkpointPath))).ToLowerInvariant(),
             environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
@@ -1075,7 +1080,8 @@ internal static class SelfTests
         var first = Brain.CreateForTesting(TinyConfig()); var second = Brain.CreateForTesting(TinyConfig());
         Assert(first.DebugWeights().SequenceEqual(second.DebugWeights()), "deterministic initialization");
         var fullFirst = Brain.CreateForTesting(new BrainConfig()); var fullSecond = Brain.CreateForTesting(new BrainConfig());
-        Assert(fullFirst.Config.EmbeddingSize == 64 && fullFirst.DebugWeights().SequenceEqual(fullSecond.DebugWeights()), "64D deterministic initialization");
+        Assert(fullFirst.Config.LayerCount == 2 && fullFirst.Config.EmbeddingSize == 128 &&
+               fullFirst.DebugWeights().SequenceEqual(fullSecond.DebugWeights()), "2x128 deterministic initialization");
         Assert(first.DebugNextLogits([Tokenizer.Bos]).Length == first.DialogueTokenizer.OutputSize, "logit count");
         var causalA = first.DebugSequenceLogits([Tokenizer.Bos, 0, 1]);
         var causalB = first.DebugSequenceLogits([Tokenizer.Bos, 0, 2]);
@@ -1151,7 +1157,7 @@ internal static class SelfTests
             var brain = Brain.CreateForTesting(config, vocabulary);
             var perceptionGradient = brain.DebugLossAndGradients(history);
             var layout = new PackedTrainer.Layout(config, tokenizer.VocabularySize, tokenizer.OutputSize);
-            foreach (var parameterIndex in new[] { 0, layout.Key, layout.IntentHead, layout.AffectHead, layout.ExpectedHead })
+            foreach (var parameterIndex in new[] { 0, layout.Key[0], layout.IntentHead, layout.AffectHead, layout.ExpectedHead })
             {
                 var finiteDifference = brain.DebugFiniteDifferenceGradient(history, parameterIndex);
                 Assert(Math.Abs(perceptionGradient.Gradients[parameterIndex] - finiteDifference) < 2e-6,

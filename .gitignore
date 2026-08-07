@@ -21,6 +21,7 @@ data/compiled/
 data/compiled-*/
 data/training/
 data/telemetry/training-v10.jsonl
+data/telemetry/training-v11.jsonl
 
 # User-specific files
 *.rsuser
