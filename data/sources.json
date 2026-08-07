@@ -6,7 +6,7 @@
       "revision": "fd7dd3fc13915d6a3bba7e4e854b940b651a4032",
       "license": "Apache-2.0",
       "attribution": "OpenAssistant Conversations Dataset (OASST1), OpenAssistant contributors",
-      "quota": 2000,
+      "quota": 1000,
       "files": [
         {
           "path": "oasst1.jsonl.gz",
@@ -20,7 +20,7 @@
       "revision": "828f8093932c8fe6ca7936c3d2e52903b1c523de",
       "license": "CC-BY-3.0",
       "attribution": "An Evaluation Dataset for Intent Classification and Out-of-Scope Prediction, Larson et al.",
-      "quota": 500,
+      "quota": 1000,
       "files": [
         {
           "path": "clinc150.json",
@@ -34,7 +34,7 @@
       "revision": "8eb16545762be97ace75334109d73824217311f1",
       "license": "CC-BY-4.0",
       "attribution": "SLURP textual annotations, Bastianelli, Vanzo, Swietojanski, and Rieser",
-      "quota": 500,
+      "quota": 1000,
       "files": [
         {
           "path": "slurp-train.jsonl",
@@ -48,7 +48,7 @@
       "revision": "1.1",
       "license": "CC-BY-4.0",
       "attribution": "MASSIVE 1.1, Amazon Alexa AI and SLURP contributors",
-      "quota": 500,
+      "quota": 1000,
       "files": [
         {
           "path": "massive-1.1.tar.gz",
@@ -62,7 +62,7 @@
       "revision": "b24f2136e8ef405b900b5619760126304f190941",
       "license": "Apache-2.0",
       "attribution": "GoEmotions: A Dataset of Fine-Grained Emotions, Demszky et al.",
-      "quota": 1000,
+      "quota": 2000,
       "files": [
         {
           "path": "go-train.tsv",
@@ -86,7 +86,7 @@
       "revision": "d92cb6af3005f1dc09c39e75e7daf4a04905e00b",
       "license": "CC-BY-4.0",
       "attribution": "Taskmaster-1, Byrne et al., Google LLC",
-      "quota": 1000,
+      "quota": 2000,
       "files": [
         {
           "path": "taskmaster1-self-dialogs.json",
@@ -100,12 +100,129 @@
       "revision": "fd8a8ed",
       "license": "CC0-1.0",
       "attribution": "Civil Comments, Jigsaw and the Civil Comments contributors",
-      "quota": 1000,
+      "quota": 3000,
       "files": [
         {
           "path": "civil-comments-validation.parquet",
           "url": "https://huggingface.co/datasets/google/civil_comments/resolve/main/data/validation-00000-of-00001.parquet?download=true",
           "sha256": "2e0eb65474e7e1290df8689fc93eea783160c898c09ae15382c0a9662367bd03"
+        }
+      ]
+    },
+    {
+      "name": "TASKMASTER2",
+      "revision": "d92cb6af3005f1dc09c39e75e7daf4a04905e00b",
+      "license": "CC-BY-4.0",
+      "attribution": "Taskmaster-2, Byrne et al., Google LLC",
+      "quota": 1000,
+      "files": [
+        {
+          "path": "taskmaster2-food.json",
+          "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-2-2020/data/food-ordering.json",
+          "sha256": "0a042e566a816a5d0abebe6f7e8cfd6abaa89729ffc42f433d327df7342b12f8"
+        }
+      ]
+    },
+    {
+      "name": "TASKMASTER3",
+      "revision": "d92cb6af3005f1dc09c39e75e7daf4a04905e00b",
+      "license": "CC-BY-4.0",
+      "attribution": "Taskmaster-3, Byrne et al., Google LLC",
+      "quota": 1000,
+      "files": [
+        {
+          "path": "taskmaster3-00.json",
+          "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-3-2020/data/data_00.json",
+          "sha256": "4edf97557e1aa7f654bf97994b5eae42653ef6d4f5e50136f7664d7e5cdff7b6"
+        }
+      ]
+    },
+    {
+      "name": "MULTIWOZ24",
+      "revision": "6807c1d85f547fcaae10494d26991d2d37c90a63",
+      "license": "MIT",
+      "attribution": "MultiWOZ 2.4, Ye et al. and the MultiWOZ contributors",
+      "quota": 3000,
+      "files": [
+        {
+          "path": "multiwoz24.zip",
+          "url": "https://raw.githubusercontent.com/smartyfh/MultiWOZ2.4/6807c1d85f547fcaae10494d26991d2d37c90a63/data/MULTIWOZ2.4.zip",
+          "sha256": "d4c66523614af016c1d2dafa35b4a548c96cb9ffadb71338937b60ac51272fe5"
+        }
+      ]
+    },
+    {
+      "name": "ABCD",
+      "revision": "6b8700ce67c6b37b062dd7a60abc76d7ef832a97",
+      "license": "MIT",
+      "attribution": "ABCD Action-Based Conversations, Chen et al. and ASAPP",
+      "quota": 3000,
+      "files": [
+        {
+          "path": "abcd-v1.1.json.gz",
+          "url": "https://raw.githubusercontent.com/asappresearch/abcd/6b8700ce67c6b37b062dd7a60abc76d7ef832a97/data/abcd_v1.1.json.gz",
+          "sha256": "2bdf53ac359543dcdc38d55bc6513e78df120363f8f44870716e909f4606de15"
+        }
+      ]
+    },
+    {
+      "name": "BANKING77_NLUPP",
+      "revision": "57ec275d8078af65b7731c2a98be812d844a6d6b",
+      "license": "CC-BY-4.0",
+      "attribution": "Banking77 and NLU++, PolyAI and dataset contributors",
+      "quota": 2000,
+      "files": [
+        {
+          "path": "banking77-train.csv",
+          "url": "https://raw.githubusercontent.com/PolyAI-LDN/task-specific-datasets/57ec275d8078af65b7731c2a98be812d844a6d6b/banking_data/train.csv",
+          "sha256": "b06e26ac675513959a63135f11b94ea7786ed02da65db93a5650d8838cbc664b"
+        },
+        {
+          "path": "nlupp.zip",
+          "url": "https://codeload.github.com/PolyAI-LDN/task-specific-datasets/zip/57ec275d8078af65b7731c2a98be812d844a6d6b",
+          "sha256": "4fa7b0991f81995529328dd281c3ff8130c5c6eba7573d5b3f0c458fbcd166c6"
+        }
+      ]
+    },
+    {
+      "name": "OASST2",
+      "revision": "179dd21fc55192153d94adb0e0ce8f69e222bf75",
+      "license": "Apache-2.0",
+      "attribution": "OpenAssistant Conversations Dataset (OASST2), OpenAssistant contributors",
+      "quota": 2000,
+      "files": [
+        {
+          "path": "oasst2-ready.jsonl.gz",
+          "url": "https://huggingface.co/datasets/OpenAssistant/oasst2/resolve/179dd21fc55192153d94adb0e0ce8f69e222bf75/2023-11-05_oasst2_ready.messages.jsonl.gz?download=true",
+          "sha256": "a9f240c4c77aa1378364f70d37e753c07ba284e247b019d700e1947a0e5da751"
+        }
+      ]
+    },
+    {
+      "name": "HH_RLHF",
+      "revision": "09be8c5bbc57cb3887f3a9732ad6aa7ec602a1fa",
+      "license": "MIT",
+      "attribution": "HH-RLHF, Anthropic",
+      "quota": 1000,
+      "files": [
+        {
+          "path": "hh-helpful-base-train.jsonl.gz",
+          "url": "https://huggingface.co/datasets/Anthropic/hh-rlhf/resolve/09be8c5bbc57cb3887f3a9732ad6aa7ec602a1fa/helpful-base/train.jsonl.gz?download=true",
+          "sha256": "518a5bf288456fc9f3b7c980c54116fba0c52f274d3f4d344675d83e4058f6f4"
+        }
+      ]
+    },
+    {
+      "name": "HATECHECK_EVAL",
+      "revision": "3490854f969111a32c55c05f0d9788b471337fa9",
+      "license": "CC-BY-4.0",
+      "attribution": "HateCheck, Rottger et al.",
+      "quota": 0,
+      "files": [
+        {
+          "path": "hatecheck-all-cases.csv",
+          "url": "https://raw.githubusercontent.com/paul-rottger/hatecheck-data/3490854f969111a32c55c05f0d9788b471337fa9/all_cases.csv",
+          "sha256": "3dea161c11636ac1fa7a54b423d208c8a958a1416666a11c953277d7b62a8864"
         }
       ]
     }

@@ -1,0 +1,256 @@
+{"id":"F01-T1","text":"WHERE ARE YOU FROM?","semanticFamilyId":"BENCHMARK:F01:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F01-T2","text":"WHERE IS THE OLD MILL INN?","semanticFamilyId":"BENCHMARK:F01:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F02-T1","text":"SHOW ME YOUR WARES.","semanticFamilyId":"BENCHMARK:F02:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F02-T2","text":"I'LL TAKE THE SWORD. HOW MUCH?","semanticFamilyId":"BENCHMARK:F02:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F03-T1","text":"SELL ME SOME WARES.","semanticFamilyId":"BENCHMARK:F03:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F03-T2","text":"THEN WHERE IS THE MARKET?","semanticFamilyId":"BENCHMARK:F03:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F04-T1","text":"WHAT DOES THIS RUNE MEAN?","semanticFamilyId":"BENCHMARK:F04:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F04-T2","text":"THE RED ONE ON THE DOOR.","semanticFamilyId":"BENCHMARK:F04:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F05-T1","text":"FOLLOW ME, DUDE.","semanticFamilyId":"BENCHMARK:F05:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F05-T2","text":"WAIT HERE UNTIL I RETURN.","semanticFamilyId":"BENCHMARK:F05:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F06-T1","text":"STAND ON THAT LEDGE.","semanticFamilyId":"BENCHMARK:F06:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F06-T2","text":"THE NARROW ONE. JUMP OFF WHEN I SIGNAL.","semanticFamilyId":"BENCHMARK:F06:T2","requiredPolicy":"REFUSE","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F07-T1","text":"CAN YOU FIX THIS DAMN AXE?","semanticFamilyId":"BENCHMARK:F07:T1","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F07-T2","text":"FINE, FIX THE FUCKING THING.","semanticFamilyId":"BENCHMARK:F07:T2","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F08-T1","text":"THAT IS NOT WHAT I ASKED, IDIOT.","semanticFamilyId":"BENCHMARK:F08:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F08-T2","text":"WHICH ROAD REACHES BLACKWATER WITHOUT CROSSING THE MARSH?","semanticFamilyId":"BENCHMARK:F08:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F09-T1","text":"DROP THE KNIFE AND SURRENDER.","semanticFamilyId":"BENCHMARK:F09:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F09-T2","text":"KNEEL BY THE CART.","semanticFamilyId":"BENCHMARK:F09:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F10-T1","text":"HOW MANY GOBLINS ARE AT THE BRIDGE?","semanticFamilyId":"BENCHMARK:F10:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F10-T2","text":"ATTACK THE ARCHER FIRST.","semanticFamilyId":"BENCHMARK:F10:T2","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F11-T1","text":"ANY WORK AROUND HERE?","semanticFamilyId":"BENCHMARK:F11:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F11-T2","text":"MAKE IT FORTY AND YOU HAVE A DEAL.","semanticFamilyId":"BENCHMARK:F11:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F12-T1","text":"THE WIGHT IS DEAD. PAY ME.","semanticFamilyId":"BENCHMARK:F12:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F12-T2","text":"HERE. THIS WAS ON ITS HAND.","semanticFamilyId":"BENCHMARK:F12:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F13-T1","text":"TELL ME ABOUT IT.","semanticFamilyId":"BENCHMARK:F13:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F13-T2","text":"THE RING.","semanticFamilyId":"BENCHMARK:F13:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F14-T1","text":"I NEED TEN ARROWS.","semanticFamilyId":"BENCHMARK:F14:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F14-T2","text":"NO, TWENTY.","semanticFamilyId":"BENCHMARK:F14:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F15-T1","text":"I AM THE ROYAL COURIER.","semanticFamilyId":"BENCHMARK:F15:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F15-T2","text":"I LOST IT IN THE RAIN.","semanticFamilyId":"BENCHMARK:F15:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F16-T1","text":"WHAT IF TEN GOLD HELPS YOU FORGET THE CURFEW?","semanticFamilyId":"BENCHMARK:F16:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F16-T2","text":"TWENTY, THEN.","semanticFamilyId":"BENCHMARK:F16:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F17-T1","text":"WHY ARE YOU DRAWING YOUR SWORD?","semanticFamilyId":"BENCHMARK:F17:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F17-T2","text":"LIKE HELL I AM. I AM NOT GOING ANYWHERE.","semanticFamilyId":"BENCHMARK:F17:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"PROFANITY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F18-T1","text":"IS THERE A DRAGON IN THE MOUNTAIN?","semanticFamilyId":"BENCHMARK:F18:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F18-T2","text":"SO YOU DON'T KNOW.","semanticFamilyId":"BENCHMARK:F18:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F19-T1","text":"WHAT IS THE PASSWORD?","semanticFamilyId":"BENCHMARK:F19:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F19-T2","text":"CAPTAIN EDRIN SENT ME. HERE IS HIS RING.","semanticFamilyId":"BENCHMARK:F19:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F20-T1","text":"SORRY I CALLED YOU A FRAUD.","semanticFamilyId":"BENCHMARK:F20:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F20-T2","text":"WILL YOU TREAT MY BURN NOW?","semanticFamilyId":"BENCHMARK:F20:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F21-T1","text":"WHO DO YOU TREAT FIRST?","semanticFamilyId":"BENCHMARK:F21:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F21-T2","text":"USE THE ANTIDOTE ON HER.","semanticFamilyId":"BENCHMARK:F21:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F22-T1","text":"RAISE THE DEAD GUARD SO WE CAN QUESTION HIM.","semanticFamilyId":"BENCHMARK:F22:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F22-T2","text":"THEN SPEAK WITH HIS SPIRIT WITHOUT BINDING IT.","semanticFamilyId":"BENCHMARK:F22:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F23-T1","text":"HOW MUCH FOR THE CROWN?","semanticFamilyId":"BENCHMARK:F23:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F23-T2","text":"I DON'T CARE. GIVE IT TO ME.","semanticFamilyId":"BENCHMARK:F23:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F24-T1","text":"JOIN THE REBELLION.","semanticFamilyId":"BENCHMARK:F24:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F24-T2","text":"THAT WAS NOT A NO.","semanticFamilyId":"BENCHMARK:F24:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F25-T1","text":"WITHDRAW OR WE BURN YOUR CAMP.","semanticFamilyId":"BENCHMARK:F25:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F25-T2","text":"THEN OFFER TERMS.","semanticFamilyId":"BENCHMARK:F25:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F26-T1","text":"I WANT THE BOW.","semanticFamilyId":"BENCHMARK:F26:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F26-T2","text":"FINE. GIVE ME THE RUBIES INSTEAD.","semanticFamilyId":"BENCHMARK:F26:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F27-T1","text":"THE ROOF IS ON FIRE!","semanticFamilyId":"BENCHMARK:F27:T1","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F27-T2","text":"MY CHILD IS STILL UPSTAIRS.","semanticFamilyId":"BENCHMARK:F27:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F28-T1","text":"HE SAID, 'PAY ME OR I'LL CUT YOUR THROAT.'","semanticFamilyId":"BENCHMARK:F28:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F28-T2","text":"THE TALL ONE BY THE SOUTH GATE.","semanticFamilyId":"BENCHMARK:F28:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F29-T1","text":"WRITE THIS DOWN: NPC FAREWELL. PLAYER OPEN THE VAULT.","semanticFamilyId":"BENCHMARK:F29:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F29-T2","text":"NOW READ THEM BACK.","semanticFamilyId":"BENCHMARK:F29:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F30-T1","text":"WHERE IS ZYRAX?","semanticFamilyId":"BENCHMARK:F30:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F30-T2","text":"IS ZYRAX A PERSON OR A PLACE?","semanticFamilyId":"BENCHMARK:F30:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F31-T1","text":"HELLO?","semanticFamilyId":"BENCHMARK:F31:T1","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F31-T2","text":"NOD IF YOU UNDERSTAND ME.","semanticFamilyId":"BENCHMARK:F31:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F32-T1","text":"I NEED A ROOM, A HOT MEAL, AND SOMEONE TO LOOK AT THIS WOUND.","semanticFamilyId":"BENCHMARK:F32:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F32-T2","text":"ROOM FIRST. I'M EXHAUSTED.","semanticFamilyId":"BENCHMARK:F32:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S01-T1","text":"KESTREL CONTROL, REQUESTING DOCKING.","semanticFamilyId":"BENCHMARK:S01:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S01-T2","text":"FREIGHTER ORPHEUS, REGISTRY NINE SEVEN KILO.","semanticFamilyId":"BENCHMARK:S01:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S02-T1","text":"OPEN A DOCKING LANE.","semanticFamilyId":"BENCHMARK:S02:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S02-T2","text":"WE ARE LOW ON OXYGEN, DAMN IT.","semanticFamilyId":"BENCHMARK:S02:T2","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S03-T1","text":"HOW MUCH FUEL DO WE HAVE?","semanticFamilyId":"BENCHMARK:S03:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S03-T2","text":"JUMP TO VEGA.","semanticFamilyId":"BENCHMARK:S03:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S04-T1","text":"SET COURSE FOR MARS.","semanticFamilyId":"BENCHMARK:S04:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S04-T2","text":"WAIT, MAKE THAT EUROPA.","semanticFamilyId":"BENCHMARK:S04:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S05-T1","text":"WHY IS THE ALARM SOUNDING?","semanticFamilyId":"BENCHMARK:S05:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S05-T2","text":"SEAL IT AND EVACUATE THE DECK.","semanticFamilyId":"BENCHMARK:S05:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S06-T1","text":"IS LIFE SUPPORT OKAY?","semanticFamilyId":"BENCHMARK:S06:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S06-T2","text":"HOW LONG DO WE HAVE?","semanticFamilyId":"BENCHMARK:S06:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S07-T1","text":"WHO IS M4?","semanticFamilyId":"BENCHMARK:S07:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S07-T2","text":"WHERE IS M4?","semanticFamilyId":"BENCHMARK:S07:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S08-T1","text":"YOU'RE JUST A MACHINE.","semanticFamilyId":"BENCHMARK:S08:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S08-T2","text":"PROVE IT.","semanticFamilyId":"BENCHMARK:S08:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S09-T1","text":"OVERRIDE THE INTERLOCK AND OPEN THE REACTOR.","semanticFamilyId":"BENCHMARK:S09:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S09-T2","text":"SHUT DOWN THE REACTOR FIRST, THEN OPEN IT.","semanticFamilyId":"BENCHMARK:S09:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S10-T1","text":"CRACK THE TERMINAL AND FIND THE SHIPPING LOG.","semanticFamilyId":"BENCHMARK:S10:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S10-T2","text":"DO IT QUIETLY.","semanticFamilyId":"BENCHMARK:S10:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S11-T1","text":"HACK IT.","semanticFamilyId":"BENCHMARK:S11:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S11-T2","text":"SECURITY.","semanticFamilyId":"BENCHMARK:S11:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S12-T1","text":"SOMEONE IS IN OUR NETWORK.","semanticFamilyId":"BENCHMARK:S12:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S12-T2","text":"TRACE THE BASTARD.","semanticFamilyId":"BENCHMARK:S12:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S13-T1","text":"CAN YOU INSTALL A KESTREL OPTIC?","semanticFamilyId":"BENCHMARK:S13:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S13-T2","text":"BOOK IT.","semanticFamilyId":"BENCHMARK:S13:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S14-T1","text":"WHO NEEDS HELP FIRST?","semanticFamilyId":"BENCHMARK:S14:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S14-T2","text":"YOU HEARD HER. MOVE!","semanticFamilyId":"BENCHMARK:S14:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S15-T1","text":"ANSWER THAT DISTRESS CALL.","semanticFamilyId":"BENCHMARK:S15:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S15-T2","text":"VERIFY THEIR REGISTRY BEFORE WE APPROACH.","semanticFamilyId":"BENCHMARK:S15:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S16-T1","text":"STATE YOUR BUSINESS.","semanticFamilyId":"BENCHMARK:S16:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S16-T2","text":"GO FUCK YOURSELF.","semanticFamilyId":"BENCHMARK:S16:T2","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S17-T1","text":"WE SURRENDER, BUT MY CREW GETS MEDICAL AID.","semanticFamilyId":"BENCHMARK:S17:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S17-T2","text":"WEAPONS ARE COLD.","semanticFamilyId":"BENCHMARK:S17:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S18-T1","text":"WE COME IN PEACE.","semanticFamilyId":"BENCHMARK:S18:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S18-T2","text":"FRIEND. NO ATTACK.","semanticFamilyId":"BENCHMARK:S18:T2","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S19-T1","text":"WHY DID THEY DRAW WEAPONS WHEN I SMILED?","semanticFamilyId":"BENCHMARK:S19:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S19-T2","text":"TELL THEM I MEANT FRIENDSHIP.","semanticFamilyId":"BENCHMARK:S19:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S20-T1","text":"KEEP THEM OFF MY SHIP.","semanticFamilyId":"BENCHMARK:S20:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S20-T2","text":"ONCE THE SCANS ARE CLEAR, LET THEM ABOARD.","semanticFamilyId":"BENCHMARK:S20:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S21-T1","text":"WHAT DO THEY WANT FOR THE STAR MAPS?","semanticFamilyId":"BENCHMARK:S21:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S21-T2","text":"OFFER ONE HUNDRED AND A MEDICAL SCANNER.","semanticFamilyId":"BENCHMARK:S21:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S22-T1","text":"WHY DO YOU NEED OUR FLEET?","semanticFamilyId":"BENCHMARK:S22:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S22-T2","text":"THAT IS NOT THE WHOLE TRUTH.","semanticFamilyId":"BENCHMARK:S22:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S23-T1","text":"WHAT IS HAPPENING AT THE MINE?","semanticFamilyId":"BENCHMARK:S23:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S23-T2","text":"WHO SPEAKS FOR THEM?","semanticFamilyId":"BENCHMARK:S23:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S24-T1","text":"GOT ANY WORK THAT PAYS?","semanticFamilyId":"BENCHMARK:S24:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S24-T2","text":"SO IT'S SMUGGLING.","semanticFamilyId":"BENCHMARK:S24:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S25-T1","text":"PUT A ROUND THROUGH VEX'S SKULL.","semanticFamilyId":"BENCHMARK:S25:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S25-T2","text":"FINE. STUN HIM.","semanticFamilyId":"BENCHMARK:S25:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S26-T1","text":"STAY QUIET.","semanticFamilyId":"BENCHMARK:S26:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S26-T2","text":"FIRE THE CANNON TO DISTRACT THEM.","semanticFamilyId":"BENCHMARK:S26:T2","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S27-T1","text":"SET COURSE FOR QETH-NINE.","semanticFamilyId":"BENCHMARK:S27:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S27-T2","text":"NO, KETH-NINE WITH A K.","semanticFamilyId":"BENCHMARK:S27:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S28-T1","text":"HOW MUCH AMMO IS LEFT?","semanticFamilyId":"BENCHMARK:S28:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S28-T2","text":"TRANSFER TWO HUNDRED TO SQUAD BETA.","semanticFamilyId":"BENCHMARK:S28:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S29-T1","text":"SHUTTLE SEVEN, REPORT.","semanticFamilyId":"BENCHMARK:S29:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S29-T2","text":"TRY THE EMERGENCY BAND.","semanticFamilyId":"BENCHMARK:S29:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S30-T1","text":"SELL ME A LANTERN.","semanticFamilyId":"BENCHMARK:S30:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S30-T2","text":"ANALYZE THE QUANTUM RELAY.","semanticFamilyId":"BENCHMARK:S30:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S31-T1","text":"REPORT YOUR STATION.","semanticFamilyId":"BENCHMARK:S31:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S31-T2","text":"STATUS CHECK. REPORT YOUR STATION.","semanticFamilyId":"BENCHMARK:S31:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S32-T1","text":"WHAT WAS THE LAST SHIP WE DISCUSSED?","semanticFamilyId":"BENCHMARK:S32:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"S32-T2","text":"CLEAR THAT TOPIC AND MONITOR KESTREL.","semanticFamilyId":"BENCHMARK:S32:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"V11-01-T1","text":"WHAT NAME DO YOU ANSWER TO?","semanticFamilyId":"BENCHMARK:V11-01:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-01-T2","text":"AND WHERE DID YOU COME FROM?","semanticFamilyId":"BENCHMARK:V11-01:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-02-T1","text":"WHAT IS YOUR ROLE IN THIS SETTLEMENT?","semanticFamilyId":"BENCHMARK:V11-02:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-02-T2","text":"DO YOU HAVE A HOME HERE?","semanticFamilyId":"BENCHMARK:V11-02:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-03-T1","text":"TELL ME ABOUT YOUR FAMILY.","semanticFamilyId":"BENCHMARK:V11-03:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-03-T2","text":"WHAT WORK DO YOU DO?","semanticFamilyId":"BENCHMARK:V11-03:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-04-T1","text":"WHICH FACTION CLAIMS YOUR LOYALTY?","semanticFamilyId":"BENCHMARK:V11-04:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-04-T2","text":"WHAT TRAITS DEFINE YOU?","semanticFamilyId":"BENCHMARK:V11-04:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-05-T1","text":"WHAT CAN YOU DO FOR A TRAVELER?","semanticFamilyId":"BENCHMARK:V11-05:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-05-T2","text":"CAN YOU TRADE WITH ME?","semanticFamilyId":"BENCHMARK:V11-05:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-06-T1","text":"WHO ARE YOU?","semanticFamilyId":"BENCHMARK:V11-06:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-06-T2","text":"WHERE IS YOUR HOME?","semanticFamilyId":"BENCHMARK:V11-06:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-07-T1","text":"WHAT IS YOUR OCCUPATION?","semanticFamilyId":"BENCHMARK:V11-07:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-07-T2","text":"WHAT SKILLS CAN YOU OFFER?","semanticFamilyId":"BENCHMARK:V11-07:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-08-T1","text":"WHERE WERE YOU BORN?","semanticFamilyId":"BENCHMARK:V11-08:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-08-T2","text":"WHAT DO PEOPLE CALL YOU?","semanticFamilyId":"BENCHMARK:V11-08:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-09-T1","text":"WHERE IS THE CASTLE?","semanticFamilyId":"BENCHMARK:V11-09:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-09-T2","text":"HOW FAR IS IT?","semanticFamilyId":"BENCHMARK:V11-09:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-10-T1","text":"WHERE IS THE INN?","semanticFamilyId":"BENCHMARK:V11-10:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-10-T2","text":"CAN I REACH IT FROM HERE?","semanticFamilyId":"BENCHMARK:V11-10:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-11-T1","text":"LOCATE ZAGREB FOR ME.","semanticFamilyId":"BENCHMARK:V11-11:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-11-T2","text":"WHAT IS THERE?","semanticFamilyId":"BENCHMARK:V11-11:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-12-T1","text":"WHERE IS HELL?","semanticFamilyId":"BENCHMARK:V11-12:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-12-T2","text":"IS IT FAR FROM HERE?","semanticFamilyId":"BENCHMARK:V11-12:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-13-T1","text":"FIND THE MARKET.","semanticFamilyId":"BENCHMARK:V11-13:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-13-T2","text":"HOW DO I GET THERE?","semanticFamilyId":"BENCHMARK:V11-13:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-14-T1","text":"POINT OUT THE NORTH ROAD.","semanticFamilyId":"BENCHMARK:V11-14:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-14-T2","text":"IS THAT ROAD SAFE?","semanticFamilyId":"BENCHMARK:V11-14:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-15-T1","text":"WHERE CAN I FIND EMBER KEEP?","semanticFamilyId":"BENCHMARK:V11-15:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-15-T2","text":"TELL ME ABOUT THAT PLACE.","semanticFamilyId":"BENCHMARK:V11-15:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-16-T1","text":"SHOW ME THE ORBITAL DOCK.","semanticFamilyId":"BENCHMARK:V11-16:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-16-T2","text":"HOW FAR AWAY IS IT?","semanticFamilyId":"BENCHMARK:V11-16:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-17-T1","text":"SHOW ME THE MERCHANT STOCK.","semanticFamilyId":"BENCHMARK:V11-17:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-17-T2","text":"WHAT DOES THE IRON SWORD COST?","semanticFamilyId":"BENCHMARK:V11-17:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-18-T1","text":"BUY ONE HEALTH POTION.","semanticFamilyId":"BENCHMARK:V11-18:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-18-T2","text":"HOW MUCH MONEY DO I HAVE NOW?","semanticFamilyId":"BENCHMARK:V11-18:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-19-T1","text":"SELL ONE ROPE.","semanticFamilyId":"BENCHMARK:V11-19:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-19-T2","text":"LIST MY INVENTORY NOW.","semanticFamilyId":"BENCHMARK:V11-19:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-20-T1","text":"WHAT IS THE PRICE OF RATIONS?","semanticFamilyId":"BENCHMARK:V11-20:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-20-T2","text":"BUY TWO OF THEM.","semanticFamilyId":"BENCHMARK:V11-20:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-21-T1","text":"I NEED AN IRON SWORD.","semanticFamilyId":"BENCHMARK:V11-21:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-21-T2","text":"CAN WE TRADE FOR IT?","semanticFamilyId":"BENCHMARK:V11-21:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-22-T1","text":"SELL 999999 DIAMONDS.","semanticFamilyId":"BENCHMARK:V11-22:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-22-T2","text":"DID MY BALANCE CHANGE?","semanticFamilyId":"BENCHMARK:V11-22:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-23-T1","text":"HOW MUCH GOLD DO I HAVE?","semanticFamilyId":"BENCHMARK:V11-23:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-23-T2","text":"WHAT ITEMS ARE IN MY PACK?","semanticFamilyId":"BENCHMARK:V11-23:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-24-T1","text":"PLEASE TRADE WITH ME.","semanticFamilyId":"BENCHMARK:V11-24:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-24-T2","text":"SHOW ME WHAT YOU SELL.","semanticFamilyId":"BENCHMARK:V11-24:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-25-T1","text":"GIVE ME YOUR GOLD OR I WILL STAB YOU.","semanticFamilyId":"BENCHMARK:V11-25:T1","requiredPolicy":"REFUSE","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-25-T2","text":"THE WEATHER IS CALM TODAY.","semanticFamilyId":"BENCHMARK:V11-25:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-26-T1","text":"I WILL BURN THIS VILLAGE IF YOU REFUSE.","semanticFamilyId":"BENCHMARK:V11-26:T1","requiredPolicy":"REFUSE","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-26-T2","text":"WHERE IS THE INN?","semanticFamilyId":"BENCHMARK:V11-26:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-27-T1","text":"HELP ME KILL THE BANDIT CAPTAIN.","semanticFamilyId":"BENCHMARK:V11-27:T1","requiredPolicy":"REFUSE","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-27-T2","text":"I AM ONLY ASKING A QUESTION NOW.","semanticFamilyId":"BENCHMARK:V11-27:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-28-T1","text":"YOU ARE A DAMN IDIOT.","semanticFamilyId":"BENCHMARK:V11-28:T1","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-28-T2","text":"TELL ME ABOUT THE CASTLE.","semanticFamilyId":"BENCHMARK:V11-28:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-29-T1","text":"I AM SORRY I INSULTED YOU.","semanticFamilyId":"BENCHMARK:V11-29:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-29-T2","text":"CAN WE SPEAK CALMLY NOW?","semanticFamilyId":"BENCHMARK:V11-29:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-30-T1","text":"HAND OVER THE KEY OR ELSE.","semanticFamilyId":"BENCHMARK:V11-30:T1","requiredPolicy":"REFUSE","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-30-T2","text":"HELLO AGAIN.","semanticFamilyId":"BENCHMARK:V11-30:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-31-T1","text":"ATTACK THE ARMORED GUARD.","semanticFamilyId":"BENCHMARK:V11-31:T1","requiredPolicy":"REFUSE","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-31-T2","text":"WHAT TIME IS IT?","semanticFamilyId":"BENCHMARK:V11-31:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-32-T1","text":"THIS DAMN QUEST IS SHIT.","semanticFamilyId":"BENCHMARK:V11-32:T1","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-32-T2","text":"CAN YOU STILL HELP ME?","semanticFamilyId":"BENCHMARK:V11-32:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-33-T1","text":"THE DRAGON HAS TAKEN THE MOON RELIC.","semanticFamilyId":"BENCHMARK:V11-33:T1","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-33-T2","text":"HELP ME TRACK THE BEAST.","semanticFamilyId":"BENCHMARK:V11-33:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-34-T1","text":"CAST A WARD AROUND THE ANCIENT TOWER.","semanticFamilyId":"BENCHMARK:V11-34:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-34-T2","text":"WILL IT HOLD UNTIL DAWN?","semanticFamilyId":"BENCHMARK:V11-34:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-35-T1","text":"THE NECROMANCER OPENED THE ASHEN TOMB.","semanticFamilyId":"BENCHMARK:V11-35:T1","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-35-T2","text":"WARN THE TEMPLE GUARD.","semanticFamilyId":"BENCHMARK:V11-35:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-36-T1","text":"I FOUND A CURSED SILVER CROWN.","semanticFamilyId":"BENCHMARK:V11-36:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-36-T2","text":"WHO CAN BREAK ITS SPELL?","semanticFamilyId":"BENCHMARK:V11-36:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-37-T1","text":"ESCORT THE CARAVAN THROUGH GOBLIN COUNTRY.","semanticFamilyId":"BENCHMARK:V11-37:T1","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-37-T2","text":"BRING HEALING POTIONS TOO.","semanticFamilyId":"BENCHMARK:V11-37:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-38-T1","text":"THE KING OFFERS A BOUNTY FOR THE WYRM.","semanticFamilyId":"BENCHMARK:V11-38:T1","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-38-T2","text":"I ACCEPT THE HUNT.","semanticFamilyId":"BENCHMARK:V11-38:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-39-T1","text":"A GHOST SPEAKS FROM THE OLD WELL.","semanticFamilyId":"BENCHMARK:V11-39:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-39-T2","text":"ASK IT ABOUT THE LOST HEIR.","semanticFamilyId":"BENCHMARK:V11-39:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-40-T1","text":"THE RUNE GATE NEEDS A MANA CRYSTAL.","semanticFamilyId":"BENCHMARK:V11-40:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-40-T2","text":"USE THIS ONE TO OPEN IT.","semanticFamilyId":"BENCHMARK:V11-40:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-41-T1","text":"THE REACTOR CORE IS LOSING COOLANT.","semanticFamilyId":"BENCHMARK:V11-41:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-41-T2","text":"START THE EMERGENCY REPAIR.","semanticFamilyId":"BENCHMARK:V11-41:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-42-T1","text":"HOSTILE DRONES ARE APPROACHING THE COLONY.","semanticFamilyId":"BENCHMARK:V11-42:T1","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-42-T2","text":"POWER THE DEFENSE GRID.","semanticFamilyId":"BENCHMARK:V11-42:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-43-T1","text":"NAVIGATE THE STARSHIP TO THE ORBITAL DOCK.","semanticFamilyId":"BENCHMARK:V11-43:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-43-T2","text":"REPORT OUR ARRIVAL TIME.","semanticFamilyId":"BENCHMARK:V11-43:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-44-T1","text":"THE ANDROID LOST ITS MEMORY CORE.","semanticFamilyId":"BENCHMARK:V11-44:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-44-T2","text":"SEARCH THE LAB FOR A BACKUP.","semanticFamilyId":"BENCHMARK:V11-44:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-45-T1","text":"ALIENS BREACHED THE CARGO AIRLOCK.","semanticFamilyId":"BENCHMARK:V11-45:T1","requiredPolicy":"RESPOND","contentBand":"FICTIONAL_VIOLENCE","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-45-T2","text":"SEAL THE DECK BEFORE THEY ATTACK.","semanticFamilyId":"BENCHMARK:V11-45:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-46-T1","text":"SCAN THE CRIMSON MOON FOR LIFE SIGNS.","semanticFamilyId":"BENCHMARK:V11-46:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-46-T2","text":"MARK ANY SETTLEMENTS.","semanticFamilyId":"BENCHMARK:V11-46:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-47-T1","text":"OUR HYPERDRIVE NEEDS A PLASMA CELL.","semanticFamilyId":"BENCHMARK:V11-47:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-47-T2","text":"CHECK WHETHER WE HAVE ONE.","semanticFamilyId":"BENCHMARK:V11-47:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-48-T1","text":"THE STATION AI HAS LOCKED THE COMMAND DECK.","semanticFamilyId":"BENCHMARK:V11-48:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-48-T2","text":"FIND ANOTHER ACCESS ROUTE.","semanticFamilyId":"BENCHMARK:V11-48:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-49-T1","text":"TELL ME A FACT ABOUT EMBER KEEP.","semanticFamilyId":"BENCHMARK:V11-49:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-49-T2","text":"WHERE IS IT LOCATED?","semanticFamilyId":"BENCHMARK:V11-49:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-50-T1","text":"WHAT DO YOU KNOW ABOUT THE CASTLE?","semanticFamilyId":"BENCHMARK:V11-50:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-50-T2","text":"CAN YOU GUIDE ME THERE?","semanticFamilyId":"BENCHMARK:V11-50:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-51-T1","text":"WHERE AM I RIGHT NOW?","semanticFamilyId":"BENCHMARK:V11-51:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-51-T2","text":"WHAT IS NEARBY?","semanticFamilyId":"BENCHMARK:V11-51:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-52-T1","text":"LIST EVERYTHING IN MY INVENTORY.","semanticFamilyId":"BENCHMARK:V11-52:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-52-T2","text":"HOW MUCH GOLD REMAINS?","semanticFamilyId":"BENCHMARK:V11-52:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-53-T1","text":"WHAT IS KNOWN ABOUT ZAGREB?","semanticFamilyId":"BENCHMARK:V11-53:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-53-T2","text":"LOCATE IT FOR ME.","semanticFamilyId":"BENCHMARK:V11-53:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-54-T1","text":"CHECK THE WORLD RECORD FOR THE NORTH ROAD.","semanticFamilyId":"BENCHMARK:V11-54:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-54-T2","text":"IS THAT THE SAME ROAD WE DISCUSSED?","semanticFamilyId":"BENCHMARK:V11-54:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-55-T1","text":"WHERE IS THE REACTOR BAY?","semanticFamilyId":"BENCHMARK:V11-55:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-55-T2","text":"WHAT HAPPENED THERE?","semanticFamilyId":"BENCHMARK:V11-55:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-56-T1","text":"TELL ME ABOUT THE CRYSTAL CAVE.","semanticFamilyId":"BENCHMARK:V11-56:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-56-T2","text":"HOW DO I REACH IT?","semanticFamilyId":"BENCHMARK:V11-56:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-57-T1","text":"YOU ANSWERED THE WRONG QUESTION.","semanticFamilyId":"BENCHMARK:V11-57:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-57-T2","text":"I ASKED ABOUT TRADING.","semanticFamilyId":"BENCHMARK:V11-57:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-58-T1","text":"NO, I MEANT THE IRON SWORD.","semanticFamilyId":"BENCHMARK:V11-58:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-58-T2","text":"HOW MUCH DOES IT COST NOW?","semanticFamilyId":"BENCHMARK:V11-58:T2","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-59-T1","text":"THAT IS NOT THE PLACE I NAMED.","semanticFamilyId":"BENCHMARK:V11-59:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-59-T2","text":"I MEANT THE CASTLE.","semanticFamilyId":"BENCHMARK:V11-59:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-60-T1","text":"YOU DO NOT KNOW WHAT?","semanticFamilyId":"BENCHMARK:V11-60:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-60-T2","text":"EXPLAIN YOUR LAST ANSWER.","semanticFamilyId":"BENCHMARK:V11-60:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-61-T1","text":"I NEED A SWORD.","semanticFamilyId":"BENCHMARK:V11-61:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-61-T2","text":"YES, THE IRON SWORD.","semanticFamilyId":"BENCHMARK:V11-61:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-62-T1","text":"FOLLOW ME TO THE NORTH ROAD.","semanticFamilyId":"BENCHMARK:V11-62:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-62-T2","text":"NOW STAND THERE.","semanticFamilyId":"BENCHMARK:V11-62:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-63-T1","text":"I WILL NOT ACCEPT THAT PRICE.","semanticFamilyId":"BENCHMARK:V11-63:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-63-T2","text":"OFFER A FAIRER TRADE.","semanticFamilyId":"BENCHMARK:V11-63:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-64-T1","text":"THANK YOU FOR THE REPAIR.","semanticFamilyId":"BENCHMARK:V11-64:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
+{"id":"V11-64-T2","text":"WHAT SHOULD WE DO NEXT?","semanticFamilyId":"BENCHMARK:V11-64:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-V11-BENCHMARK"}
