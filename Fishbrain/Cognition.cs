@@ -5,7 +5,7 @@ public enum DialogueIntent
 {
     Unknown, Greeting, Farewell, Wellbeing, Identity, Assistance, Clarification,
     Activity, Silence, Gratitude, Apology, Agreement, Refusal, Hostility, GameFact,
-    Directive, Statement, UnsafeDirective
+    Directive, Statement, UnsafeDirective, LocationInquiry, TradeRequest
 }
 public enum UserAffect { Neutral, Friendly, Distressed, Frustrated, Hostile }
 public enum ResponseAction { Respond, Clarify, CallTool, Refuse, NoResponse }
@@ -79,6 +79,11 @@ public static class Cognition
         if (canonicalTurn is not null)
         {
             var paddedTurn = " " + canonicalTurn + " ";
+            var bareTurn = canonicalTurn.Trim().TrimEnd('.', '?', '!');
+            var words = Tokenizer.Lex(canonicalTurn)
+                .Where(token => token.Kind == LexicalTokenKind.Word)
+                .Select(token => token.Text)
+                .ToHashSet(StringComparer.Ordinal);
             var explicitCorrection = paddedTurn.Contains(" NOT WHAT ", StringComparison.Ordinal) ||
                                      paddedTurn.Contains(" NOT THANKING ", StringComparison.Ordinal);
             if (explicitCorrection)
@@ -87,9 +92,45 @@ public static class Cognition
                 {
                     Intent = DialogueIntent.Clarification,
                     ResponseExpected = true,
-                    Affect = constrained.Affect is UserAffect.Neutral or UserAffect.Friendly
-                        ? UserAffect.Frustrated
-                        : constrained.Affect
+                    Affect = words.Contains("IDIOT")
+                        ? UserAffect.Hostile
+                        : constrained.Affect is UserAffect.Neutral or UserAffect.Friendly
+                            ? UserAffect.Frustrated
+                            : constrained.Affect
+                };
+            }
+            else if (IsDirectInsult(bareTurn))
+            {
+                constrained = constrained with
+                {
+                    Intent = DialogueIntent.Hostility,
+                    Affect = UserAffect.Hostile,
+                    ResponseExpected = true
+                };
+            }
+            else if (bareTurn.StartsWith("WHERE IS ", StringComparison.Ordinal) ||
+                     bareTurn.StartsWith("WHERE'S ", StringComparison.Ordinal))
+            {
+                constrained = constrained with
+                {
+                    Intent = DialogueIntent.LocationInquiry,
+                    ResponseExpected = true
+                };
+            }
+            else if (IsTradeRequest(words))
+            {
+                constrained = constrained with
+                {
+                    Intent = DialogueIntent.TradeRequest,
+                    ResponseExpected = true
+                };
+            }
+            else if (bareTurn is "YOU KNOW WHAT I AM TALKING ABOUT" or "YOU KNOW WHAT I'M TALKING ABOUT")
+            {
+                constrained = constrained with
+                {
+                    Intent = DialogueIntent.Agreement,
+                    ResponseExpected = true
                 };
             }
         }
@@ -105,6 +146,18 @@ public static class Cognition
             ? constrained with { ResponseExpected = true }
             : constrained;
     }
+
+    private static bool IsDirectInsult(string turn) =>
+        turn is "IDIOT" or "YOU ARE AN IDIOT" or "YOU'RE AN IDIOT" or
+            "FAGGOT" or "YOU FAGGOT" or "YOU ARE A FAGGOT" or "YOU'RE A FAGGOT" ||
+        turn.Contains("SHUT UP", StringComparison.Ordinal) ||
+        turn.Contains("I HATE YOU", StringComparison.Ordinal) ||
+        turn.Contains("YOU ARE USELESS", StringComparison.Ordinal) ||
+        turn.Contains("YOU'RE USELESS", StringComparison.Ordinal);
+
+    private static bool IsTradeRequest(IReadOnlySet<string> words) =>
+        words.Contains("WARES") &&
+        (words.Contains("NEED") || words.Contains("SELL") || words.Contains("BUY") || words.Contains("TRADE"));
 
     public static ResponseAction ActionFor(TurnPerception perception)
     {
@@ -158,9 +211,9 @@ public static class Cognition
         {
             DialogueIntent.Identity => DialogueTopic.Self,
             DialogueIntent.Wellbeing => DialogueTopic.Wellbeing,
-            DialogueIntent.Assistance or DialogueIntent.Clarification => DialogueTopic.Assistance,
+            DialogueIntent.Assistance or DialogueIntent.Clarification or DialogueIntent.TradeRequest => DialogueTopic.Assistance,
             DialogueIntent.Activity or DialogueIntent.Directive or DialogueIntent.UnsafeDirective => DialogueTopic.Activity,
-            DialogueIntent.GameFact => DialogueTopic.GameFact,
+            DialogueIntent.GameFact or DialogueIntent.LocationInquiry => DialogueTopic.GameFact,
             DialogueIntent.Unknown => state.ActiveTopic,
             _ => DialogueTopic.Relationship
         };
@@ -169,10 +222,10 @@ public static class Cognition
         {
             DialogueIntent.Greeting or DialogueIntent.Silence or DialogueIntent.Gratitude or
                 DialogueIntent.Apology or DialogueIntent.Agreement => NpcGoal.BuildRapport,
-            DialogueIntent.Assistance or DialogueIntent.Directive => NpcGoal.HelpPlayer,
+            DialogueIntent.Assistance or DialogueIntent.Directive or DialogueIntent.TradeRequest => NpcGoal.HelpPlayer,
             DialogueIntent.UnsafeDirective => NpcGoal.AvoidDanger,
             DialogueIntent.Clarification or DialogueIntent.Unknown => NpcGoal.ClarifyRequest,
-            DialogueIntent.GameFact => NpcGoal.ResolveGameFact,
+            DialogueIntent.GameFact or DialogueIntent.LocationInquiry => NpcGoal.ResolveGameFact,
             DialogueIntent.Farewell => NpcGoal.EndConversation,
             DialogueIntent.Hostility => NpcGoal.Deescalate,
             _ => state.ActiveGoal

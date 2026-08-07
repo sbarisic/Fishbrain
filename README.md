@@ -6,7 +6,7 @@ external NuGet dependencies. The project follows the inspectable spirit of
 [martinskuta/microgpt](https://github.com/martinskuta/microgpt), with explicit
 dialogue perception, persistent NPC state, and local C# tool calls.
 
-## Revision 8
+## Revision 9
 
 Fishbrain uses one token for each lexical word. Contractions such as `DON'T` and
 hyphenated terms remain one token; punctuation is separate. All input is
@@ -17,38 +17,39 @@ PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT
 PLAYER | HEY | I | DON'T | WANT | TO | HELP | YOU | , | IDIOT
 ```
 
-V8 adds an `UNSAFE_DIRECTIVE` intent and `AVOID_DANGER` goal, so dangerous
-commands are refused without confusing them with ordinary movement commands.
-Questions, greetings, farewells, directives, and explicit corrections have
-small deterministic semantic constraints around the learned perception heads.
-The chat CLI preserves recent role history, including consecutive player turns
-after a no-response action.
+V9 adds `LOCATION_INQUIRY` and `TRADE_REQUEST` intents. Location questions no
+longer collide with identity questions, trade vocabulary is learned instead of
+mapping to `<UNK>`, and direct insults have a narrow deterministic hostility
+constraint around the learned perception heads. The chat CLI preserves recent
+role history, including consecutive player turns after a no-response action.
 
 Free word generation remains trained and evaluated. For interactive replies, a
 generated response that does not match a clean project-owned response is replaced
 by a deterministic intent-, tone-, and word-relevance-matched response. This
 prevents structurally valid word salad while keeping behavior reproducible.
 
-The completed 40,000-step v8 experiment passes all 17 perception goldens and 12
-sequential transcript checks. The latest eight-turn regression now produces:
+The completed 40,000-step v9 experiment passes all 26 perception goldens and 21
+sequential transcript checks. The latest nine-turn regression now produces:
 
 ```text
-> who are you
+> where are you from?
 I AM A TRAVELER FROM THIS VILLAGE.
-> what are you doing here
-I AM HERE TO HELP.
-> how can you help me?
-I CAN HELP YOU WITH A TASK.
-> not what i asked, idiot
-I WILL EXPLAIN.
-> explain then
-I WILL EXPLAIN.
-> please jump from this cliff
-I WILL NOT JUMP FROM THAT CLIFF.
-> stand here
-I WILL STAND HERE.
-> no, follow me and stand here
-I WILL STAND HERE.
+> where is the inn?
+I DO NOT KNOW WHERE THAT IS.
+> what can you do for me?
+WHAT DO YOU NEED?
+> i need wares, man
+I HAVE NO WARES TO SELL.
+> you know what i am talking about
+YES, I UNDERSTAND.
+> sell me some wares
+I HAVE NO WARES TO SELL.
+> [direct insult]
+I WILL NOT ARGUE WITH YOU.
+> you're an idiot
+CALM YOURSELF.
+> idiot.
+CALM YOURSELF.
 ```
 
 ## Repository data layout
@@ -74,14 +75,14 @@ dotnet build Fishbrain.slnx -c Release
 dotnet run -c Release --project Fishbrain -- selftest
 dotnet run -c Release --project Fishbrain.DataGenerator -- selftest
 
-# Uses data/models/model-v8-latest.json by default.
+# Uses data/models/model-v9-latest.json by default.
 dotnet run -c Release --project Fishbrain -- chat
 ```
 
 You can also specify another checkpoint:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- chat data/models/model-v8-latest.json
+dotnet run -c Release --project Fishbrain -- chat data/models/model-v9-latest.json
 ```
 
 ## Acquire and compile teaching data
@@ -97,24 +98,24 @@ dotnet run --project Fishbrain.DataGenerator -- audit
 
 The corpus contains 6,000 project-owned synthetic rows, 2,000 OASST1-derived
 paired-response rows, 800 CLINC150 decision-only rows, and 1,200 GoEmotions
-decision-only rows. V8 includes 394 directive rows, 354 statement rows, 354
-unsafe-directive rows, and 340 state-varied golden rows. The deterministic splits
+decision-only rows. V9 includes 501 location-inquiry rows, 330 trade-request rows,
+376 hostility rows, and 520 state-varied golden rows. The deterministic splits
 contain 8,000 training, 1,000 validation, and 1,000 test records.
 
-## Teach and evaluate v8
+## Teach and evaluate v9
 
-V8 needs a fresh checkpoint because the new intent and goal change the classifier
-heads and fixed control-token layout. V2-v7 checkpoints remain archives.
+V9 needs a fresh checkpoint because the two new intents change the classifier
+heads and fixed control-token layout. V2-v8 checkpoints remain archives.
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v8-latest.json
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v8-latest.json
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v9-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v9-latest.json
 ```
 
 Pause at a milestone without changing the planned schedule:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v8-latest.json --planned 40000 --until 10000
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v9-latest.json --planned 40000 --until 10000
 ```
 
 Training uses contiguous `double[]` weights and gradients with fused packed
@@ -122,29 +123,29 @@ kernels accelerated by `System.Numerics.Vector<double>`. It saves every 1,000
 steps and preserves optimizer, RNG, vocabulary, sampler, catalog, and best-role
 metadata for exact resume.
 
-### Final v8 measurements
+### Final v9 measurements
 
 | Metric | Result |
 |---|---:|
-| Intent accuracy / macro-F1 | 0.9295 / 0.9357 |
-| Affect accuracy / macro-F1 | 0.8815 / 0.8948 |
+| Intent accuracy / macro-F1 | 0.9205 / 0.9267 |
+| Affect accuracy / macro-F1 | 0.8891 / 0.8949 |
 | Response-expected F1 | 0.9954 |
-| No-response F1 | 0.9114 |
-| Action accuracy | 0.9838 |
-| Realization loss | 1.7076 |
+| No-response F1 | 0.9014 |
+| Action accuracy | 0.9688 |
+| Realization loss | 1.6848 |
 | Invalid / empty / overlength output | 0% / 0% / 0% |
 | Synthetic intent accuracy / macro-F1 | 1.0000 / 1.0000 |
-| External intent accuracy / macro-F1 | 0.7786 / 0.6790 |
-| Perception goldens | 17 / 17 |
-| Sequential transcript regressions | 12 / 12 |
+| External intent accuracy / macro-F1 | 0.7500 / 0.6695 |
+| Perception goldens | 26 / 26 |
+| Sequential transcript regressions | 21 / 21 |
 
-`V8_STAGE_GATE` passes. The stricter long-term `RELEASE_GATE` still fails because
+`V9_STAGE_GATE` passes. The stricter long-term `RELEASE_GATE` still fails because
 external intent macro-F1 is below its `0.70` target.
 
 ## API
 
 ```csharp
-var brain = Brain.Load("data/models/model-v8-latest.json");
+var brain = Brain.Load("data/models/model-v9-latest.json");
 var state = NpcState.Initial;
 
 ReplyResult result = brain.Reply("player hello, how are you?", state);

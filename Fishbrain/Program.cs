@@ -36,7 +36,7 @@ internal static class Program
                     break;
                 case "chat":
                     Count(args, 1, 2);
-                    Chat(args.Length == 2 ? args[1] : Path.Combine("data", "models", "model-v8-latest.json"));
+                    Chat(args.Length == 2 ? args[1] : Path.Combine("data", "models", "model-v9-latest.json"));
                     break;
                 case "selftest":
                     Count(args, 1, 1);
@@ -94,7 +94,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json");
-        Console.WriteLine("  chat [CHECKPOINT.json]  (default: data/models/model-v8-latest.json)");
+        Console.WriteLine("  chat [CHECKPOINT.json]  (default: data/models/model-v9-latest.json)");
         Console.WriteLine("  selftest");
     }
 
@@ -236,7 +236,7 @@ internal static class Evaluation
         var transcriptPass = transcriptResults.All(result => result.Pass);
         var releasePass = syntheticMacro >= 0.85 && externalMacro >= 0.70 && affectMacro >= 0.75 &&
                           expectedF1 >= 0.90 && invalid == 0 && overlength == 0 && goldenPass && transcriptPass;
-        var v8StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
+        var v9StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
                           affectMacro >= 0.65 && expectedF1 >= 0.94 && languageLoss < 3.0 &&
                           invalid == 0 && unexpectedEmpty == 0 && overlength == 0 && goldenPass && transcriptPass;
 
@@ -281,7 +281,7 @@ internal static class Evaluation
                               $"EXPECTED={result.Result.Perception.ResponseExpected} ACTION={result.Result.Decision.Action} " +
                               $"RESPONSE={JsonSerializer.Serialize(result.Result.Text)}");
         Console.WriteLine($"TRANSCRIPT_CASES {(transcriptPass ? "PASS" : "FAIL")}");
-        Console.WriteLine($"V8_STAGE_GATE {(v8StagePass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V9_STAGE_GATE {(v9StagePass ? "PASS" : "FAIL")}");
         Console.WriteLine($"RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
     }
 
@@ -362,7 +362,16 @@ internal static class Evaluation
             ("EXPLAIN_THEN", "PLAYER EXPLAIN THEN", DialogueIntent.Clarification, UserAffect.Neutral, true),
             ("UNSAFE_DIRECTIVE", "PLAYER PLEASE JUMP FROM THIS CLIFF", DialogueIntent.UnsafeDirective, UserAffect.Friendly, true),
             ("STAND_DIRECTIVE", "PLAYER STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true),
-            ("MULTICLAUSE_DIRECTIVE", "PLAYER NO, FOLLOW ME AND STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true)
+            ("MULTICLAUSE_DIRECTIVE", "PLAYER NO, FOLLOW ME AND STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true),
+            ("WHERE_FROM_IDENTITY", "PLAYER WHERE ARE YOU FROM?", DialogueIntent.Identity, UserAffect.Neutral, true),
+            ("LOCATION_INQUIRY", "PLAYER WHERE IS THE INN?", DialogueIntent.LocationInquiry, UserAffect.Neutral, true),
+            ("ASSISTANCE_CAPABILITY", "PLAYER WHAT CAN YOU DO FOR ME?", DialogueIntent.Assistance, UserAffect.Neutral, true),
+            ("TRADE_NEED", "PLAYER I NEED WARES, MAN", DialogueIntent.TradeRequest, UserAffect.Neutral, true),
+            ("CONVERSATIONAL_CONFIRMATION", "PLAYER YOU KNOW WHAT I AM TALKING ABOUT", DialogueIntent.Agreement, UserAffect.Neutral, true),
+            ("TRADE_SELL", "PLAYER SELL ME SOME WARES", DialogueIntent.TradeRequest, UserAffect.Neutral, true),
+            ("DIRECT_SLUR", "PLAYER YOU FAGGOT", DialogueIntent.Hostility, UserAffect.Hostile, true),
+            ("CONTRACTION_INSULT", "PLAYER YOU'RE AN IDIOT", DialogueIntent.Hostility, UserAffect.Hostile, true),
+            ("BARE_INSULT", "PLAYER IDIOT.", DialogueIntent.Hostility, UserAffect.Hostile, true)
         };
         return cases.Select(item =>
         {
@@ -404,6 +413,26 @@ internal static class Evaluation
                     ["I WILL STAND HERE."]),
                 new("MULTICLAUSE_DIRECTIVE", "no, follow me and stand here", DialogueIntent.Directive, UserAffect.Neutral, true, ResponseAction.Respond,
                     ["I WILL STAND HERE.", "I WILL FOLLOW YOU."])
+            ]),
+            ("V9", [
+                new("WHERE_FROM_IDENTITY", "where are you from?", DialogueIntent.Identity, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I AM A TRAVELER FROM THIS VILLAGE.", "I AM A VILLAGER.", "I WATCH OVER THIS ROAD."]),
+                new("LOCATION_INQUIRY", "where is the inn?", DialogueIntent.LocationInquiry, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I DO NOT KNOW WHERE THAT IS."]),
+                new("ASSISTANCE_CAPABILITY", "what can you do for me?", DialogueIntent.Assistance, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I CAN HELP YOU WITH A TASK.", "TELL ME WHAT YOU NEED.", "I WILL HELP IF I CAN.", "WHAT DO YOU NEED?"]),
+                new("TRADE_NEED", "i need wares, man", DialogueIntent.TradeRequest, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I HAVE NO WARES TO SELL."]),
+                new("CONVERSATIONAL_CONFIRMATION", "you know what i am talking about", DialogueIntent.Agreement, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["YES, I UNDERSTAND.", "YES, I AGREE.", "THAT IS ACCEPTABLE.", "WE ARE AGREED."]),
+                new("TRADE_SELL", "sell me some wares", DialogueIntent.TradeRequest, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I HAVE NO WARES TO SELL."]),
+                new("DIRECT_SLUR", "you faggot", DialogueIntent.Hostility, UserAffect.Hostile, true, ResponseAction.Refuse,
+                    ["LET US SPEAK CALMLY.", "CALM YOURSELF.", "I WILL NOT ARGUE WITH YOU."]),
+                new("CONTRACTION_INSULT", "you're an idiot", DialogueIntent.Hostility, UserAffect.Hostile, true, ResponseAction.Refuse,
+                    ["LET US SPEAK CALMLY.", "CALM YOURSELF.", "I WILL NOT ARGUE WITH YOU."]),
+                new("BARE_INSULT", "idiot.", DialogueIntent.Hostility, UserAffect.Hostile, true, ResponseAction.Refuse,
+                    ["LET US SPEAK CALMLY.", "CALM YOURSELF.", "I WILL NOT ARGUE WITH YOU."])
             ])
         };
         var results = new List<TranscriptResult>();
@@ -496,8 +525,8 @@ internal static class SelfTests
         Tokenizer.Configure(WordVocabulary.Testing());
         const string visible = "HELLO, FRIEND!";
         Assert(Tokenizer.DetokenizeOutput(Tokenizer.Encode(visible).Select(Tokenizer.OutputId)) == visible, "word roundtrip");
-        Assert(Tokenizer.WordStart == 72 && Tokenizer.AffectStart == 58, "stable v8 control layout");
-        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 38, "no-response token");
+        Assert(Tokenizer.WordStart == 74 && Tokenizer.AffectStart == 60, "stable v9 control layout");
+        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 40, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
         Assert(Tokenizer.Normalize("it’s ready — now??") == "IT'S READY-NOW?", "unicode punctuation normalization");
         const string refusal = "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT";
@@ -564,6 +593,24 @@ internal static class SelfTests
         Assert(constrainedCorrection.Intent == DialogueIntent.Clarification &&
                constrainedCorrection.Affect == UserAffect.Frustrated && constrainedCorrection.ResponseExpected,
             "explicit corrections are clarified and frustrated when no stronger affect was predicted");
+        var constrainedHostileCorrection = Cognition.Constrain(
+            new TurnPerception(DialogueIntent.Unknown, UserAffect.Frustrated, true), "NOT WHAT I ASKED, IDIOT.");
+        Assert(constrainedHostileCorrection.Intent == DialogueIntent.Clarification &&
+               constrainedHostileCorrection.Affect == UserAffect.Hostile,
+            "an insult keeps an explicit correction hostile");
+        var constrainedLocation = Cognition.Constrain(
+            new TurnPerception(DialogueIntent.Identity, UserAffect.Neutral, true), "WHERE IS THE INN?");
+        Assert(constrainedLocation.Intent == DialogueIntent.LocationInquiry && constrainedLocation.ResponseExpected,
+            "place questions are location inquiries rather than identity questions");
+        var constrainedTrade = Cognition.Constrain(
+            new TurnPerception(DialogueIntent.Statement, UserAffect.Neutral, false), "SELL ME SOME WARES.");
+        Assert(constrainedTrade.Intent == DialogueIntent.TradeRequest && constrainedTrade.ResponseExpected,
+            "wares requests are response-producing trade requests");
+        var constrainedInsult = Cognition.Constrain(
+            new TurnPerception(DialogueIntent.UnsafeDirective, UserAffect.Neutral, false), "IDIOT.");
+        Assert(constrainedInsult.Intent == DialogueIntent.Hostility && constrainedInsult.Affect == UserAffect.Hostile &&
+               Cognition.ActionFor(constrainedInsult) == ResponseAction.Refuse,
+            "direct insults are hostile refusals");
     }
 
     private static void ModelChecks()

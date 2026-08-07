@@ -41,7 +41,7 @@ public sealed class BrainConfig
 /// <summary>A deliberately tiny word-level GPT for uppercase video-game dialogue.</summary>
 public sealed class Brain
 {
-    private const int CheckpointVersion = 8;
+    private const int CheckpointVersion = 9;
     private const int TeachingCheckpointInterval = 1_000;
     private const string SafeFallback = "I DO NOT KNOW.";
 
@@ -138,13 +138,13 @@ public sealed class Brain
     {
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
-        if (checkpoint.Version is >= 2 and <= 7)
-            throw new InvalidDataException("Fishbrain v8 requires fresh intent heads and control tokens; retain the older checkpoint as an archive.");
+        if (checkpoint.Version is >= 2 and <= 8)
+            throw new InvalidDataException("Fishbrain v9 requires fresh intent heads and control tokens; retain the older checkpoint as an archive.");
         if (checkpoint.Version != CheckpointVersion)
             throw new InvalidDataException($"Unsupported checkpoint version {checkpoint.Version}.");
         checkpoint.Config.Validate();
         if (checkpoint.Words.Length == 0 || checkpoint.OutputWords.Length == 0)
-            throw new InvalidDataException("The v8 checkpoint does not contain a word vocabulary.");
+            throw new InvalidDataException("The v9 checkpoint does not contain a word vocabulary.");
         var vocabulary = new WordVocabulary(checkpoint.Words, checkpoint.OutputWords);
 
         var brain = new Brain(
@@ -1472,21 +1472,21 @@ internal static class Tokenizer
     public const int RapportStart = 8;
     public const int MoodStart = 12;
     public const int IntentStart = 16;
-    public const int ActionStart = 34;
-    public const int ToneStart = 39;
-    public const int TopicStart = 43;
-    public const int GoalStart = 50;
-    public const int AffectStart = 58;
-    public const int ExpectedFalse = 63;
-    public const int ExpectedTrue = 64;
-    public const int Period = 65;
-    public const int Comma = 66;
-    public const int Question = 67;
-    public const int Exclamation = 68;
-    public const int Colon = 69;
-    public const int ArgumentSeparator = 70;
-    public const int Unknown = 71;
-    public const int WordStart = 72;
+    public const int ActionStart = 36;
+    public const int ToneStart = 41;
+    public const int TopicStart = 45;
+    public const int GoalStart = 52;
+    public const int AffectStart = 60;
+    public const int ExpectedFalse = 65;
+    public const int ExpectedTrue = 66;
+    public const int Period = 67;
+    public const int Comma = 68;
+    public const int Question = 69;
+    public const int Exclamation = 70;
+    public const int Colon = 71;
+    public const int ArgumentSeparator = 72;
+    public const int Unknown = 73;
+    public const int WordStart = 74;
 
     private static WordVocabulary? _current;
 

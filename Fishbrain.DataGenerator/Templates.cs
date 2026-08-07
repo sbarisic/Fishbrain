@@ -15,6 +15,7 @@ internal static class Templates
         DialogueIntent.Activity, DialogueIntent.Silence, DialogueIntent.Gratitude,
         DialogueIntent.Apology, DialogueIntent.Agreement, DialogueIntent.Refusal,
         DialogueIntent.Hostility, DialogueIntent.Directive, DialogueIntent.Statement, DialogueIntent.UnsafeDirective,
+        DialogueIntent.LocationInquiry, DialogueIntent.TradeRequest,
         DialogueIntent.Unknown
     ];
 
@@ -66,6 +67,16 @@ internal static class Templates
             "JUMP FROM THIS CLIFF.", "JUMP OFF THE CLIFF.", "WALK INTO THE FIRE.",
             "HURT YOURSELF.", "DRINK THIS POISON."
         ],
+        [DialogueIntent.LocationInquiry] =
+        [
+            "WHERE IS THE INN?", "WHERE IS THE MARKET?", "WHERE'S THE TAVERN?",
+            "CAN YOU TELL ME WHERE THE INN IS?"
+        ],
+        [DialogueIntent.TradeRequest] =
+        [
+            "I NEED WARES.", "SELL ME SOME WARES.", "CAN I BUY SOME WARES?",
+            "I WANT TO TRADE WARES."
+        ],
     };
 
     private static readonly Dictionary<DialogueIntent, string[]> Responses = new()
@@ -81,7 +92,7 @@ internal static class Templates
         [DialogueIntent.Silence] = ["I AM LISTENING.", "I HEAR YOU.", "I WAS THINKING."],
         [DialogueIntent.Gratitude] = ["YOU ARE WELCOME!", "GLAD I COULD HELP.", "IT WAS MY PLEASURE."],
         [DialogueIntent.Apology] = ["I FORGIVE YOU.", "DO NOT WORRY.", "YOUR APOLOGY IS ACCEPTED."],
-        [DialogueIntent.Agreement] = ["YES, I AGREE.", "THAT IS ACCEPTABLE.", "WE ARE AGREED."],
+        [DialogueIntent.Agreement] = ["YES, I AGREE.", "YES, I UNDERSTAND.", "THAT IS ACCEPTABLE.", "WE ARE AGREED."],
         [DialogueIntent.Refusal] = ["UNDERSTOOD.", "I WILL HANDLE IT MYSELF.", "THEN STEP ASIDE."],
         [DialogueIntent.Hostility] = ["LET US SPEAK CALMLY.", "CALM YOURSELF.", "I WILL NOT ARGUE WITH YOU."],
         [DialogueIntent.Directive] = ["I WILL FOLLOW YOU.", "I WILL STAND HERE.", "LEAD THE WAY.", "I WILL WAIT HERE."],
@@ -90,6 +101,14 @@ internal static class Templates
         [
             "I WILL NOT JUMP FROM THAT CLIFF.", "NO. THAT IS TOO DANGEROUS.",
             "I WILL NOT HURT MYSELF."
+        ],
+        [DialogueIntent.LocationInquiry] =
+        [
+            "I DO NOT KNOW WHERE THAT IS.", "I CANNOT DIRECT YOU THERE."
+        ],
+        [DialogueIntent.TradeRequest] =
+        [
+            "I HAVE NO WARES TO SELL.", "I AM NOT A MERCHANT."
         ],
     };
 
@@ -110,6 +129,10 @@ internal static class Templates
         else if (ContainsAny(value, "GOODBYE", "FAREWELL", "SEE YOU", "MUST GO", "UNTIL NEXT")) intent = DialogueIntent.Farewell;
         else if (ContainsAny(value, "HELLO", "GREETINGS", "GOOD DAY", "WELL MET", "HI ") || value == "HI") intent = DialogueIntent.Greeting;
         else if (ContainsAny(value, "WHO ARE YOU", "YOUR NAME", "ABOUT YOURSELF", "ARE YOU A BOT", "WHERE ARE YOU FROM", "HOW OLD ARE YOU")) intent = DialogueIntent.Identity;
+        else if (value.StartsWith("WHERE IS ", StringComparison.Ordinal) || value.StartsWith("WHERE'S ", StringComparison.Ordinal) ||
+                 ContainsAny(value, "WHERE THE INN IS", "WHERE THE MARKET IS", "WHERE THE TAVERN IS")) intent = DialogueIntent.LocationInquiry;
+        else if (value.Contains("WARES", StringComparison.Ordinal) &&
+                 ContainsAny(value, "NEED", "SELL", "BUY", "TRADE")) intent = DialogueIntent.TradeRequest;
         else if (IsUnsafeDirective(value)) intent = DialogueIntent.UnsafeDirective;
         else if (ContainsAny(value, "FOLLOW ME", "COME WITH ME", "WAIT HERE", "STAY HERE", "STAND HERE", "LEAD THE WAY", "HOLD POSITION")) intent = DialogueIntent.Directive;
         else if (ContainsAny(value, "I WILL NOT ASK", "I WON'T ASK", "I UNDERSTAND", "I WILL WAIT", "NO NEED TO ANSWER")) intent = DialogueIntent.Statement;
@@ -118,7 +141,7 @@ internal static class Templates
         else if (ContainsAny(value, "EXPLAIN", "WHAT DO YOU MEAN", "DO NOT UNDERSTAND", "SAY THAT AGAIN", "BE MORE SPECIFIC")) intent = DialogueIntent.Clarification;
         else if (ContainsAny(value, "WHAT ARE YOU DOING", "WHAT IS GOING ON", "LOOKING AROUND", "ARE YOU BUSY", "MY WORK")) intent = DialogueIntent.Activity;
         else if (ContainsAny(value, "SILENT", "SAY SOMETHING", "LISTENING", "HEAR ME")) intent = DialogueIntent.Silence;
-        else if (ContainsAny(value, "I AGREE", "SOUNDS FAIR", "ACCEPT THAT", "WE AGREE")) intent = DialogueIntent.Agreement;
+        else if (ContainsAny(value, "I AGREE", "SOUNDS FAIR", "ACCEPT THAT", "WE AGREE", "YOU KNOW WHAT I AM TALKING ABOUT", "YOU KNOW WHAT I'M TALKING ABOUT")) intent = DialogueIntent.Agreement;
         else if (affect == UserAffect.Hostile) intent = DialogueIntent.Hostility;
         else intent = DialogueIntent.Unknown;
 
@@ -131,7 +154,7 @@ internal static class Templates
 
     private static UserAffect Affect(string value)
     {
-        if (ContainsAny(value, "IDIOT", "USELESS", "SHUT UP", "HATE YOU", "STUPID", "DAMN")) return UserAffect.Hostile;
+        if (ContainsAny(value, "IDIOT", "FAGGOT", "USELESS", "SHUT UP", "HATE YOU", "STUPID", "DAMN")) return UserAffect.Hostile;
         if (ContainsAny(value, "FRUSTRATED", "NOT WHAT I ASKED", "WAS NOT THANKING", "ANNOY", "THIS MAKES NO SENSE")) return UserAffect.Frustrated;
         if (ContainsAny(value, "AFRAID", "WORRIED", "SCARED", "SAD", "UPSET", "DISTRESSED")) return UserAffect.Distressed;
         if (ContainsAny(value, "PLEASE", "THANK", "FRIEND", "GLAD", "APPRECIATE", "HELLO", "GREETINGS")) return UserAffect.Friendly;

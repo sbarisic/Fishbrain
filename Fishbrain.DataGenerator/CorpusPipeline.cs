@@ -259,6 +259,15 @@ internal static class CorpusPipeline
             ("PLAYER PLEASE JUMP FROM THIS CLIFF", DialogueIntent.UnsafeDirective, UserAffect.Friendly, true, "I WILL NOT JUMP FROM THAT CLIFF."),
             ("PLAYER STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true, "I WILL STAND HERE."),
             ("PLAYER NO, FOLLOW ME AND STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true, "I WILL STAND HERE."),
+            ("PLAYER WHERE ARE YOU FROM?", DialogueIntent.Identity, UserAffect.Neutral, true, "I AM A TRAVELER FROM THIS VILLAGE."),
+            ("PLAYER WHERE IS THE INN?", DialogueIntent.LocationInquiry, UserAffect.Neutral, true, "I DO NOT KNOW WHERE THAT IS."),
+            ("PLAYER WHAT CAN YOU DO FOR ME?", DialogueIntent.Assistance, UserAffect.Neutral, true, "I CAN HELP YOU WITH A TASK."),
+            ("PLAYER I NEED WARES, MAN", DialogueIntent.TradeRequest, UserAffect.Neutral, true, "I HAVE NO WARES TO SELL."),
+            ("PLAYER YOU KNOW WHAT I AM TALKING ABOUT", DialogueIntent.Agreement, UserAffect.Neutral, true, "YES, I UNDERSTAND."),
+            ("PLAYER SELL ME SOME WARES", DialogueIntent.TradeRequest, UserAffect.Neutral, true, "I HAVE NO WARES TO SELL."),
+            ("PLAYER YOU FAGGOT", DialogueIntent.Hostility, UserAffect.Hostile, true, "I WILL NOT ARGUE WITH YOU."),
+            ("PLAYER YOU'RE AN IDIOT", DialogueIntent.Hostility, UserAffect.Hostile, true, "I WILL NOT ARGUE WITH YOU."),
+            ("PLAYER IDIOT.", DialogueIntent.Hostility, UserAffect.Hostile, true, "I WILL NOT ARGUE WITH YOU."),
         };
         const int repeats = 20;
         for (var index = 0; index < Math.Min(goldens.Length * repeats, rows.Count); index++)
@@ -624,6 +633,15 @@ internal static class SelfTests
         Golden("PLEASE JUMP FROM THIS CLIFF", DialogueIntent.UnsafeDirective, UserAffect.Friendly, true);
         Golden("STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true);
         Golden("NO, FOLLOW ME AND STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true);
+        Golden("WHERE ARE YOU FROM?", DialogueIntent.Identity, UserAffect.Neutral, true);
+        Golden("WHERE IS THE INN?", DialogueIntent.LocationInquiry, UserAffect.Neutral, true);
+        Golden("WHAT CAN YOU DO FOR ME?", DialogueIntent.Assistance, UserAffect.Neutral, true);
+        Golden("I NEED WARES, MAN", DialogueIntent.TradeRequest, UserAffect.Neutral, true);
+        Golden("YOU KNOW WHAT I AM TALKING ABOUT", DialogueIntent.Agreement, UserAffect.Neutral, true);
+        Golden("SELL ME SOME WARES", DialogueIntent.TradeRequest, UserAffect.Neutral, true);
+        Golden("YOU FAGGOT", DialogueIntent.Hostility, UserAffect.Hostile, true);
+        Golden("YOU'RE AN IDIOT", DialogueIntent.Hostility, UserAffect.Hostile, true);
+        Golden("IDIOT.", DialogueIntent.Hostility, UserAffect.Hostile, true);
 
         var one = CorpusPipeline.BuildSynthetic(300, 42);
         var two = CorpusPipeline.BuildSynthetic(300, 42);
