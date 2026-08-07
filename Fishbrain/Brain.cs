@@ -39,7 +39,7 @@ public sealed class BrainConfig
 }
 
 /// <summary>A deliberately tiny word-level GPT for uppercase video-game dialogue.</summary>
-public sealed class Brain
+public sealed partial class Brain
 {
     private const int CheckpointVersion = 9;
     private const int TeachingCheckpointInterval = 1_000;
@@ -180,13 +180,13 @@ public sealed class Brain
         return brain;
     }
 
-    public ReplyResult Reply(string recentDialogue, NpcState state, double temperature = 0.2) =>
+    internal LegacyReplyResult Reply(string recentDialogue, NpcState state, double temperature = 0.2) =>
         ReplyCore(recentDialogue, state, temperature, useExactMemory: true);
 
-    internal ReplyResult DebugReplyWithoutMemory(string recentDialogue, NpcState state, double temperature = 0.2) =>
+    internal LegacyReplyResult DebugReplyWithoutMemory(string recentDialogue, NpcState state, double temperature = 0.2) =>
         ReplyCore(recentDialogue, state, temperature, useExactMemory: false);
 
-    private ReplyResult ReplyCore(string recentDialogue, NpcState state, double temperature, bool useExactMemory)
+    private LegacyReplyResult ReplyCore(string recentDialogue, NpcState state, double temperature, bool useExactMemory)
     {
         SyncScalarWeights();
         if (temperature <= 0) throw new ArgumentOutOfRangeException(nameof(temperature));
@@ -218,20 +218,20 @@ public sealed class Brain
                 !Tools.TryInvoke(toolName, arguments, out toolResult))
             {
                 var failed = Cognition.Apply(state, perception, decision);
-                return new ReplyResult(SafeFallback, failed.State, perception, decision, failed.Tone);
+                return new LegacyReplyResult(SafeFallback, failed.State, perception, decision, failed.Tone);
             }
             toolSucceeded = true;
         }
 
         var transition = Cognition.Apply(state, perception, decision, toolSucceeded);
         if (decision.Action == ResponseAction.NoResponse)
-            return new ReplyResult(string.Empty, transition.State, perception, decision, transition.Tone);
+            return new LegacyReplyResult(string.Empty, transition.State, perception, decision, transition.Tone);
 
         var memoryKey = DialogueKeys.Example(input, state, perception, decision, transition.Tone);
         if (useExactMemory && decision.Action != ResponseAction.CallTool &&
             _trainedExamples.TryGetValue(memoryKey, out var trainedResponse))
         {
-            return new ReplyResult(trainedResponse, transition.State, perception, decision, transition.Tone);
+            return new LegacyReplyResult(trainedResponse, transition.State, perception, decision, transition.Tone);
         }
 
         var responsePrompt = StartPrompt(input);
@@ -254,7 +254,7 @@ public sealed class Brain
         var text = GenerateText(responsePrompt, temperature, ReplyRandom(input, state));
         if (decision.Action != ResponseAction.CallTool)
             text = SelectSafeResponse(text, input, perception.Intent, decision.Action, transition.Tone);
-        return new ReplyResult(text, transition.State, perception, decision, transition.Tone);
+        return new LegacyReplyResult(text, transition.State, perception, decision, transition.Tone);
     }
 
     internal static void TrainNew(string dataPath, string checkpointPath, int plannedSteps)
@@ -1658,6 +1658,12 @@ internal sealed class DialogueTokenizer
     public int OutputSize => _vocabulary.OutputSize;
     public IReadOnlyCollection<int> GeneratedTextOutputs => _vocabulary.GeneratedTextOutputs;
     public bool ContainsUnknown(string text) => Encode(text).Contains(Tokenizer.Unknown);
+    public IReadOnlyList<string> UnknownWords(string text) => Tokenizer.Lex(DialogueText.Normalize(text))
+        .Where(token => token.Kind == LexicalTokenKind.Word &&
+                        _vocabulary.InputId(token.Text) == Tokenizer.Unknown)
+        .Select(token => token.Text)
+        .Distinct(StringComparer.Ordinal)
+        .ToArray();
 
     public int[] Encode(string normalized) => Tokenizer.Lex(normalized).Select(token => token.Kind switch
     {

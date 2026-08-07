@@ -40,7 +40,7 @@ internal static class Program
                     return Evaluation.Run(args[1], args[2], gate);
                 case "chat":
                     Count(args, 1, 2);
-                    Chat(args.Length == 2 ? args[1] : Path.Combine("data", "models", "model-v9-latest.json"));
+                    Chat(args.Length == 2 ? args[1] : ResolveDefaultModel());
                     break;
                 case "selftest":
                     Count(args, 1, 1);
@@ -60,27 +60,29 @@ internal static class Program
     private static void Chat(string checkpoint)
     {
         var brain = Brain.Load(checkpoint);
-        var state = NpcState.Initial;
-        var history = new List<string>();
+        var state = NpcDialogueState.Initial;
+        var history = new List<DialogueTurn>();
+        var tools = DemoGameTools.CreateMerchant();
+        var conversationId = "CLI-" + Guid.NewGuid().ToString("N");
+        var turn = 0;
         Console.WriteLine("ENTER DIALOGUE OR AN EMPTY LINE TO QUIT");
         while (true)
         {
             Console.Write("> ");
             var input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input)) return;
-            var playerTurn = "PLAYER " + DialogueText.Normalize(input);
-            var recentDialogue = string.Join(' ', history.Append(playerTurn));
-            var result = brain.Reply(recentDialogue, state);
+            history.Add(new DialogueTurn(DialogueRole.Player, input));
+            var result = brain.Reply(new ReplyRequest(conversationId,
+                (++turn).ToString(CultureInfo.InvariantCulture), history, state, turn), tools);
             state = result.State;
             Console.WriteLine(result.Text.Length == 0 ? "[NO RESPONSE]" : result.Text);
             Console.WriteLine(
-                $"STATE RAPPORT={state.Rapport} MOOD={Upper(state.Mood)} " +
-                $"INTENT={Upper(result.Perception.Intent)} AFFECT={Upper(result.Perception.Affect)} " +
-                $"EXPECTED={result.Perception.ResponseExpected.ToString().ToUpperInvariant()} " +
-                $"ACTION={Upper(result.Decision.Action)} TOPIC={Upper(state.ActiveTopic)} " +
-                $"GOAL={Upper(state.ActiveGoal)} TONE={Upper(result.Tone)}");
-            history.Add(DialogueText.TerminateTurn(playerTurn));
-            if (result.Text.Length > 0) history.Add("NPC " + DialogueText.TerminateTurn(result.Text));
+                $"STATE RAPPORT={state.Rapport} TRUST={state.Trust} HOSTILITY={state.Hostility} MOOD={Upper(state.Mood)} " +
+                $"ACTS={string.Join(',', result.Perception.SpeechActs.Select(Upper))} " +
+                $"DOMAINS={string.Join(',', result.Perception.Domains.Select(Upper))} " +
+                $"AFFECT={Upper(result.Perception.Affect)} POLICY={Upper(result.Perception.Policy)} " +
+                $"SOURCE={Upper(result.Diagnostics.ResponseSource)} TONE={Upper(result.Tone)}");
+            if (result.Text.Length > 0) history.Add(new DialogueTurn(DialogueRole.Npc, result.Text));
         }
     }
 
@@ -98,7 +100,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|stage|release]");
-        Console.WriteLine("  chat [CHECKPOINT.json]  (default: data/models/model-v9-latest.json)");
+        Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-v10-latest.fbm)");
         Console.WriteLine("  selftest");
     }
 
@@ -109,6 +111,23 @@ internal static class Program
         if (File.Exists(besideBuild)) return besideBuild;
         var beneathWorkingDirectory = Path.GetFullPath(Path.Combine("Fishbrain", "Fishbrain.csproj"));
         return beneathWorkingDirectory;
+    }
+
+    private static string ResolveDefaultModel()
+    {
+        var names = new[] { "model-v10-latest.fbm", "model-v9-latest.json" };
+        var roots = new[]
+        {
+            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "models")),
+            Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "data", "models"))
+        };
+        foreach (var root in roots)
+        foreach (var name in names)
+        {
+            var candidate = Path.Combine(root, name);
+            if (File.Exists(candidate)) return candidate;
+        }
+        throw new FileNotFoundException("No default v10 model was found. Run the documented training command first.");
     }
 }
 
@@ -584,7 +603,7 @@ internal static class Evaluation
     private sealed record TranscriptExpectation(
         string Name, string Input, DialogueIntent Intent, UserAffect Affect, bool Expected,
         ResponseAction Action, string[] Responses);
-    private sealed record TranscriptResult(string Name, ReplyResult Result, bool Pass);
+    private sealed record TranscriptResult(string Name, LegacyReplyResult Result, bool Pass);
 
     private static JsonSerializerOptions CreateOptions()
     {

@@ -1,4 +1,6 @@
 <Solution>
   <Project Path="Fishbrain.DataGenerator/Fishbrain.DataGenerator.csproj" />
+  <Project Path="Fishbrain.DataGenerator.Tests/Fishbrain.DataGenerator.Tests.csproj" />
   <Project Path="Fishbrain/Fishbrain.csproj" />
+  <Project Path="Fishbrain.Tests/Fishbrain.Tests.csproj" />
 </Solution>

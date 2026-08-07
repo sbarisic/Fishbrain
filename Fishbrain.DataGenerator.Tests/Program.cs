@@ -1,0 +1,1 @@
+Fishbrain.DataGenerator.SelfTests.Run();
