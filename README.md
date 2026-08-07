@@ -25,6 +25,16 @@ no-response turn returns an empty string while still persisting the state change
 Novel ordinary dialogue uses free character generation; exact memory is used only
 for seen state/input pairs. Dynamic game facts remain tool-only.
 
+Revision 4 is experimental rather than release-ready. At the 32,000-step
+milestone, held-out intent macro-F1 was `0.1554` and 12% of sampled replies were
+invalid. The sequential curriculum exposed task interference: perception training
+forgot language, while joint training repaired language and weakened intent
+classification.
+
+See [INFO.md](INFO.md) for the complete architecture and token layout, state and
+tool semantics, data policy, milestone measurements, conclusions, and proposed v5
+revision.
+
 ## Build and test
 
 ```powershell
@@ -94,6 +104,18 @@ development machine, the same 100-step Release fixture improved from 35.929 to
 
 The chat CLI prints the NPC reply together with intent, affect, response
 expectation, action, rapport, mood, topic, goal, and tone.
+
+### Current experimental status
+
+- Step 24,000 is the strongest observed cognition snapshot, but it has severe
+  language forgetting.
+- Step 32,000 is a better language/cognition compromise, but intent performance
+  regressed and the release gates still fail.
+
+Preserve checkpoints locally before continuing an experiment. Files matching
+`model.*.json` are intentionally ignored by Git. Continuing the unchanged v4
+schedule to 40,000 steps is not expected to solve the measured intent problem;
+the recommended work is the [v5 plan](INFO.md#next-revision-recommended-v5).
 
 ## API
 
