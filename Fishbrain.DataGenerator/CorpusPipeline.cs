@@ -185,25 +185,30 @@ internal static class CorpusPipeline
                 var groupNumber = global / 2;
                 var variant = local % 2;
                 var intent = Templates.SyntheticIntents[(groupNumber + seed) % Templates.SyntheticIntents.Length];
-                var inputText = Address(Templates.InputFor(intent, groupNumber + variant), groupNumber * 2 + variant);
+                var baseInput = Templates.InputFor(intent, groupNumber + variant);
+                var inputText = Address(baseInput, groupNumber * 2 + variant);
                 var affect = (UserAffect)((groupNumber * 2 + variant + seed) % 5);
                 inputText = ExpressAffect(inputText, affect);
-                var expected = !(intent == DialogueIntent.Activity && (groupNumber + variant) % 5 == 0);
+                var expected = intent != DialogueIntent.Statement &&
+                               !(intent == DialogueIntent.Activity && (groupNumber + variant) % 5 == 0);
                 var perception = new TurnPerception(intent, affect, expected);
                 var stateIndex = global + seed;
                 var state = StateFor(stateIndex);
                 var currentInput = "PLAYER " + inputText;
                 TurnPerception? priorPerception = null;
+                string? historyPrefix = null;
 
                 if ((groupNumber + variant) % 3 == 0)
                 {
                     var priorIntent = Templates.SyntheticIntents[(groupNumber + 5) % Templates.SyntheticIntents.Length];
+                    if (priorIntent == DialogueIntent.Statement) priorIntent = DialogueIntent.Agreement;
                     var priorText = Address(Templates.InputFor(priorIntent, groupNumber + 1), groupNumber + 11);
                     priorPerception = new TurnPerception(priorIntent, (UserAffect)((groupNumber + 1) % 5), true);
                     var priorDecision = new TurnDecision(Cognition.ActionFor(priorPerception));
                     var priorState = Cognition.Apply(state, priorPerception, priorDecision).State;
                     var priorResponse = Templates.ResponseFor(priorIntent, groupNumber);
-                    currentInput = $"PLAYER {priorText} NPC {priorResponse} PLAYER {inputText}";
+                    historyPrefix = $"PLAYER {priorText} NPC {priorResponse}";
+                    currentInput = $"{historyPrefix} PLAYER {inputText}";
                     state = priorState;
                 }
 
@@ -211,7 +216,9 @@ internal static class CorpusPipeline
                 while (!used.Add(StateInputKey(state, currentInput)))
                 {
                     if (++collisionAttempts > 1000) throw new InvalidDataException($"Could not make a unique synthetic row for {currentInput}.");
-                    stateIndex += Math.Max(1, count);
+                    stateIndex++;
+                    inputText = ExpressAffect(Address(baseInput, groupNumber * 2 + variant + collisionAttempts), affect);
+                    currentInput = historyPrefix is null ? "PLAYER " + inputText : $"{historyPrefix} PLAYER {inputText}";
                     var candidate = StateFor(stateIndex);
                     state = priorPerception is null
                         ? candidate
@@ -232,15 +239,19 @@ internal static class CorpusPipeline
 
     private static void AddGolden(List<TeachingRow> rows, int seed)
     {
-        var goldens = new (string Input, DialogueIntent Intent, UserAffect Affect, bool Expected)[]
+        var goldens = new (string Input, DialogueIntent Intent, UserAffect Affect, bool Expected, string? Response)[]
         {
-            ("PLAYER HELLO, HOW ARE YOU?", DialogueIntent.Wellbeing, UserAffect.Friendly, true),
-            ("PLAYER THAT IS NOT WHAT I ASKED.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
-            ("PLAYER WHAT?", DialogueIntent.Clarification, UserAffect.Neutral, true),
-            ("PLAYER THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true),
-            ("PLAYER I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
-            ("PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false),
-            ("PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true),
+            ("PLAYER HELLO, HOW ARE YOU?", DialogueIntent.Wellbeing, UserAffect.Friendly, true, null),
+            ("PLAYER THAT IS NOT WHAT I ASKED.", DialogueIntent.Clarification, UserAffect.Frustrated, true, null),
+            ("PLAYER WHAT?", DialogueIntent.Clarification, UserAffect.Neutral, true, null),
+            ("PLAYER THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true, null),
+            ("PLAYER I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true, null),
+            ("PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false, ""),
+            ("PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true, "THEN STEP ASIDE."),
+            ("PLAYER TELL ME SOMETHING ABOUT YOURSELF", DialogueIntent.Identity, UserAffect.Neutral, true, "I AM A TRAVELER FROM THIS VILLAGE."),
+            ("PLAYER WHY YOU WORRY", DialogueIntent.Wellbeing, UserAffect.Neutral, true, "I DO NOT WORRY."),
+            ("PLAYER I WILL NOT ASK", DialogueIntent.Statement, UserAffect.Neutral, false, ""),
+            ("PLAYER FOLLOW ME, DUDE!", DialogueIntent.Directive, UserAffect.Neutral, true, "I WILL FOLLOW YOU."),
         };
         const int repeats = 12;
         for (var index = 0; index < Math.Min(goldens.Length * repeats, rows.Count); index++)
@@ -249,7 +260,8 @@ internal static class CorpusPipeline
             var golden = goldens[index % goldens.Length];
             var perception = new TurnPerception(golden.Intent, golden.Affect, golden.Expected);
             rows[index] = Make(golden.Input, StateFor(seed + index), perception,
-                golden.Expected ? Templates.ResponseFor(golden.Intent, index) : "", "SYNTHETIC", old.Split, old.GroupId, "GOLDEN");
+                golden.Response ?? (golden.Expected ? Templates.ResponseFor(golden.Intent, index) : ""),
+                "SYNTHETIC", old.Split, old.GroupId, "GOLDEN");
         }
     }
 
@@ -378,7 +390,8 @@ internal static class CorpusPipeline
         var value = Math.Abs(index);
         var rapport = (byte)(value % 4); value /= 4;
         var mood = (NpcMood)(value % 4); value /= 4;
-        var intent = (DialogueIntent)(value % 15); value /= 15;
+        var intentCount = Enum.GetValues<DialogueIntent>().Length;
+        var intent = (DialogueIntent)(value % intentCount); value /= intentCount;
         var affect = (UserAffect)(value % 5); value /= 5;
         var topic = (DialogueTopic)(value % 7); value /= 7;
         var goal = (NpcGoal)(value % 7);
@@ -570,6 +583,10 @@ internal static class SelfTests
         Golden("I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true);
         Golden("I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false);
         Golden("HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true);
+        Golden("TELL ME SOMETHING ABOUT YOURSELF", DialogueIntent.Identity, UserAffect.Neutral, true);
+        Golden("WHY YOU WORRY", DialogueIntent.Wellbeing, UserAffect.Neutral, true);
+        Golden("I WILL NOT ASK", DialogueIntent.Statement, UserAffect.Neutral, false);
+        Golden("FOLLOW ME, DUDE!", DialogueIntent.Directive, UserAffect.Neutral, true);
 
         var one = CorpusPipeline.BuildSynthetic(300, 42);
         var two = CorpusPipeline.BuildSynthetic(300, 42);

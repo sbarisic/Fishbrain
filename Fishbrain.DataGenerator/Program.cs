@@ -38,9 +38,9 @@ internal static class Program
     private static void Usage()
     {
         Console.WriteLine("FISHBRAIN TEACHING DATA");
-        Console.WriteLine("  fetch [--manifest Fishbrain.DataGenerator/sources.json] [--raw datasets/raw]");
-        Console.WriteLine("  compile [--count 10000] [--seed 42] [--raw datasets/raw] [--output datasets/compiled]");
-        Console.WriteLine("  audit [--input datasets/compiled] [--manifest Fishbrain.DataGenerator/sources.json]");
+        Console.WriteLine("  fetch [--manifest data/sources.json] [--raw data/raw]");
+        Console.WriteLine("  compile [--count 10000] [--seed 42] [--raw data/raw] [--output data/compiled]");
+        Console.WriteLine("  audit [--input data/compiled] [--manifest data/sources.json]");
         Console.WriteLine("  selftest");
     }
 }
@@ -55,9 +55,9 @@ internal sealed record CliOptions(
 {
     public static CliOptions Parse(string[] args)
     {
-        var rootManifest = Path.Combine("Fishbrain.DataGenerator", "sources.json");
+        var rootManifest = Path.Combine("data", "sources.json");
         var manifest = File.Exists(rootManifest) ? rootManifest : Path.Combine(AppContext.BaseDirectory, "sources.json");
-        var result = new CliOptions(manifest, Path.Combine("datasets", "raw"), Path.Combine("datasets", "compiled"), Path.Combine("datasets", "compiled"), 10_000, 42);
+        var result = new CliOptions(manifest, Path.Combine("data", "raw"), Path.Combine("data", "compiled"), Path.Combine("data", "compiled"), 10_000, 42);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < args.Length; index += 2)
         {

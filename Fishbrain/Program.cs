@@ -35,8 +35,8 @@ internal static class Program
                     Evaluation.Run(args[1], args[2]);
                     break;
                 case "chat":
-                    Count(args, 2, 2);
-                    Chat(args[1]);
+                    Count(args, 1, 2);
+                    Chat(args.Length == 2 ? args[1] : Path.Combine("data", "models", "model-v7-latest.json"));
                     break;
                 case "selftest":
                     Count(args, 1, 1);
@@ -57,13 +57,16 @@ internal static class Program
     {
         var brain = Brain.Load(checkpoint);
         var state = NpcState.Initial;
+        var history = new List<string>();
         Console.WriteLine("ENTER DIALOGUE OR AN EMPTY LINE TO QUIT");
         while (true)
         {
             Console.Write("> ");
             var input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input)) return;
-            var result = brain.Reply(input, state);
+            var playerTurn = "PLAYER " + DialogueText.Normalize(input);
+            var recentDialogue = string.Join(' ', history.Append(playerTurn));
+            var result = brain.Reply(recentDialogue, state);
             state = result.State;
             Console.WriteLine(result.Text.Length == 0 ? "[NO RESPONSE]" : result.Text);
             Console.WriteLine(
@@ -72,6 +75,8 @@ internal static class Program
                 $"EXPECTED={result.Perception.ResponseExpected.ToString().ToUpperInvariant()} " +
                 $"ACTION={Upper(result.Decision.Action)} TOPIC={Upper(state.ActiveTopic)} " +
                 $"GOAL={Upper(state.ActiveGoal)} TONE={Upper(result.Tone)}");
+            history.Add(DialogueText.TerminateTurn(playerTurn));
+            if (result.Text.Length > 0) history.Add("NPC " + DialogueText.TerminateTurn(result.Text));
         }
     }
 
@@ -89,7 +94,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json");
-        Console.WriteLine("  chat CHECKPOINT.json");
+        Console.WriteLine("  chat [CHECKPOINT.json]  (default: data/models/model-v7-latest.json)");
         Console.WriteLine("  selftest");
     }
 
@@ -222,11 +227,13 @@ internal static class Evaluation
         var expectedF1 = BinaryMetrics(scoredResponseExpected, scoredResponsePredicted, true).F1;
         var goldenResults = GoldenCases(brain);
         var goldenPass = goldenResults.All(result => result.Pass);
+        var transcriptResults = TranscriptCases(brain);
+        var transcriptPass = transcriptResults.All(result => result.Pass);
         var releasePass = syntheticMacro >= 0.85 && externalMacro >= 0.70 && affectMacro >= 0.75 &&
-                          expectedF1 >= 0.90 && invalid == 0 && overlength == 0 && goldenPass;
-        var v5StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
+                          expectedF1 >= 0.90 && invalid == 0 && overlength == 0 && goldenPass && transcriptPass;
+        var v7StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
                           affectMacro >= 0.65 && expectedF1 >= 0.94 && languageLoss < 3.0 &&
-                          invalid == 0 && unexpectedEmpty == 0 && overlength == 0 && goldenPass;
+                          invalid == 0 && unexpectedEmpty == 0 && overlength == 0 && goldenPass && transcriptPass;
 
         Console.WriteLine($"RECORDS {rows.Length}");
         Console.WriteLine($"INTENT_SCORED {intentIndices.Length}");
@@ -261,7 +268,12 @@ internal static class Evaluation
             Console.WriteLine($"GOLDEN {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
                               $"EXPECTED {result.Expected} PREDICTED {result.Predicted}");
         Console.WriteLine($"GOLDEN_CASES {(goldenPass ? "PASS" : "FAIL")}");
-        Console.WriteLine($"V6_STAGE_GATE {(v5StagePass ? "PASS" : "FAIL")}");
+        foreach (var result in transcriptResults)
+            Console.WriteLine($"TRANSCRIPT {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
+                              $"INTENT={result.Result.Perception.Intent} EXPECTED={result.Result.Perception.ResponseExpected} " +
+                              $"RESPONSE={JsonSerializer.Serialize(result.Result.Text)}");
+        Console.WriteLine($"TRANSCRIPT_CASES {(transcriptPass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V7_STAGE_GATE {(v7StagePass ? "PASS" : "FAIL")}");
         Console.WriteLine($"RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
     }
 
@@ -332,7 +344,11 @@ internal static class Evaluation
             ("HOSTILE_GRATITUDE", "PLAYER THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true),
             ("NEGATED_GRATITUDE", "PLAYER I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
             ("NO_RESPONSE_ACTIVITY", "PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false),
-            ("HOSTILE_REFUSAL", "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true)
+            ("HOSTILE_REFUSAL", "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true),
+            ("IDENTITY_REQUEST", "PLAYER TELL ME SOMETHING ABOUT YOURSELF", DialogueIntent.Identity, UserAffect.Neutral, true),
+            ("CONTEXTUAL_WELLBEING", "PLAYER WHY YOU WORRY", DialogueIntent.Wellbeing, UserAffect.Neutral, true),
+            ("NONQUESTION_STATEMENT", "PLAYER I WILL NOT ASK", DialogueIntent.Statement, UserAffect.Neutral, false),
+            ("FOLLOW_DIRECTIVE", "PLAYER FOLLOW ME, DUDE!", DialogueIntent.Directive, UserAffect.Neutral, true)
         };
         return cases.Select(item =>
         {
@@ -343,6 +359,36 @@ internal static class Evaluation
     }
 
     private sealed record GoldenResult(string Name, TurnPerception Expected, TurnPerception Predicted, bool Pass);
+
+    private static TranscriptResult[] TranscriptCases(Brain brain)
+    {
+        var cases = new (string Name, string Input, DialogueIntent Intent, bool Expected, string[] Responses)[]
+        {
+            ("IDENTITY_REQUEST", "tell me something about yourself", DialogueIntent.Identity, true,
+                ["I AM A VILLAGER.", "I AM A TRAVELER FROM THIS VILLAGE.", "I WATCH OVER THIS ROAD."]),
+            ("CONTEXTUAL_WELLBEING", "why you worry", DialogueIntent.Wellbeing, true,
+                ["I DO NOT WORRY.", "I AM DOING WELL, THANK YOU.", "ALL IS WELL WITH ME."]),
+            ("NONQUESTION_STATEMENT", "i will not ask", DialogueIntent.Statement, false, [""]),
+            ("FOLLOW_DIRECTIVE", "follow me, dude!", DialogueIntent.Directive, true,
+                ["I WILL FOLLOW YOU."])
+        };
+        var state = NpcState.Initial;
+        var history = new List<string>();
+        return cases.Select(item =>
+        {
+            var playerTurn = "PLAYER " + DialogueText.Normalize(item.Input);
+            var result = brain.Reply(string.Join(' ', history.Append(playerTurn)), state);
+            state = result.State;
+            history.Add(DialogueText.TerminateTurn(playerTurn));
+            if (result.Text.Length > 0) history.Add("NPC " + DialogueText.TerminateTurn(result.Text));
+            var pass = result.Perception.Intent == item.Intent &&
+                       result.Perception.ResponseExpected == item.Expected &&
+                       item.Responses.Contains(result.Text, StringComparer.Ordinal);
+            return new TranscriptResult(item.Name, result, pass);
+        }).ToArray();
+    }
+
+    private sealed record TranscriptResult(string Name, ReplyResult Result, bool Pass);
 
     private static JsonSerializerOptions CreateOptions()
     {
@@ -408,8 +454,8 @@ internal static class SelfTests
         Tokenizer.Configure(WordVocabulary.Testing());
         const string visible = "HELLO, FRIEND!";
         Assert(Tokenizer.DetokenizeOutput(Tokenizer.Encode(visible).Select(Tokenizer.OutputId)) == visible, "word roundtrip");
-        Assert(Tokenizer.WordStart == 68 && Tokenizer.AffectStart == 54, "stable v6 control layout");
-        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 35, "no-response token");
+        Assert(Tokenizer.WordStart == 70 && Tokenizer.AffectStart == 56, "stable v7 control layout");
+        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 37, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
         Assert(Tokenizer.Normalize("it’s ready — now??") == "IT'S READY-NOW?", "unicode punctuation normalization");
         const string refusal = "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT";
@@ -421,6 +467,8 @@ internal static class SelfTests
         Assert(Brain.ExtractCurrentPlayerTurn("HELLO, FRIEND!") == "HELLO, FRIEND!", "plain current turn");
         Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC GREETINGS. PLAYER WHAT?") == "WHAT?", "history current turn");
         Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER WAIT. NPC YES. PLAYER THANKS.") == "THANKS.", "multi-turn current turn");
+        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER I WILL NOT ASK. PLAYER FOLLOW ME.") == "FOLLOW ME.",
+            "current turn after no-response history");
         Assert(Brain.ExtractCurrentPlayerTurn("PLAYER I AM A PLAYER.") == "I AM A PLAYER.", "player noun is not a role marker");
         Assert(Brain.ExtractCurrentPlayerTurn("PLAYERISH WORD") == "PLAYERISH WORD", "marker word boundary");
         AssertThrows<ArgumentException>(() => Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT. PLAYER"));
@@ -478,7 +526,7 @@ internal static class SelfTests
             "packed forward loss equivalence");
         var gradientChecks = new[]
         {
-            0, 8, 31, new PackedTrainer.Layout(TinyConfig()).OutputHead,
+            0, 8, Tokenizer.ActionStart, new PackedTrainer.Layout(TinyConfig()).OutputHead,
             optimizedGradient.Gradients.Length / 4,
             optimizedGradient.Gradients.Length / 2,
             optimizedGradient.Gradients.Length - 1
@@ -498,7 +546,7 @@ internal static class SelfTests
 
     private static void TrainingDataChecks()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v5-{Guid.NewGuid():N}.jsonl");
+        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v7-{Guid.NewGuid():N}.jsonl");
         try
         {
             File.WriteAllLines(path,
@@ -547,7 +595,7 @@ internal static class SelfTests
 
     private static void CheckpointChecks()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v5-{Guid.NewGuid():N}.json");
+        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v7-{Guid.NewGuid():N}.json");
         try
         {
             var brain = Brain.CreateForTesting(TinyConfig()); brain.Save(path);

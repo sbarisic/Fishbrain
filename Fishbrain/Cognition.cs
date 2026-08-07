@@ -4,7 +4,8 @@ public enum NpcMood { Neutral, Friendly, Cautious, Annoyed }
 public enum DialogueIntent
 {
     Unknown, Greeting, Farewell, Wellbeing, Identity, Assistance, Clarification,
-    Activity, Silence, Gratitude, Apology, Agreement, Refusal, Hostility, GameFact
+    Activity, Silence, Gratitude, Apology, Agreement, Refusal, Hostility, GameFact,
+    Directive, Statement
 }
 public enum UserAffect { Neutral, Friendly, Distressed, Frustrated, Hostile }
 public enum ResponseAction { Respond, Clarify, CallTool, Refuse, NoResponse }
@@ -61,6 +62,11 @@ public static class DialogueText
     public static string Normalize(string text) => Tokenizer.Normalize(text);
     public static bool IsCanonical(string text) =>
         text is not null && string.Equals(text, Tokenizer.Normalize(text), StringComparison.Ordinal);
+    public static string TerminateTurn(string canonicalText)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(canonicalText);
+        return canonicalText[^1] is '.' or '?' or '!' ? canonicalText : canonicalText + ".";
+    }
 }
 
 public static class Cognition
@@ -118,7 +124,7 @@ public static class Cognition
             DialogueIntent.Identity => DialogueTopic.Self,
             DialogueIntent.Wellbeing => DialogueTopic.Wellbeing,
             DialogueIntent.Assistance or DialogueIntent.Clarification => DialogueTopic.Assistance,
-            DialogueIntent.Activity => DialogueTopic.Activity,
+            DialogueIntent.Activity or DialogueIntent.Directive => DialogueTopic.Activity,
             DialogueIntent.GameFact => DialogueTopic.GameFact,
             DialogueIntent.Unknown => state.ActiveTopic,
             _ => DialogueTopic.Relationship
@@ -128,7 +134,7 @@ public static class Cognition
         {
             DialogueIntent.Greeting or DialogueIntent.Silence or DialogueIntent.Gratitude or
                 DialogueIntent.Apology or DialogueIntent.Agreement => NpcGoal.BuildRapport,
-            DialogueIntent.Assistance => NpcGoal.HelpPlayer,
+            DialogueIntent.Assistance or DialogueIntent.Directive => NpcGoal.HelpPlayer,
             DialogueIntent.Clarification or DialogueIntent.Unknown => NpcGoal.ClarifyRequest,
             DialogueIntent.GameFact => NpcGoal.ResolveGameFact,
             DialogueIntent.Farewell => NpcGoal.EndConversation,

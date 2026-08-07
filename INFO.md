@@ -1,6 +1,6 @@
 # Fishbrain Project Notes
 
-This is the detailed engineering record for Fishbrain: its goals, revision 6
+This is the detailed engineering record for Fishbrain: its goals, revision 7
 architecture, data and training pipelines, historical experiments, current
 results, and known problems. The [README](README.md) remains the quick-start
 guide.
@@ -14,7 +14,7 @@ of [martinskuta/microgpt](https://github.com/martinskuta/microgpt): keep the ent
 learning system small enough for one person to inspect and modify.
 
 The project began as a character-level next-token model, then added local tool
-calls and explicit dialogue state. Revision 6 separates three concerns:
+calls and explicit dialogue state. Revision 7 separates three concerns:
 
 ```text
 LANGUAGE -> PERCEPTION -> BEHAVIOR
@@ -65,14 +65,19 @@ Fishbrain.DataGenerator/
   CorpusPipeline.cs               fetch, filter, compile, split, and audit
   Templates.cs                    project-owned synthetic teaching material
   MarkovChain.cs                  simple word-level variation utility
+data/
   sources.json                    pinned external-source manifest
+  raw/                            ignored downloaded corpora
+  compiled/                       ignored generated JSONL splits
+  models/                         checkpoints and experiment roles
+  logs/                           ignored experiment logs
 ```
 
 Downloaded data, compiled datasets, experiment checkpoints, and intermediate
 models are ignored by Git. This avoids redistributing external text and keeps the
 repository small.
 
-## Current model: checkpoint version 6
+## Current model: checkpoint version 7
 
 ### Transformer
 
@@ -109,7 +114,7 @@ fixture improved from 35.929 to 12.727 seconds on the development machine, a
 
 ### Tokenizer and vocabulary
 
-V6 uses one token for every lexical word. Apostrophes and hyphens inside a word
+V7 uses one token for every lexical word. Apostrophes and hyphens inside a word
 remain part of that word, so `DON'T` and `SELF-AWARE` each use one token.
 `. , ? ! :` are standalone punctuation tokens. Control, cognition, and state
 tokens occupy fixed IDs; corpus words begin at ID 68.
@@ -130,7 +135,7 @@ arguments remain uppercase alphanumeric identifiers.
 ## Stateful API and cognition
 
 ```csharp
-var brain = Brain.Load("model-v6-latest.json");
+var brain = Brain.Load("data/models/model-v7-latest.json");
 var state = NpcState.Initial;
 
 ReplyResult result = brain.Reply(
@@ -162,7 +167,7 @@ ReplyResult        Text, State, Perception, Decision, Tone
 
 The intents are unknown, greeting, farewell, wellbeing, identity, assistance,
 clarification, activity, silence, gratitude, apology, agreement, refusal,
-hostility, and game fact. User affect is neutral, friendly, distressed,
+hostility, game fact, directive, and statement. User affect is neutral, friendly, distressed,
 frustrated, or hostile.
 
 Perception removes a leading `PLAYER` role marker for direct input. For history,
@@ -227,9 +232,9 @@ dotnet run --project Fishbrain.DataGenerator -- compile --count 10000 --seed 42
 dotnet run --project Fishbrain.DataGenerator -- audit
 ```
 
-`sources.json` pins source revisions, URLs, SHA-256 hashes, licenses,
+`data/sources.json` pins source revisions, URLs, SHA-256 hashes, licenses,
 attributions, and quotas. Raw and externally derived records stay in ignored
-`datasets/raw` and `datasets/compiled` directories.
+`data/raw` and `data/compiled` directories.
 
 | Source | Rows | Use |
 |---|---:|---|
@@ -274,7 +279,7 @@ then neutral.
 ## Teaching, checkpoints, and recovery
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json
 ```
 
 The planned curriculum is:
@@ -292,8 +297,8 @@ separate best-perception and best-realization metadata.
 Milestones pause without changing the schedule:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json --planned 40000 --until 2000
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json --planned 40000 --until 10000
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json --planned 40000 --until 2000
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json --planned 40000 --until 10000
 ```
 
 `--planned` controls phase boundaries and decay; `--until` only pauses. A resumed
@@ -308,7 +313,7 @@ selects `best-perception`; realization loss selects `best-realization`. Use the
 full evaluator for milestone acceptance:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v6-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v7-latest.json
 ```
 
 Evaluation disables memory and reports intent and affect accuracy/macro-F1,
@@ -628,6 +633,72 @@ RAPPORT=0 MOOD=ANNOYED INTENT=REFUSAL AFFECT=HOSTILE EXPECTED=TRUE
 ACTION=RESPOND TOPIC=RELATIONSHIP GOAL=DEESCALATE TONE=COLD
 ```
 
+## Revision 7 implementation and experiment
+
+The first interactive v6 test showed that benchmark gains did not guarantee a
+usable conversation. It misclassified an identity request as silence, a follow
+command as farewell, and `I WILL NOT ASK` as refusal. Generated replies could be
+structurally valid but grammatically incoherent.
+
+V7 deliberately breaks checkpoint compatibility to address those failures:
+
+- `DIRECTIVE` and `STATEMENT` expand the intent head from 15 to 17 classes.
+- Fixed control tokens now occupy IDs 0-69; corpus words begin at ID 70.
+- Refusal annotation requires an actual refused action rather than matching every
+  occurrence of `WILL NOT`.
+- Identity and wellbeing constructions cover `TELL ME SOMETHING ABOUT YOURSELF`
+  and `WHY YOU WORRY` directly and through paraphrases.
+- The chat CLI retains role history. Missing terminal punctuation is repaired in
+  the stored history, and the parser selects the last player turn even when a
+  no-response action creates consecutive player markers.
+- Checkpoints store a clean response catalog built only from project-owned
+  synthetic responses. A generated reply outside that catalog falls back to a
+  deterministic candidate selected by intent, tone, and lexical overlap.
+- The evaluator replays the complete four-turn failure transcript. Direct
+  one-line checks are not sufficient for stage-gate acceptance.
+- Every data artifact now lives below `data/`; only the source manifest and
+  historical v4 checkpoints are tracked.
+
+The regenerated 10,000-row corpus contains 380 directive rows, 380 statement
+rows, and 132 state-varied golden rows. The fresh 40,000-step v7 run ended with
+these trainer-validation values:
+
+| Metric | Step 40,000 |
+|---|---:|
+| Intent macro-F1 | 0.9112 |
+| Affect macro-F1 | 0.8815 |
+| Expected-response F1 | 1.0000 |
+| Direct / history intent macro-F1 | 1.0000 / 0.9683 |
+| Realization loss | 1.6876 |
+
+Independent evaluation on 1,000 test records reported:
+
+| Metric | Result |
+|---|---:|
+| Intent accuracy / macro-F1 | 0.9216 / 0.9292 |
+| Affect accuracy / macro-F1 | 0.8696 / 0.8778 |
+| Expected-response F1 | 1.0000 |
+| No-response F1 | 1.0000 |
+| Action accuracy | 1.0000 |
+| Realization loss | 1.5372 |
+| Invalid / empty / overlength generation | 0% / 0% / 0% |
+| Synthetic intent accuracy / macro-F1 | 0.9883 / 0.9880 |
+| External intent accuracy / macro-F1 | 0.7786 / 0.6311 |
+| Perception golden cases | 11 / 11 |
+| Sequential transcript cases | 4 / 4 |
+
+The real CLI replay is:
+
+```text
+TELL ME SOMETHING ABOUT YOURSELF -> I AM A TRAVELER FROM THIS VILLAGE.
+WHY YOU WORRY                    -> I DO NOT WORRY.
+I WILL NOT ASK                   -> [NO RESPONSE]
+FOLLOW ME, DUDE!                 -> I WILL FOLLOW YOU.
+```
+
+`V7_STAGE_GATE` passes. `RELEASE_GATE` still fails because external intent
+macro-F1 `0.6311` remains below the long-term `0.70` requirement.
+
 ## Revision history
 
 - **v1:** uppercase character GPT for one NPC reply, using microGPT-style scalar
@@ -645,6 +716,9 @@ ACTION=RESPOND TOPIC=RELATIONSHIP GOAL=DEESCALATE TONE=COLD
 - **v6:** corpus-owned word tokens, separate response output head, full 128-token
   attention, constrained word generation, corrected player-refusal behavior, and
   seven state-varied golden behaviors. The 40,000-step experiment is complete.
+- **v7:** directive and statement intents, robust sequential role history,
+  project-owned safe-response selection, consolidated `data/` layout, and
+  end-to-end transcript regression gates.
 
 ## Command reference
 
@@ -659,10 +733,10 @@ dotnet run --project Fishbrain.DataGenerator -- fetch
 dotnet run --project Fishbrain.DataGenerator -- compile --count 10000 --seed 42
 dotnet run --project Fishbrain.DataGenerator -- audit
 
-# Revision 6
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v6-latest.json
-dotnet run -c Release --project Fishbrain -- chat model-v6-latest.json
+# Revision 7
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v7-latest.json
+dotnet run -c Release --project Fishbrain -- chat
 
 # Generic JSONL workflow
 dotnet run --project Fishbrain -- train data.jsonl model.json 10000
@@ -671,7 +745,7 @@ dotnet run --project Fishbrain -- resume data.jsonl model.json
 
 ## Known limitations
 
-- Revision 2-v5 checkpoints are historical archives and do not load in the v6 runtime.
+- Revision 2-v6 checkpoints are historical archives and do not load in the v7 runtime.
 - One layer and 64 hidden dimensions provide little semantic capacity.
 - The fixed corpus vocabulary maps unseen words to `<UNK>` and cannot preserve
   their lexical identity.

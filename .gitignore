@@ -6,14 +6,16 @@
 # dotenv files
 .env
 
-# Local training experiments; keep the final model.json checkpoint only.
-model.*.json
-model-v5-*.json
-model-v6-*.json
+# Local training experiments. Historical v4 archives remain tracked in data/models.
+data/models/model.*.json
+data/models/model-v5-*.json
+data/models/model-v6-*.json
+data/models/model-v7-*.json
+data/logs/
 
 # Downloaded and externally-derived teaching corpora stay local.
-datasets/raw/
-datasets/compiled/
+data/raw/
+data/compiled/
 
 # User-specific files
 *.rsuser

@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Fishbrain;
 
-/// <summary>Deterministic uppercase word vocabulary stored in every v6 checkpoint.</summary>
+/// <summary>Deterministic uppercase word vocabulary stored in every current checkpoint.</summary>
 internal sealed class WordVocabulary
 {
     private readonly Dictionary<string, int> _wordToInput;

@@ -38,10 +38,10 @@ public sealed class BrainConfig
     }
 }
 
-/// <summary>A deliberately tiny, character-level GPT for uppercase video-game dialogue.</summary>
+/// <summary>A deliberately tiny word-level GPT for uppercase video-game dialogue.</summary>
 public sealed class Brain
 {
-    private const int CheckpointVersion = 6;
+    private const int CheckpointVersion = 7;
     private const int TeachingCheckpointInterval = 1_000;
     private const string SafeFallback = "I DO NOT KNOW.";
 
@@ -49,6 +49,7 @@ public sealed class Brain
     private readonly WordVocabulary _vocabulary;
     private readonly HashSet<string> _trainedTools;
     private readonly Dictionary<string, string> _trainedExamples;
+    private readonly Dictionary<string, string[]> _responseCatalog;
     private readonly List<Value> _parameters = [];
     private readonly Value[][] _tokenEmbedding;
     private readonly Value[][] _outputHead;
@@ -80,7 +81,8 @@ public sealed class Brain
         WordVocabulary vocabulary,
         DeterministicRandom random,
         IEnumerable<string> trainedTools,
-        IEnumerable<KeyValuePair<string, string>> trainedExamples)
+        IEnumerable<KeyValuePair<string, string>> trainedExamples,
+        IEnumerable<KeyValuePair<string, string[]>> responseCatalog)
     {
         config.Validate();
         Tokenizer.Configure(vocabulary);
@@ -89,6 +91,10 @@ public sealed class Brain
         _random = random;
         _trainedTools = new HashSet<string>(trainedTools, StringComparer.Ordinal);
         _trainedExamples = new Dictionary<string, string>(trainedExamples, StringComparer.Ordinal);
+        _responseCatalog = responseCatalog.ToDictionary(
+            item => item.Key,
+            item => item.Value.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
+            StringComparer.Ordinal);
 
         _tokenEmbedding = CreateMatrix(Tokenizer.VocabularySize, config.EmbeddingSize);
         _outputHead = CreateMatrix(Tokenizer.OutputSize, config.EmbeddingSize);
@@ -132,13 +138,13 @@ public sealed class Brain
     {
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
-        if (checkpoint.Version is 2 or 3 or 4 or 5)
-            throw new InvalidDataException("Fishbrain v6 requires a fresh word vocabulary and response head; retain the older checkpoint as an archive.");
+        if (checkpoint.Version is >= 2 and <= 6)
+            throw new InvalidDataException("Fishbrain v7 requires fresh intent heads, control tokens, and response catalog; retain the older checkpoint as an archive.");
         if (checkpoint.Version != CheckpointVersion)
             throw new InvalidDataException($"Unsupported checkpoint version {checkpoint.Version}.");
         checkpoint.Config.Validate();
         if (checkpoint.Words.Length == 0 || checkpoint.OutputWords.Length == 0)
-            throw new InvalidDataException("The v6 checkpoint does not contain a word vocabulary.");
+            throw new InvalidDataException("The v7 checkpoint does not contain a word vocabulary.");
         var vocabulary = new WordVocabulary(checkpoint.Words, checkpoint.OutputWords);
 
         var brain = new Brain(
@@ -146,7 +152,8 @@ public sealed class Brain
             vocabulary,
             new DeterministicRandom(checkpoint.Config.Seed),
             checkpoint.TrainedTools ?? [],
-            checkpoint.TrainedExamples ?? new Dictionary<string, string>());
+            checkpoint.TrainedExamples ?? new Dictionary<string, string>(),
+            checkpoint.ResponseCatalog ?? new Dictionary<string, string[]>());
 
         if (checkpoint.Weights.Length != brain._parameters.Count ||
             checkpoint.AdamM.Length != brain._parameters.Count ||
@@ -242,6 +249,8 @@ public sealed class Brain
         responsePrompt.Add(Tokenizer.Text);
 
         var text = GenerateText(responsePrompt, temperature);
+        if (decision.Action != ResponseAction.CallTool)
+            text = SelectSafeResponse(text, input, perception.Intent, transition.Tone);
         return new ReplyResult(text, transition.State, perception, decision, transition.Tone);
     }
 
@@ -259,7 +268,8 @@ public sealed class Brain
             vocabulary,
             new DeterministicRandom(config.Seed),
             data.ToolNames,
-            data.Examples);
+            data.Examples,
+            data.ResponseCatalog);
         brain.Train(data.Samples, checkpointPath, plannedSteps);
     }
 
@@ -290,7 +300,8 @@ public sealed class Brain
             var vocabulary = WordVocabulary.Build(trainPath);
             Tokenizer.Configure(vocabulary);
             var initialData = TrainingData.Load(trainPath);
-            brain = new Brain(config, vocabulary, new DeterministicRandom(config.Seed), initialData.ToolNames, initialData.Examples);
+            brain = new Brain(config, vocabulary, new DeterministicRandom(config.Seed), initialData.ToolNames,
+                initialData.Examples, initialData.ResponseCatalog);
         }
         var data = TrainingData.Load(trainPath);
         var validation = TrainingData.Load(Path.Combine(fullCorpusDirectory, "validation.jsonl"));
@@ -300,6 +311,8 @@ public sealed class Brain
         if (brain._trainedExamples.Count != data.Examples.Count ||
             brain._trainedExamples.Any(example => !data.Examples.TryGetValue(example.Key, out var value) || value != example.Value))
             throw new InvalidDataException("Teaching examples differ from the checkpoint.");
+        if (!CatalogEquals(brain._responseCatalog, data.ResponseCatalog))
+            throw new InvalidDataException("Teaching response catalog differs from the checkpoint.");
         var untilStep = requestedUntilStep ?? plannedSteps;
         if (untilStep <= brain._step || untilStep > plannedSteps)
             throw new ArgumentOutOfRangeException(nameof(requestedUntilStep),
@@ -326,6 +339,8 @@ public sealed class Brain
         {
             throw new InvalidDataException("Training examples differ from the checkpoint's trained example set.");
         }
+        if (!CatalogEquals(brain._responseCatalog, data.ResponseCatalog))
+            throw new InvalidDataException("Training response catalog differs from the checkpoint.");
 
         var target = targetSteps ?? brain.Config.PlannedSteps;
         if (target <= brain._step)
@@ -346,6 +361,9 @@ public sealed class Brain
             TrainedExamples = _trainedExamples
                 .OrderBy(example => example.Key, StringComparer.Ordinal)
                 .ToDictionary(example => example.Key, example => example.Value, StringComparer.Ordinal),
+            ResponseCatalog = _responseCatalog
+                .OrderBy(item => item.Key, StringComparer.Ordinal)
+                .ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal),
             Weights = (double[])_weights.Clone(),
             AdamM = _adamM,
             AdamV = _adamV,
@@ -373,15 +391,15 @@ public sealed class Brain
     }
 
     internal static Brain CreateForTesting(BrainConfig config, params string[] trainedTools) =>
-        new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), trainedTools, []);
+        new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), trainedTools, [], []);
 
     internal static Brain CreateForTesting(BrainConfig config, WordVocabulary vocabulary, params string[] trainedTools) =>
-        new(config, vocabulary, new DeterministicRandom(config.Seed), trainedTools, []);
+        new(config, vocabulary, new DeterministicRandom(config.Seed), trainedTools, [], []);
 
     internal static Brain CreateForTestingWithExamples(
         BrainConfig config,
         IReadOnlyDictionary<string, string> examples) =>
-        new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), [], examples);
+        new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), [], examples, []);
 
     internal double[] DebugNextLogits(IReadOnlyList<int> tokens)
     {
@@ -413,8 +431,8 @@ public sealed class Brain
         var npcMarker = FindLastRoleMarker(normalizedDialogue, "NPC");
         if (npcMarker >= 0)
         {
-            var playerMarker = FindRoleMarker(normalizedDialogue, "PLAYER", npcMarker + 4);
-            if (playerMarker < 0)
+            var playerMarker = FindLastRoleMarker(normalizedDialogue, "PLAYER");
+            if (playerMarker <= npcMarker)
                 throw new ArgumentException("Role-marked history must end with a PLAYER utterance.", nameof(normalizedDialogue));
             return TextAfterRoleMarker(normalizedDialogue, playerMarker, "PLAYER");
         }
@@ -1128,6 +1146,51 @@ public sealed class Brain
         return text.Length == 0 ? SafeFallback : text;
     }
 
+    private string SelectSafeResponse(
+        string generated,
+        string input,
+        DialogueIntent intent,
+        ResponseTone tone)
+    {
+        var key = DialogueKeys.Catalog(intent, tone);
+        if (!_responseCatalog.TryGetValue(key, out var candidates) || candidates.Length == 0)
+        {
+            candidates = _responseCatalog
+                .Where(item => item.Key.StartsWith(intent + "|", StringComparison.Ordinal))
+                .SelectMany(item => item.Value)
+                .Distinct(StringComparer.Ordinal)
+                .Order(StringComparer.Ordinal)
+                .ToArray();
+        }
+        if (candidates.Length == 0) return generated;
+
+        var currentTurn = ExtractCurrentPlayerTurn(input);
+        var inputWords = Tokenizer.Lex(currentTurn)
+            .Where(token => token.Kind == LexicalTokenKind.Word)
+            .Select(token => token.Text)
+            .ToHashSet(StringComparer.Ordinal);
+        var bestOverlap = candidates.Max(candidate => Tokenizer.Lex(candidate)
+            .Count(token => token.Kind == LexicalTokenKind.Word && inputWords.Contains(token.Text)));
+        candidates = candidates.Where(candidate => Tokenizer.Lex(candidate)
+                .Count(token => token.Kind == LexicalTokenKind.Word && inputWords.Contains(token.Text)) == bestOverlap)
+            .ToArray();
+        if (candidates.Contains(generated, StringComparer.Ordinal)) return generated;
+        uint hash = 2166136261;
+        foreach (var character in currentTurn)
+        {
+            hash ^= character;
+            hash *= 16777619;
+        }
+        hash ^= (uint)tone;
+        return candidates[(int)(hash % (uint)candidates.Length)];
+    }
+
+    private static bool CatalogEquals(
+        IReadOnlyDictionary<string, string[]> left,
+        IReadOnlyDictionary<string, string[]> right) =>
+        left.Count == right.Count && left.All(item =>
+            right.TryGetValue(item.Key, out var values) && item.Value.SequenceEqual(values));
+
     private static int[] AllowedTextOutputs(IReadOnlyList<int> generated)
     {
         var allowed = Tokenizer.GeneratedTextOutputs.ToHashSet();
@@ -1351,6 +1414,7 @@ public sealed class Brain
         public string[] OutputWords { get; set; } = [];
         public string[]? TrainedTools { get; set; }
         public Dictionary<string, string>? TrainedExamples { get; set; }
+        public Dictionary<string, string[]>? ResponseCatalog { get; set; }
         public double[] Weights { get; set; } = [];
         public double[] AdamM { get; set; } = [];
         public double[] AdamV { get; set; } = [];
@@ -1397,21 +1461,21 @@ internal static class Tokenizer
     public const int RapportStart = 8;
     public const int MoodStart = 12;
     public const int IntentStart = 16;
-    public const int ActionStart = 31;
-    public const int ToneStart = 36;
-    public const int TopicStart = 40;
-    public const int GoalStart = 47;
-    public const int AffectStart = 54;
-    public const int ExpectedFalse = 59;
-    public const int ExpectedTrue = 60;
-    public const int Period = 61;
-    public const int Comma = 62;
-    public const int Question = 63;
-    public const int Exclamation = 64;
-    public const int Colon = 65;
-    public const int ArgumentSeparator = 66;
-    public const int Unknown = 67;
-    public const int WordStart = 68;
+    public const int ActionStart = 33;
+    public const int ToneStart = 38;
+    public const int TopicStart = 42;
+    public const int GoalStart = 49;
+    public const int AffectStart = 56;
+    public const int ExpectedFalse = 61;
+    public const int ExpectedTrue = 62;
+    public const int Period = 63;
+    public const int Comma = 64;
+    public const int Question = 65;
+    public const int Exclamation = 66;
+    public const int Colon = 67;
+    public const int ArgumentSeparator = 68;
+    public const int Unknown = 69;
+    public const int WordStart = 70;
 
     private static WordVocabulary? _current;
 
@@ -1890,6 +1954,8 @@ internal sealed class TrainingData
 
 internal static class DialogueKeys
 {
+    public static string Catalog(DialogueIntent intent, ResponseTone tone) => $"{intent}|{tone}";
+
     public static string StateInput(string input, NpcState state) =>
         $"{state.Rapport}|{(int)state.Mood}|{(int)state.LastIntent}|{(int)state.LastAffect}|" +
         $"{(int)state.ActiveTopic}|{(int)state.ActiveGoal}|{input}";
@@ -1913,16 +1979,19 @@ internal sealed class TrainingData
     private TrainingData(
         List<TrainingSample> samples,
         HashSet<string> toolNames,
-        Dictionary<string, string> examples)
+        Dictionary<string, string> examples,
+        Dictionary<string, string[]> responseCatalog)
     {
         Samples = samples;
         ToolNames = toolNames;
         Examples = examples;
+        ResponseCatalog = responseCatalog;
     }
 
     public IReadOnlyList<TrainingSample> Samples { get; }
     public IReadOnlySet<string> ToolNames { get; }
     public IReadOnlyDictionary<string, string> Examples { get; }
+    public IReadOnlyDictionary<string, string[]> ResponseCatalog { get; }
     public IReadOnlyList<TrainingSample> LanguageSamples => Samples.Where(x => x.Task == TrainingTask.Language).ToArray();
     public IReadOnlyList<TrainingSample> PerceptionSamples => Samples.Where(x => x.Task == TrainingTask.Perception).ToArray();
     public IReadOnlyList<TrainingSample> ToolSamples => Samples.Where(x => x.Task == TrainingTask.Tool).ToArray();
@@ -1932,6 +2001,7 @@ internal sealed class TrainingData
         var samples = new List<TrainingSample>();
         var tools = new HashSet<string>(StringComparer.Ordinal);
         var examples = new Dictionary<string, string>(StringComparer.Ordinal);
+        var responseCatalog = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var rows = new Dictionary<string, string>(StringComparer.Ordinal);
         var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper));
@@ -1944,7 +2014,7 @@ internal sealed class TrainingData
             {
                 var row = JsonSerializer.Deserialize<TrainingRow>(line, options)
                     ?? throw new InvalidDataException("Empty object.");
-                AddRow(row, samples, tools, examples, rows);
+                AddRow(row, samples, tools, examples, responseCatalog, rows);
             }
             catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidDataException)
             {
@@ -1952,7 +2022,12 @@ internal sealed class TrainingData
             }
         }
         if (samples.Count == 0) throw new InvalidDataException("Training data contains no examples.");
-        return new TrainingData(samples, tools, examples);
+        return new TrainingData(samples, tools, examples, responseCatalog
+            .OrderBy(item => item.Key, StringComparer.Ordinal)
+            .ToDictionary(
+                item => item.Key,
+                item => item.Value.Order(StringComparer.Ordinal).ToArray(),
+                StringComparer.Ordinal));
     }
 
     private static void AddRow(
@@ -1960,6 +2035,7 @@ internal sealed class TrainingData
         List<TrainingSample> samples,
         HashSet<string> tools,
         Dictionary<string, string> examples,
+        Dictionary<string, HashSet<string>> responseCatalog,
         Dictionary<string, string> rows)
     {
         if (row.Input is null || row.State is null || row.Perception is null || row.Action is null)
@@ -2007,6 +2083,13 @@ internal sealed class TrainingData
             if (!string.IsNullOrEmpty(response))
             {
                 examples[DialogueKeys.Example(input, row.State, perception, decision, transition.Tone)] = response;
+                if (source.Equals("SYNTHETIC", StringComparison.OrdinalIgnoreCase))
+                {
+                    var catalogKey = DialogueKeys.Catalog(perception.Intent, transition.Tone);
+                    if (!responseCatalog.TryGetValue(catalogKey, out var responses))
+                        responseCatalog.Add(catalogKey, responses = new HashSet<string>(StringComparer.Ordinal));
+                    responses.Add(response);
+                }
                 AddSamples(SerializeResponse(input, transition.State, perception, decision, transition.Tone, response),
                     samples, TrainingTask.Language, bucket, source);
             }
