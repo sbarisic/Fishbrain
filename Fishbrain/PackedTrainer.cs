@@ -12,14 +12,17 @@ internal sealed class PackedTrainer
     private const double RmsEpsilon = 1e-5;
 
     private readonly BrainConfig _config;
+    private readonly DialogueTokenizer _tokenizer;
     private readonly Layout _layout;
     private readonly double[] _weights;
     private readonly double[] _gradients;
 
-    private PackedTrainer(BrainConfig config, double[] weights, double[] gradients)
+    private PackedTrainer(
+        BrainConfig config, DialogueTokenizer tokenizer, double[] weights, double[] gradients)
     {
         _config = config;
-        _layout = new Layout(config);
+        _tokenizer = tokenizer;
+        _layout = new Layout(config, tokenizer.VocabularySize, tokenizer.OutputSize);
         _weights = weights;
         _gradients = gradients;
         if (weights.Length != _layout.ParameterCount || gradients.Length != weights.Length)
@@ -28,12 +31,13 @@ internal sealed class PackedTrainer
 
     public static double Calculate(
         BrainConfig config,
+        DialogueTokenizer tokenizer,
         double[] weights,
         double[] gradients,
         TrainingSample sample)
     {
         Array.Clear(gradients);
-        return new PackedTrainer(config, weights, gradients).Calculate(sample);
+        return new PackedTrainer(config, tokenizer, weights, gradients).Calculate(sample);
     }
 
     private double Calculate(TrainingSample sample)
@@ -56,9 +60,9 @@ internal sealed class PackedTrainer
             var position = firstPosition + index;
             var hidden = ForwardHidden(tokens, position);
             targets[index] = hidden;
-            var target = Tokenizer.OutputId(sample.Tokens[sample.FirstTargetIndex + index]);
+            var target = _tokenizer.OutputId(sample.Tokens[sample.FirstTargetIndex + index]);
             loss += CrossEntropy(
-                _layout.OutputHead, Tokenizer.OutputSize, _config.EmbeddingSize,
+                _layout.OutputHead, _tokenizer.OutputSize, _config.EmbeddingSize,
                 hidden.Final, target, 1.0 / targetCount, hidden.DFinal);
         }
 
@@ -452,12 +456,14 @@ internal sealed class PackedTrainer
 
     internal sealed class Layout
     {
-        public Layout(BrainConfig config)
+        public Layout(BrainConfig config, int vocabularySize, int outputSize)
         {
+            if (vocabularySize <= 0 || outputSize <= 0)
+                throw new ArgumentOutOfRangeException(nameof(vocabularySize));
             var size = config.EmbeddingSize;
             TokenEmbedding = 0;
-            OutputHead = TokenEmbedding + Tokenizer.VocabularySize * size;
-            PositionEmbedding = OutputHead + Tokenizer.OutputSize * size;
+            OutputHead = TokenEmbedding + vocabularySize * size;
+            PositionEmbedding = OutputHead + outputSize * size;
             Query = PositionEmbedding + config.PositionPeriod * size;
             Key = Query + size * size;
             Value = Key + size * size;

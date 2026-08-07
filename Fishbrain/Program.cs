@@ -1,4 +1,8 @@
 using System.Globalization;
+using System.Diagnostics;
+using System.Numerics;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -31,9 +35,9 @@ internal static class Program
                         FindProjectPath());
                     break;
                 case "evaluate":
-                    Count(args, 3, 3);
-                    Evaluation.Run(args[1], args[2]);
-                    break;
+                    Count(args, 3, 5);
+                    var gate = EvaluationGateParser.Parse(args[3..]);
+                    return Evaluation.Run(args[1], args[2], gate);
                 case "chat":
                     Count(args, 1, 2);
                     Chat(args.Length == 2 ? args[1] : Path.Combine("data", "models", "model-v9-latest.json"));
@@ -93,7 +97,7 @@ internal static class Program
         Console.WriteLine("  resume DATA.jsonl CHECKPOINT.json [TOTAL_STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
-        Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json");
+        Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|stage|release]");
         Console.WriteLine("  chat [CHECKPOINT.json]  (default: data/models/model-v9-latest.json)");
         Console.WriteLine("  selftest");
     }
@@ -105,6 +109,25 @@ internal static class Program
         if (File.Exists(besideBuild)) return besideBuild;
         var beneathWorkingDirectory = Path.GetFullPath(Path.Combine("Fishbrain", "Fishbrain.csproj"));
         return beneathWorkingDirectory;
+    }
+}
+
+internal enum EvaluationGate { None, Stage, Release }
+
+internal static class EvaluationGateParser
+{
+    public static EvaluationGate Parse(string[] args)
+    {
+        if (args.Length == 0) return EvaluationGate.None;
+        if (args.Length != 2 || !args[0].Equals("--gate", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Evaluation accepts only --gate none|stage|release.");
+        return args[1].ToLowerInvariant() switch
+        {
+            "none" => EvaluationGate.None,
+            "stage" => EvaluationGate.Stage,
+            "release" => EvaluationGate.Release,
+            _ => throw new ArgumentException("Evaluation gate must be none, stage, or release.")
+        };
     }
 }
 
@@ -154,8 +177,9 @@ internal static class Evaluation
 {
     private static readonly JsonSerializerOptions Options = CreateOptions();
 
-    public static void Run(string testPath, string checkpointPath)
+    public static int Run(string testPath, string checkpointPath, EvaluationGate gate)
     {
+        var timer = Stopwatch.StartNew();
         var brain = Brain.Load(checkpointPath);
         var rows = File.ReadLines(testPath).Where(line => !string.IsNullOrWhiteSpace(line))
             .Select(line => JsonSerializer.Deserialize<Row>(line, Options)
@@ -164,8 +188,10 @@ internal static class Evaluation
         if (rows.Length == 0) throw new InvalidDataException("Evaluation data is empty.");
 
         var expectedIntent = new List<DialogueIntent>();
+        var rawIntent = new List<DialogueIntent>();
         var predictedIntent = new List<DialogueIntent>();
         var expectedAffect = new List<UserAffect>();
+        var rawAffect = new List<UserAffect>();
         var predictedAffect = new List<UserAffect>();
         var expectedResponse = new List<bool>();
         var predictedResponse = new List<bool>();
@@ -175,10 +201,13 @@ internal static class Evaluation
         foreach (var row in rows)
         {
             row.State.Validate();
+            var raw = brain.DebugPredictRawPerception(row.Input, row.State);
             var predicted = brain.DebugPredictPerception(row.Input, row.State);
             expectedIntent.Add(row.Perception.Intent);
+            rawIntent.Add(raw.Intent);
             predictedIntent.Add(predicted.Intent);
             expectedAffect.Add(row.Perception.Affect);
+            rawAffect.Add(raw.Affect);
             predictedAffect.Add(predicted.Affect);
             expectedResponse.Add(row.Perception.ResponseExpected);
             predictedResponse.Add(predicted.ResponseExpected);
@@ -195,12 +224,14 @@ internal static class Evaluation
             }
         }
 
-        var trainingData = TrainingData.Load(testPath);
-        var lossSamples = trainingData.LanguageSamples.Take(100).ToArray();
+        var trainingData = TrainingData.Load(testPath, brain.DialogueTokenizer);
+        var lossSamples = SeededStratifiedSamples(trainingData.LanguageSamples, 100, 42);
         var languageLoss = brain.DebugAverageLoss(lossSamples);
         var generated = 0; var invalid = 0; var unexpectedEmpty = 0; var overlength = 0;
         var unexpectedEmptyInputs = new List<string>();
-        foreach (var row in rows.Where(row => row.Perception.ResponseExpected && row.Action != ResponseAction.CallTool).Take(100))
+        foreach (var row in SeededStratifiedRows(
+                     rows.Where(row => row.Perception.ResponseExpected && row.Action != ResponseAction.CallTool),
+                     brain.DialogueTokenizer, 100, 42))
         {
             var result = brain.DebugReplyWithoutMemory(row.Input, row.State);
             generated++;
@@ -228,14 +259,21 @@ internal static class Evaluation
         var scoredResponseExpected = expectedIndices.Select(index => expectedResponse[index]).ToArray();
         var scoredResponsePredicted = expectedIndices.Select(index => predictedResponse[index]).ToArray();
         var intentMacro = MacroF1(scoredIntentExpected, scoredIntentPredicted);
+        var scoredRawIntent = intentIndices.Select(index => rawIntent[index]).ToArray();
+        var rawIntentMacro = MacroF1(scoredIntentExpected, scoredRawIntent);
         var affectMacro = MacroF1(scoredAffectExpected, scoredAffectPredicted);
+        var scoredRawAffect = affectIndices.Select(index => rawAffect[index]).ToArray();
+        var rawAffectMacro = MacroF1(scoredAffectExpected, scoredRawAffect);
         var expectedF1 = BinaryMetrics(scoredResponseExpected, scoredResponsePredicted, true).F1;
         var goldenResults = GoldenCases(brain);
         var goldenPass = goldenResults.All(result => result.Pass);
-        var transcriptResults = TranscriptCases(brain);
+        var transcriptResults = TranscriptCases(brain, production: true);
         var transcriptPass = transcriptResults.All(result => result.Pass);
+        var modelTranscriptResults = TranscriptCases(brain, production: false);
+        var modelTranscriptPass = modelTranscriptResults.All(result => result.Pass);
         var releasePass = syntheticMacro >= 0.85 && externalMacro >= 0.70 && affectMacro >= 0.75 &&
-                          expectedF1 >= 0.90 && invalid == 0 && overlength == 0 && goldenPass && transcriptPass;
+                          expectedF1 >= 0.90 && invalid == 0 && unexpectedEmpty == 0 && overlength == 0 &&
+                          goldenPass && transcriptPass;
         var v9StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
                           affectMacro >= 0.65 && expectedF1 >= 0.94 && languageLoss < 3.0 &&
                           invalid == 0 && unexpectedEmpty == 0 && overlength == 0 && goldenPass && transcriptPass;
@@ -244,9 +282,11 @@ internal static class Evaluation
         Console.WriteLine($"INTENT_SCORED {intentIndices.Length}");
         Console.WriteLine($"INTENT_ACCURACY {Accuracy(scoredIntentExpected, scoredIntentPredicted):F4}");
         Console.WriteLine($"INTENT_MACRO_F1 {intentMacro:F4}");
+        Console.WriteLine($"RAW_INTENT_MACRO_F1 {rawIntentMacro:F4}");
         Console.WriteLine($"AFFECT_SCORED {affectIndices.Length}");
         Console.WriteLine($"AFFECT_ACCURACY {Accuracy(scoredAffectExpected, scoredAffectPredicted):F4}");
         Console.WriteLine($"AFFECT_MACRO_F1 {affectMacro:F4}");
+        Console.WriteLine($"RAW_AFFECT_MACRO_F1 {rawAffectMacro:F4}");
         Console.WriteLine($"EXPECTED_SCORED {expectedIndices.Length}");
         PrintBinary("RESPONSE_EXPECTED", scoredResponseExpected, scoredResponsePredicted, true);
         PrintBinary("NO_RESPONSE", scoredResponseExpected, scoredResponsePredicted, false);
@@ -276,13 +316,24 @@ internal static class Evaluation
                               $"EXPECTED {result.Expected} PREDICTED {result.Predicted}");
         Console.WriteLine($"GOLDEN_CASES {(goldenPass ? "PASS" : "FAIL")}");
         foreach (var result in transcriptResults)
-            Console.WriteLine($"TRANSCRIPT {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
+            Console.WriteLine($"PRODUCTION_TRANSCRIPT {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
                               $"INTENT={result.Result.Perception.Intent} AFFECT={result.Result.Perception.Affect} " +
                               $"EXPECTED={result.Result.Perception.ResponseExpected} ACTION={result.Result.Decision.Action} " +
                               $"RESPONSE={JsonSerializer.Serialize(result.Result.Text)}");
-        Console.WriteLine($"TRANSCRIPT_CASES {(transcriptPass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"PRODUCTION_TRANSCRIPT_CASES {(transcriptPass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"MODEL_ONLY_TRANSCRIPT_CASES {(modelTranscriptPass ? "PASS" : "FAIL")}");
         Console.WriteLine($"V9_STAGE_GATE {(v9StagePass ? "PASS" : "FAIL")}");
         Console.WriteLine($"RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
+        timer.Stop();
+        WriteTelemetry(testPath, checkpointPath, brain, timer.Elapsed, languageLoss, rawIntentMacro,
+            intentMacro, rawAffectMacro, affectMacro, expectedF1, generated, invalid, unexpectedEmpty,
+            overlength, v9StagePass, releasePass);
+        return gate switch
+        {
+            EvaluationGate.Stage when !v9StagePass => 2,
+            EvaluationGate.Release when !releasePass => 2,
+            _ => 0
+        };
     }
 
     private static double Accuracy<T>(IReadOnlyList<T> expected, IReadOnlyList<T> predicted) where T : struct, Enum =>
@@ -383,7 +434,7 @@ internal static class Evaluation
 
     private sealed record GoldenResult(string Name, TurnPerception Expected, TurnPerception Predicted, bool Pass);
 
-    private static TranscriptResult[] TranscriptCases(Brain brain)
+    private static TranscriptResult[] TranscriptCases(Brain brain, bool production)
     {
         var sessions = new (string Name, TranscriptExpectation[] Cases)[]
         {
@@ -443,7 +494,10 @@ internal static class Evaluation
             foreach (var item in session.Cases)
             {
                 var playerTurn = "PLAYER " + DialogueText.Normalize(item.Input);
-                var result = brain.Reply(string.Join(' ', history.Append(playerTurn)), state);
+                var dialogue = string.Join(' ', history.Append(playerTurn));
+                var result = production
+                    ? brain.Reply(dialogue, state)
+                    : brain.DebugReplyWithoutMemory(dialogue, state);
                 state = result.State;
                 history.Add(DialogueText.TerminateTurn(playerTurn));
                 if (result.Text.Length > 0) history.Add("NPC " + DialogueText.TerminateTurn(result.Text));
@@ -454,6 +508,77 @@ internal static class Evaluation
             }
         }
         return results.ToArray();
+    }
+
+    private static TrainingSample[] SeededStratifiedSamples(
+        IEnumerable<TrainingSample> samples, int maximum, int seed) =>
+        samples.GroupBy(sample => $"{sample.Source}|{sample.Bucket}|{sample.Family}|{sample.Task}", StringComparer.Ordinal)
+            .SelectMany(group => group.OrderBy(sample => StableSampleKey(sample, seed)).Take(Math.Max(1, maximum / Math.Max(1, samples.Select(item => $"{item.Source}|{item.Bucket}|{item.Family}|{item.Task}").Distinct().Count()))))
+            .OrderBy(sample => StableSampleKey(sample, seed))
+            .Take(maximum)
+            .ToArray();
+
+    private static Row[] SeededStratifiedRows(
+        IEnumerable<Row> source, DialogueTokenizer tokenizer, int maximum, int seed)
+    {
+        var rows = source.ToArray();
+        var groups = rows.GroupBy(row =>
+            $"{row.Source}|{row.Family}|{(IsHistory(row) ? "HISTORY" : "DIRECT")}|" +
+            $"{row.Action}|{(tokenizer.ContainsUnknown(row.Input) ? "OOV" : "KNOWN")}|{ContentBand(row.Input)}",
+            StringComparer.Ordinal).ToArray();
+        var quota = Math.Max(1, maximum / Math.Max(1, groups.Length));
+        return groups.SelectMany(group => group.OrderBy(row => StableRowKey(row, seed)).Take(quota))
+            .Concat(rows.OrderBy(row => StableRowKey(row, seed)))
+            .Distinct()
+            .Take(maximum)
+            .ToArray();
+    }
+
+    private static string ContentBand(string input)
+    {
+        var padded = " " + DialogueText.Normalize(input) + " ";
+        if (new[] { " IDIOT ", " FUCK ", " FAGGOT ", " BITCH " }.Any(padded.Contains)) return "PROFANITY";
+        if (new[] { " KILL ", " ATTACK ", " BLOOD ", " SHOOT ", " STAB " }.Any(padded.Contains)) return "VIOLENCE";
+        return "ORDINARY";
+    }
+
+    private static string StableSampleKey(TrainingSample sample, int seed) =>
+        StableHash($"{seed}|{sample.Source}|{sample.Bucket}|{sample.Family}|{string.Join(',', sample.Tokens)}");
+
+    private static string StableRowKey(Row row, int seed) =>
+        StableHash($"{seed}|{row.Source}|{row.Family}|{row.Input}|{row.Action}");
+
+    private static string StableHash(string text) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
+
+    private static void WriteTelemetry(
+        string corpusPath, string checkpointPath, Brain brain, TimeSpan elapsed, double languageLoss,
+        double rawIntent, double constrainedIntent, double rawAffect, double constrainedAffect,
+        double expectedF1, int generated, int invalid, int empty, int overlength,
+        bool stagePass, bool releasePass)
+    {
+        var directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "telemetry"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "milestones.jsonl");
+        var payload = new
+        {
+            timestampUtc = DateTimeOffset.UtcNow,
+            milestone = "A",
+            corpusHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(corpusPath))).ToLowerInvariant(),
+            checkpointHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(checkpointPath))).ToLowerInvariant(),
+            environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
+            vectorWidth = Vector<double>.Count,
+            embeddingSize = brain.Config.EmbeddingSize,
+            elapsedSeconds = elapsed.TotalSeconds,
+            throughputRowsPerSecond = generated / Math.Max(0.001, elapsed.TotalSeconds),
+            losses = new { language = languageLoss },
+            rawMetrics = new { intentMacroF1 = rawIntent, affectMacroF1 = rawAffect },
+            constrainedMetrics = new { intentMacroF1 = constrainedIntent, affectMacroF1 = constrainedAffect, responseExpectedF1 = expectedF1 },
+            responseSources = new { modelOnly = generated, invalid, empty, overlength },
+            gates = new { stage = stagePass, release = releasePass }
+        };
+        File.AppendAllText(path, JsonSerializer.Serialize(payload, Options) + Environment.NewLine, Encoding.UTF8);
+        Console.WriteLine($"TELEMETRY {path}");
     }
 
     private sealed record TranscriptExpectation(
@@ -522,9 +647,15 @@ internal static class SelfTests
 
     private static void TokenizerChecks()
     {
-        Tokenizer.Configure(WordVocabulary.Testing());
+        var tokenizer = new DialogueTokenizer(WordVocabulary.Testing());
         const string visible = "HELLO, FRIEND!";
-        Assert(Tokenizer.DetokenizeOutput(Tokenizer.Encode(visible).Select(Tokenizer.OutputId)) == visible, "word roundtrip");
+        Assert(tokenizer.DetokenizeOutput(tokenizer.Encode(visible).Select(tokenizer.OutputId)) == visible, "word roundtrip");
+        var alpha = new DialogueTokenizer(new WordVocabulary(["ALPHA"], ["ALPHA"]));
+        var beta = new DialogueTokenizer(new WordVocabulary(["BETA", "GAMMA"], ["BETA"]));
+        var alphaEncoding = alpha.Encode("ALPHA");
+        Assert(!alpha.ContainsUnknown("ALPHA") && alpha.ContainsUnknown("BETA"), "first vocabulary isolation");
+        Assert(!beta.ContainsUnknown("BETA") && beta.ContainsUnknown("ALPHA"), "second vocabulary isolation");
+        Assert(alpha.Encode("ALPHA").SequenceEqual(alphaEncoding), "constructing another tokenizer does not mutate the first");
         Assert(Tokenizer.WordStart == 74 && Tokenizer.AffectStart == 60, "stable v9 control layout");
         Assert(Tokenizer.Action(ResponseAction.NoResponse) == 40, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
@@ -619,10 +750,16 @@ internal static class SelfTests
         Assert(first.DebugWeights().SequenceEqual(second.DebugWeights()), "deterministic initialization");
         var fullFirst = Brain.CreateForTesting(new BrainConfig()); var fullSecond = Brain.CreateForTesting(new BrainConfig());
         Assert(fullFirst.Config.EmbeddingSize == 64 && fullFirst.DebugWeights().SequenceEqual(fullSecond.DebugWeights()), "64D deterministic initialization");
-        Assert(first.DebugNextLogits([Tokenizer.Bos]).Length == Tokenizer.OutputSize, "logit count");
+        Assert(first.DebugNextLogits([Tokenizer.Bos]).Length == first.DialogueTokenizer.OutputSize, "logit count");
         var causalA = first.DebugSequenceLogits([Tokenizer.Bos, 0, 1]);
         var causalB = first.DebugSequenceLogits([Tokenizer.Bos, 0, 2]);
         Assert(causalA[1].SequenceEqual(causalB[1]), "causal masking");
+        var concurrentExpected = first.DebugNextLogits([Tokenizer.Bos, 0, 1]);
+        var concurrent = new double[32][];
+        Parallel.For(0, concurrent.Length,
+            index => concurrent[index] = first.DebugNextLogits([Tokenizer.Bos, 0, 1]));
+        Assert(concurrent.All(logits => logits.SequenceEqual(concurrentExpected)),
+            "32-way inference is deterministic and independent");
         var optimized = Brain.CreateForTesting(TinyConfig());
         var reference = Brain.CreateForTesting(TinyConfig());
         int[] equivalenceWindow = [Tokenizer.Bos, 0, 1, Tokenizer.Decide, Tokenizer.Intent(DialogueIntent.Greeting), Tokenizer.Eos];
@@ -636,7 +773,10 @@ internal static class SelfTests
             "packed forward loss equivalence");
         var gradientChecks = new[]
         {
-            0, 8, Tokenizer.ActionStart, new PackedTrainer.Layout(TinyConfig()).OutputHead,
+            0, 8, Tokenizer.ActionStart,
+            new PackedTrainer.Layout(
+                TinyConfig(), optimized.DialogueTokenizer.VocabularySize,
+                optimized.DialogueTokenizer.OutputSize).OutputHead,
             optimizedGradient.Gradients.Length / 4,
             optimizedGradient.Gradients.Length / 2,
             optimizedGradient.Gradients.Length - 1
@@ -668,12 +808,12 @@ internal static class SelfTests
                 Row("PLAYER I AM WORRIED.", "UNKNOWN", "DISTRESSED", false, "NORESPONSE", "", "GOEMOTIONS")
             ]);
             var vocabulary = WordVocabulary.Build(path);
-            Tokenizer.Configure(vocabulary);
-            var data = TrainingData.Load(path);
+            var tokenizer = new DialogueTokenizer(vocabulary);
+            var data = TrainingData.Load(path, tokenizer);
             Assert(data.PerceptionSamples.Count >= 3 && data.LanguageSamples.Count >= 1, "task streams");
             Assert(data.PerceptionSamples.All(sample => sample.PerceptionTarget is not null), "dedicated perception targets");
             var history = data.PerceptionSamples.Single(sample => sample.PerceptionTarget?.Intent == DialogueIntent.Clarification);
-            var classifiedText = Tokenizer.DetokenizeInput(history.Tokens[1..^1]);
+            var classifiedText = tokenizer.DetokenizeInput(history.Tokens[1..^1]);
             Assert(classifiedText == "WHAT?", "perception classifies current turn only");
             Assert(data.PerceptionSamples.Single(sample => sample.Source == "CLINC150").TargetFields == PerceptionFields.Intent,
                 "CLINC intent-only supervision");
@@ -684,7 +824,7 @@ internal static class SelfTests
             var config = TinyConfig();
             var brain = Brain.CreateForTesting(config, vocabulary);
             var perceptionGradient = brain.DebugLossAndGradients(history);
-            var layout = new PackedTrainer.Layout(config);
+            var layout = new PackedTrainer.Layout(config, tokenizer.VocabularySize, tokenizer.OutputSize);
             foreach (var parameterIndex in new[] { 0, layout.Key, layout.IntentHead, layout.AffectHead, layout.ExpectedHead })
             {
                 var finiteDifference = brain.DebugFiniteDifferenceGradient(history, parameterIndex);
@@ -756,11 +896,12 @@ internal static class SelfTests
                 Row("A", "GREETING", "FRIENDLY", true, "RESPOND", "B"),
                 Row("C", "ACTIVITY", "NEUTRAL", false, "NO_RESPONSE", "")
             ]);
-            var data = TrainingData.Load(dataPath);
-            var uninterrupted = Brain.CreateForTesting(TinyConfig());
+            var vocabulary = WordVocabulary.Build(dataPath);
+            var data = TrainingData.Load(dataPath, new DialogueTokenizer(vocabulary));
+            var uninterrupted = Brain.CreateForTesting(TinyConfig(), vocabulary);
             uninterrupted.DebugTrainCurriculum(data, uninterruptedPath, plannedSteps: 12, untilStep: 12);
 
-            var interrupted = Brain.CreateForTesting(TinyConfig());
+            var interrupted = Brain.CreateForTesting(TinyConfig(), vocabulary);
             interrupted.DebugTrainCurriculum(data, resumedPath, plannedSteps: 12, untilStep: 6);
             var resumed = Brain.Load(resumedPath);
             resumed.DebugTrainCurriculum(data, resumedPath, plannedSteps: 12, untilStep: 12);

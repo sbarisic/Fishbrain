@@ -18,6 +18,8 @@ data/logs/
 # Downloaded and externally-derived teaching corpora stay local.
 data/raw/
 data/compiled/
+data/compiled-*/
+data/training/
 
 # User-specific files
 *.rsuser

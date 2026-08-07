@@ -47,6 +47,7 @@ public sealed class Brain
 
     private readonly DeterministicRandom _random;
     private readonly WordVocabulary _vocabulary;
+    private readonly DialogueTokenizer _tokenizer;
     private readonly HashSet<string> _trainedTools;
     private readonly Dictionary<string, string> _trainedExamples;
     private readonly Dictionary<string, string[]> _responseCatalog;
@@ -85,9 +86,9 @@ public sealed class Brain
         IEnumerable<KeyValuePair<string, string[]>> responseCatalog)
     {
         config.Validate();
-        Tokenizer.Configure(vocabulary);
         Config = config;
         _vocabulary = vocabulary;
+        _tokenizer = new DialogueTokenizer(vocabulary);
         _random = random;
         _trainedTools = new HashSet<string>(trainedTools, StringComparer.Ordinal);
         _trainedExamples = new Dictionary<string, string>(trainedExamples, StringComparer.Ordinal);
@@ -96,8 +97,8 @@ public sealed class Brain
             item => item.Value.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray(),
             StringComparer.Ordinal);
 
-        _tokenEmbedding = CreateMatrix(Tokenizer.VocabularySize, config.EmbeddingSize);
-        _outputHead = CreateMatrix(Tokenizer.OutputSize, config.EmbeddingSize);
+        _tokenEmbedding = CreateMatrix(_tokenizer.VocabularySize, config.EmbeddingSize);
+        _outputHead = CreateMatrix(_tokenizer.OutputSize, config.EmbeddingSize);
         _positionEmbedding = CreateMatrix(config.PositionPeriod, config.EmbeddingSize);
         _query = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
         _key = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
@@ -133,6 +134,7 @@ public sealed class Brain
     public ToolRegistry Tools { get; }
     public int CompletedSteps => _step;
     public IReadOnlyCollection<string> TrainedTools => _trainedTools;
+    internal DialogueTokenizer DialogueTokenizer => _tokenizer;
 
     public static Brain Load(string path)
     {
@@ -245,11 +247,11 @@ public sealed class Brain
             responsePrompt.Add(Tokenizer.Call);
             responsePrompt.AddRange(callBody);
             responsePrompt.Add(Tokenizer.Result);
-            responsePrompt.AddRange(Tokenizer.Encode(toolResult));
+            responsePrompt.AddRange(_tokenizer.Encode(toolResult));
         }
         responsePrompt.Add(Tokenizer.Text);
 
-        var text = GenerateText(responsePrompt, temperature);
+        var text = GenerateText(responsePrompt, temperature, ReplyRandom(input, state));
         if (decision.Action != ResponseAction.CallTool)
             text = SelectSafeResponse(text, input, perception.Intent, decision.Action, transition.Tone);
         return new ReplyResult(text, transition.State, perception, decision, transition.Tone);
@@ -261,8 +263,8 @@ public sealed class Brain
             throw new IOException($"Checkpoint '{checkpointPath}' already exists. Use resume or choose another path.");
 
         var vocabulary = WordVocabulary.Build(dataPath);
-        Tokenizer.Configure(vocabulary);
-        var data = TrainingData.Load(dataPath);
+        var tokenizer = new DialogueTokenizer(vocabulary);
+        var data = TrainingData.Load(dataPath, tokenizer);
         var config = new BrainConfig { PlannedSteps = plannedSteps };
         var brain = new Brain(
             config,
@@ -299,13 +301,13 @@ public sealed class Brain
             plannedSteps = requestedPlannedSteps ?? 40_000;
             var config = new BrainConfig { PlannedSteps = plannedSteps };
             var vocabulary = WordVocabulary.Build(trainPath);
-            Tokenizer.Configure(vocabulary);
-            var initialData = TrainingData.Load(trainPath);
+            var tokenizer = new DialogueTokenizer(vocabulary);
+            var initialData = TrainingData.Load(trainPath, tokenizer);
             brain = new Brain(config, vocabulary, new DeterministicRandom(config.Seed), initialData.ToolNames,
                 initialData.Examples, initialData.ResponseCatalog);
         }
-        var data = TrainingData.Load(trainPath);
-        var validation = TrainingData.Load(Path.Combine(fullCorpusDirectory, "validation.jsonl"));
+        var data = TrainingData.Load(trainPath, brain._tokenizer);
+        var validation = TrainingData.Load(Path.Combine(fullCorpusDirectory, "validation.jsonl"), brain._tokenizer);
         if (data.LanguageSamples.Count == 0 || data.PerceptionSamples.Count == 0)
             throw new InvalidDataException("Teaching requires both language and perception samples.");
         if (!brain._trainedTools.SetEquals(data.ToolNames)) throw new InvalidDataException("Teaching tools differ from the checkpoint.");
@@ -327,7 +329,7 @@ public sealed class Brain
     internal static void Resume(string dataPath, string checkpointPath, int? targetSteps)
     {
         var brain = Load(checkpointPath);
-        var data = TrainingData.Load(dataPath);
+        var data = TrainingData.Load(dataPath, brain._tokenizer);
         if (!brain._trainedTools.SetEquals(data.ToolNames))
             throw new InvalidDataException("Training data tools differ from the checkpoint's trained tool set.");
         if (brain._trainedExamples.Count == 0)
@@ -424,6 +426,15 @@ public sealed class Brain
         return Cognition.Constrain(PredictPerception(input), ExtractCurrentPlayerTurn(input));
     }
 
+    internal TurnPerception DebugPredictRawPerception(string dialogue, NpcState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        state.Validate();
+        var input = Tokenizer.Normalize(dialogue);
+        if (input.Length == 0) throw new ArgumentException("Dialogue cannot be empty.", nameof(dialogue));
+        return PredictPerception(input);
+    }
+
     internal static string ExtractCurrentPlayerTurn(string normalizedDialogue)
     {
         if (string.IsNullOrWhiteSpace(normalizedDialogue))
@@ -484,7 +495,7 @@ public sealed class Brain
     {
         SyncScalarWeights();
         var currentTurn = ExtractCurrentPlayerTurn(normalizedDialogue);
-        var encoded = Tokenizer.Encode(currentTurn);
+        var encoded = _tokenizer.Encode(currentTurn);
         if (encoded.Length > Config.ContextLength - 2) encoded = encoded[^(Config.ContextLength - 2)..];
         var tokens = new List<int>(encoded.Length + 2) { Tokenizer.Bos };
         tokens.AddRange(encoded);
@@ -551,7 +562,7 @@ public sealed class Brain
 
     internal (double Loss, double[] Gradients) DebugLossAndGradients(TrainingSample sample)
     {
-        var loss = PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+        var loss = PackedTrainer.Calculate(Config, _tokenizer, _weights, _packedGradients, sample);
         return (loss, (double[])_packedGradients.Clone());
     }
 
@@ -562,9 +573,9 @@ public sealed class Brain
         try
         {
             _weights[parameterIndex] = original + epsilon;
-            var plus = PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+            var plus = PackedTrainer.Calculate(Config, _tokenizer, _weights, _packedGradients, sample);
             _weights[parameterIndex] = original - epsilon;
-            var minus = PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+            var minus = PackedTrainer.Calculate(Config, _tokenizer, _weights, _packedGradients, sample);
             return (plus - minus) / (2 * epsilon);
         }
         finally
@@ -584,10 +595,10 @@ public sealed class Brain
         return logits.Select(row => row.Select(value => value.Data).ToArray()).ToArray();
     }
 
-    private static List<int> StartPrompt(string input)
+    private List<int> StartPrompt(string input)
     {
         var tokens = new List<int> { Tokenizer.Bos };
-        tokens.AddRange(Tokenizer.Encode(input));
+        tokens.AddRange(_tokenizer.Encode(input));
         tokens.Add(Tokenizer.Sep);
         return tokens;
     }
@@ -873,7 +884,7 @@ public sealed class Brain
         if (window.Length < 2 || window.Length > Config.ContextLength + 1)
             throw new ArgumentException($"A training sample must contain 2-{Config.ContextLength + 1} tokens.");
         if (optimizedForward)
-            return PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
+            return PackedTrainer.Calculate(Config, _tokenizer, _weights, _packedGradients, sample);
 
         SyncScalarWeights();
         if (sample.Task == TrainingTask.Perception)
@@ -891,7 +902,7 @@ public sealed class Brain
         var total = new Value(0.0);
         for (var index = 0; index < logits.Length; index++)
         {
-            var target = Tokenizer.OutputId(window[sample.FirstTargetIndex + index]);
+            var target = _tokenizer.OutputId(window[sample.FirstTargetIndex + index]);
             total += Value.CrossEntropy(logits[index], target);
         }
 
@@ -1128,22 +1139,22 @@ public sealed class Brain
         return logits[0].Select(x => x.Data).ToArray();
     }
 
-    private string GenerateText(List<int> context, double temperature)
+    private string GenerateText(List<int> context, double temperature, DeterministicRandom random)
     {
         var output = new List<int>();
         var session = new InferenceSession(this, context);
         for (var i = 0; i < Config.MaximumOutputLength; i++)
         {
             var allowed = AllowedTextOutputs(output);
-            var outputToken = Sample(session.Logits, allowed, temperature);
-            if (outputToken == Tokenizer.OutputId(Tokenizer.Eos)) break;
+            var outputToken = Sample(session.Logits, allowed, temperature, random);
+            if (outputToken == _tokenizer.OutputId(Tokenizer.Eos)) break;
             output.Add(outputToken);
-            var inputToken = Tokenizer.InputIdFromOutput(outputToken);
+            var inputToken = _tokenizer.InputIdFromOutput(outputToken);
             context.Add(inputToken);
             session.Append(inputToken);
         }
 
-        var text = Tokenizer.DetokenizeOutput(output).Trim();
+        var text = _tokenizer.DetokenizeOutput(output).Trim();
         return text.Length == 0 ? SafeFallback : text;
     }
 
@@ -1202,10 +1213,10 @@ public sealed class Brain
         left.Count == right.Count && left.All(item =>
             right.TryGetValue(item.Key, out var values) && item.Value.SequenceEqual(values));
 
-    private static int[] AllowedTextOutputs(IReadOnlyList<int> generated)
+    private int[] AllowedTextOutputs(IReadOnlyList<int> generated)
     {
-        var allowed = Tokenizer.GeneratedTextOutputs.ToHashSet();
-        var eos = Tokenizer.OutputId(Tokenizer.Eos);
+        var allowed = _tokenizer.GeneratedTextOutputs.ToHashSet();
+        var eos = _tokenizer.OutputId(Tokenizer.Eos);
         if (generated.Count == 0)
         {
             allowed.Remove(eos);
@@ -1214,13 +1225,13 @@ public sealed class Brain
                          Tokenizer.Period, Tokenizer.Comma, Tokenizer.Question,
                          Tokenizer.Exclamation, Tokenizer.Colon
                      })
-                allowed.Remove(Tokenizer.OutputId(punctuation));
+                allowed.Remove(_tokenizer.OutputId(punctuation));
         }
         if (generated.Count >= 2 && generated[^1] == generated[^2])
             allowed.Remove(generated[^1]);
         if (generated.Count > 0)
         {
-            var lastInput = Tokenizer.InputIdFromOutput(generated[^1]);
+            var lastInput = _tokenizer.InputIdFromOutput(generated[^1]);
             if (lastInput is Tokenizer.Period or Tokenizer.Comma or Tokenizer.Question or
                 Tokenizer.Exclamation or Tokenizer.Colon)
             {
@@ -1229,7 +1240,7 @@ public sealed class Brain
                              Tokenizer.Period, Tokenizer.Comma, Tokenizer.Question,
                              Tokenizer.Exclamation, Tokenizer.Colon
                          })
-                    allowed.Remove(Tokenizer.OutputId(punctuation));
+                    allowed.Remove(_tokenizer.OutputId(punctuation));
                 if (lastInput is Tokenizer.Comma or Tokenizer.Colon) allowed.Remove(eos);
             }
         }
@@ -1257,7 +1268,7 @@ public sealed class Brain
         var candidates = Tools.RegisteredNames.Order(StringComparer.Ordinal)
             .Select(name => (Name: name, Input: _vocabulary.InputId(name)))
             .Where(candidate => candidate.Input != Tokenizer.Unknown)
-            .Select(candidate => (candidate.Name, candidate.Input, Output: Tokenizer.OutputId(candidate.Input)))
+            .Select(candidate => (candidate.Name, candidate.Input, Output: _tokenizer.OutputId(candidate.Input)))
             .DistinctBy(candidate => candidate.Output)
             .ToArray();
         if (candidates.Length == 0) return false;
@@ -1286,7 +1297,7 @@ public sealed class Brain
                 .Where(word => word.Length is > 0 and <= 32 &&
                                (numeric ? word.All(char.IsDigit) : word.All(Tokenizer.IsIdentifierCharacter)))
                 .Select(word => _vocabulary.InputId(word))
-                .Select(input => (Input: input, Output: Tokenizer.OutputId(input)))
+                .Select(input => (Input: input, Output: _tokenizer.OutputId(input)))
                 .ToArray();
             if (choices.Length == 0) return false;
             var chosenOutput = Greedy(session.Logits, choices.Select(choice => choice.Output).ToArray());
@@ -1355,12 +1366,14 @@ public sealed class Brain
         return best;
     }
 
-    private int Sample(IReadOnlyList<double> logits, IReadOnlyCollection<int> allowed, double temperature)
+    private static int Sample(
+        IReadOnlyList<double> logits, IReadOnlyCollection<int> allowed, double temperature,
+        DeterministicRandom random)
     {
         var tokens = allowed.Distinct().OrderBy(x => x).ToArray();
         var maximum = tokens.Max(x => logits[x] / temperature);
         var weights = tokens.Select(x => Math.Exp(logits[x] / temperature - maximum)).ToArray();
-        var choice = _random.NextDouble() * weights.Sum();
+        var choice = random.NextDouble() * weights.Sum();
         for (var i = 0; i < tokens.Length; i++)
         {
             choice -= weights[i];
@@ -1368,6 +1381,22 @@ public sealed class Brain
         }
 
         return tokens[^1];
+    }
+
+    private DeterministicRandom ReplyRandom(string input, NpcState state)
+    {
+        uint hash = 2166136261;
+        foreach (var character in input)
+        {
+            hash ^= character;
+            hash *= 16777619;
+        }
+        hash ^= state.Rapport;
+        hash = hash * 16777619 ^ (uint)state.Mood;
+        hash = hash * 16777619 ^ (uint)state.LastIntent;
+        hash = hash * 16777619 ^ (uint)state.LastAffect;
+        hash = hash * 16777619 ^ (uint)Config.Seed;
+        return new DeterministicRandom(unchecked((int)hash));
     }
 
     private Value[][] CreateMatrix(int rows, int columns)
@@ -1488,17 +1517,6 @@ internal static class Tokenizer
     public const int Unknown = 73;
     public const int WordStart = 74;
 
-    private static WordVocabulary? _current;
-
-    public static WordVocabulary Current => _current
-        ?? throw new InvalidOperationException("A word vocabulary has not been configured.");
-    public static int VocabularySize => Current.InputSize;
-    public static int OutputSize => Current.OutputSize;
-    public static IReadOnlyCollection<int> GeneratedTextOutputs => Current.GeneratedTextOutputs;
-
-    public static void Configure(WordVocabulary vocabulary) =>
-        _current = vocabulary ?? throw new ArgumentNullException(nameof(vocabulary));
-
     public static string Normalize(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -1602,50 +1620,6 @@ internal static class Tokenizer
         return normalized;
     }
 
-    public static int[] Encode(string normalized) => Lex(normalized).Select(token => token.Kind switch
-    {
-        LexicalTokenKind.Word => Current.InputId(token.Text),
-        LexicalTokenKind.Punctuation => token.Text[0] switch
-        {
-            '.' => Period, ',' => Comma, '?' => Question, '!' => Exclamation, ':' => Colon,
-            _ => throw new InvalidDataException($"Unsupported punctuation token '{token.Text}'.")
-        },
-        _ => throw new ArgumentOutOfRangeException()
-    }).ToArray();
-
-    public static string DecodeInputToken(int token) => token switch
-    {
-        Period => ".", Comma => ",", Question => "?", Exclamation => "!", Colon => ":",
-        Unknown => "<UNK>",
-        _ when Current.IsWord(token) => Current.WordForInput(token),
-        _ => throw new ArgumentOutOfRangeException(nameof(token), "Control tokens are not visible text.")
-    };
-
-    public static string DetokenizeOutput(IEnumerable<int> outputTokens)
-        => DetokenizeInput(outputTokens.Select(Current.InputIdFromOutput));
-
-    public static string DetokenizeInput(IEnumerable<int> inputTokens)
-    {
-        var text = new StringBuilder();
-        foreach (var inputToken in inputTokens)
-        {
-            if (inputToken == Eos) break;
-            if (inputToken is Period or Comma or Question or Exclamation or Colon)
-            {
-                if (text.Length > 0 && text[^1] == ' ') text.Length--;
-                text.Append(DecodeInputToken(inputToken));
-                continue;
-            }
-            if (!Current.IsWord(inputToken)) continue;
-            if (text.Length > 0) text.Append(' ');
-            text.Append(Current.WordForInput(inputToken));
-        }
-        return text.ToString();
-    }
-
-    public static int OutputId(int inputToken) => Current.OutputId(inputToken);
-    public static int InputIdFromOutput(int outputToken) => Current.InputIdFromOutput(outputToken);
-
     public static bool IsVisibleCharacter(char character) =>
         IsIdentifierCharacter(character) || character is ' ' or '.' or ',' or '?' or '!' or '\'' or '-' or ':';
 
@@ -1669,6 +1643,74 @@ internal static class Tokenizer
         token >= AffectStart && token < AffectStart + Enum.GetValues<UserAffect>().Length
             ? (UserAffect)(token - AffectStart)
             : throw new ArgumentOutOfRangeException(nameof(token));
+}
+
+/// <summary>Immutable vocabulary-bound tokenizer owned by one model.</summary>
+internal sealed class DialogueTokenizer
+{
+    private readonly WordVocabulary _vocabulary;
+
+    public DialogueTokenizer(WordVocabulary vocabulary) =>
+        _vocabulary = vocabulary ?? throw new ArgumentNullException(nameof(vocabulary));
+
+    public WordVocabulary Vocabulary => _vocabulary;
+    public int VocabularySize => _vocabulary.InputSize;
+    public int OutputSize => _vocabulary.OutputSize;
+    public IReadOnlyCollection<int> GeneratedTextOutputs => _vocabulary.GeneratedTextOutputs;
+    public bool ContainsUnknown(string text) => Encode(text).Contains(Tokenizer.Unknown);
+
+    public int[] Encode(string normalized) => Tokenizer.Lex(normalized).Select(token => token.Kind switch
+    {
+        LexicalTokenKind.Word => _vocabulary.InputId(token.Text),
+        LexicalTokenKind.Punctuation => token.Text[0] switch
+        {
+            '.' => Tokenizer.Period,
+            ',' => Tokenizer.Comma,
+            '?' => Tokenizer.Question,
+            '!' => Tokenizer.Exclamation,
+            ':' => Tokenizer.Colon,
+            _ => throw new InvalidDataException($"Unsupported punctuation token '{token.Text}'.")
+        },
+        _ => throw new ArgumentOutOfRangeException()
+    }).ToArray();
+
+    public string DecodeInputToken(int token) => token switch
+    {
+        Tokenizer.Period => ".",
+        Tokenizer.Comma => ",",
+        Tokenizer.Question => "?",
+        Tokenizer.Exclamation => "!",
+        Tokenizer.Colon => ":",
+        Tokenizer.Unknown => "<UNK>",
+        _ when _vocabulary.IsWord(token) => _vocabulary.WordForInput(token),
+        _ => throw new ArgumentOutOfRangeException(nameof(token), "Control tokens are not visible text.")
+    };
+
+    public string DetokenizeOutput(IEnumerable<int> outputTokens) =>
+        DetokenizeInput(outputTokens.Select(_vocabulary.InputIdFromOutput));
+
+    public string DetokenizeInput(IEnumerable<int> inputTokens)
+    {
+        var text = new StringBuilder();
+        foreach (var inputToken in inputTokens)
+        {
+            if (inputToken == Tokenizer.Eos) break;
+            if (inputToken is Tokenizer.Period or Tokenizer.Comma or Tokenizer.Question or
+                Tokenizer.Exclamation or Tokenizer.Colon)
+            {
+                if (text.Length > 0 && text[^1] == ' ') text.Length--;
+                text.Append(DecodeInputToken(inputToken));
+                continue;
+            }
+            if (!_vocabulary.IsWord(inputToken)) continue;
+            if (text.Length > 0) text.Append(' ');
+            text.Append(_vocabulary.WordForInput(inputToken));
+        }
+        return text.ToString();
+    }
+
+    public int OutputId(int inputToken) => _vocabulary.OutputId(inputToken);
+    public int InputIdFromOutput(int outputToken) => _vocabulary.InputIdFromOutput(outputToken);
 }
 
 internal enum LexicalTokenKind { Word, Punctuation }
@@ -1729,8 +1771,9 @@ internal sealed class TrainingData
     public IReadOnlyDictionary<string, HashSet<string>> ResponseCatalog { get; }
     public IReadOnlyDictionary<string, string> Examples { get; }
 
-    public static TrainingData Load(string path)
+    public static TrainingData Load(string path, DialogueTokenizer tokenizer)
     {
+        ArgumentNullException.ThrowIfNull(tokenizer);
         var samples = new List<TrainingSample>();
         var tools = new HashSet<string>(StringComparer.Ordinal);
         var responseCatalog = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -2007,8 +2050,9 @@ internal sealed class TrainingData
     public IReadOnlyList<TrainingSample> PerceptionSamples => Samples.Where(x => x.Task == TrainingTask.Perception).ToArray();
     public IReadOnlyList<TrainingSample> ToolSamples => Samples.Where(x => x.Task == TrainingTask.Tool).ToArray();
 
-    public static TrainingData Load(string path)
+    public static TrainingData Load(string path, DialogueTokenizer tokenizer)
     {
+        ArgumentNullException.ThrowIfNull(tokenizer);
         var samples = new List<TrainingSample>();
         var tools = new HashSet<string>(StringComparer.Ordinal);
         var examples = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -2025,7 +2069,7 @@ internal sealed class TrainingData
             {
                 var row = JsonSerializer.Deserialize<TrainingRow>(line, options)
                     ?? throw new InvalidDataException("Empty object.");
-                AddRow(row, samples, tools, examples, responseCatalog, rows);
+                AddRow(row, samples, tools, examples, responseCatalog, rows, tokenizer);
             }
             catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidDataException)
             {
@@ -2047,7 +2091,8 @@ internal sealed class TrainingData
         HashSet<string> tools,
         Dictionary<string, string> examples,
         Dictionary<string, HashSet<string>> responseCatalog,
-        Dictionary<string, string> rows)
+        Dictionary<string, string> rows,
+        DialogueTokenizer tokenizer)
     {
         if (row.Input is null || row.State is null || row.Perception is null || row.Action is null)
             throw new InvalidDataException("Input, state, perception, and action are required.");
@@ -2086,7 +2131,7 @@ internal sealed class TrainingData
             throw new InvalidDataException("The same state and input cannot have competing supervision.");
         rows[rowKey] = rowValue;
 
-        samples.Add(CreatePerceptionSample(input, perception, bucket, source, row.Family));
+        samples.Add(CreatePerceptionSample(input, perception, bucket, source, row.Family, tokenizer));
 
         var transition = Cognition.Apply(row.State, perception, decision, hasAllTool);
         if (!hasAllTool)
@@ -2101,7 +2146,7 @@ internal sealed class TrainingData
                         responseCatalog.Add(catalogKey, responses = new HashSet<string>(StringComparer.Ordinal));
                     responses.Add(response);
                 }
-                AddSamples(SerializeResponse(input, transition.State, perception, decision, transition.Tone, response),
+                AddSamples(SerializeResponse(input, transition.State, perception, decision, transition.Tone, response, tokenizer),
                     samples, TrainingTask.Language, bucket, source);
             }
             return;
@@ -2118,17 +2163,18 @@ internal sealed class TrainingData
             throw new InvalidDataException("Tool results must be canonical and contain 1-64 characters.");
         if (string.IsNullOrEmpty(response)) throw new InvalidDataException("Tool rows require a response.");
         tools.Add(tool);
-        AddSamples(SerializeToolCall(input, row.State, perception, decision, tool, arguments),
+        AddSamples(SerializeToolCall(input, row.State, perception, decision, tool, arguments, tokenizer),
             samples, TrainingTask.Tool, bucket, source);
         AddSamples(SerializeToolResult(input, transition.State, perception, decision, transition.Tone,
-            tool, arguments, result, response), samples, TrainingTask.Language, bucket, source);
+            tool, arguments, result, response, tokenizer), samples, TrainingTask.Language, bucket, source);
     }
 
     private static TrainingSample CreatePerceptionSample(
-        string input, TurnPerception perception, string bucket, string source, string? family)
+        string input, TurnPerception perception, string bucket, string source, string? family,
+        DialogueTokenizer tokenizer)
     {
         var currentTurn = Brain.ExtractCurrentPlayerTurn(input);
-        var encoded = Tokenizer.Encode(currentTurn);
+        var encoded = tokenizer.Encode(currentTurn);
         var maximumText = 254;
         if (encoded.Length > maximumText) encoded = encoded[^maximumText..];
         var tokens = new List<int>(encoded.Length + 2) { Tokenizer.Bos };
@@ -2146,59 +2192,60 @@ internal sealed class TrainingData
 
     private static SerializedStream SerializeResponse(
         string input, NpcState state, TurnPerception perception, TurnDecision decision,
-        ResponseTone tone, string response)
+        ResponseTone tone, string response, DialogueTokenizer tokenizer)
     {
-        var tokens = Start(input);
+        var tokens = Start(input, tokenizer);
         Brain.AppendState(tokens, state);
         tokens.Add(Tokenizer.Decide);
         AddPerception(tokens, perception, decision);
         tokens.Add(Tokenizer.Tone(tone));
         var target = tokens.Count;
         tokens.Add(Tokenizer.Text);
-        tokens.AddRange(Tokenizer.Encode(response));
+        tokens.AddRange(tokenizer.Encode(response));
         tokens.Add(Tokenizer.Eos);
         return new(tokens.ToArray(), target);
     }
 
     private static SerializedStream SerializeToolCall(
         string input, NpcState state, TurnPerception perception, TurnDecision decision,
-        string tool, IReadOnlyList<string> arguments)
+        string tool, IReadOnlyList<string> arguments, DialogueTokenizer tokenizer)
     {
-        var tokens = Start(input);
+        var tokens = Start(input, tokenizer);
         Brain.AppendState(tokens, state);
         tokens.Add(Tokenizer.Decide);
         AddPerception(tokens, perception, decision);
         tokens.Add(Tokenizer.Call);
         var target = tokens.Count;
-        AddCallBody(tokens, tool, arguments);
+        AddCallBody(tokens, tool, arguments, tokenizer);
         tokens.Add(Tokenizer.Eos);
         return new(tokens.ToArray(), target);
     }
 
     private static SerializedStream SerializeToolResult(
         string input, NpcState state, TurnPerception perception, TurnDecision decision,
-        ResponseTone tone, string tool, IReadOnlyList<string> arguments, string result, string response)
+        ResponseTone tone, string tool, IReadOnlyList<string> arguments, string result, string response,
+        DialogueTokenizer tokenizer)
     {
-        var tokens = Start(input);
+        var tokens = Start(input, tokenizer);
         Brain.AppendState(tokens, state);
         tokens.Add(Tokenizer.Decide);
         AddPerception(tokens, perception, decision);
         tokens.Add(Tokenizer.Tone(tone));
         tokens.Add(Tokenizer.Call);
-        AddCallBody(tokens, tool, arguments);
+        AddCallBody(tokens, tool, arguments, tokenizer);
         tokens.Add(Tokenizer.Result);
-        tokens.AddRange(Tokenizer.Encode(result));
+        tokens.AddRange(tokenizer.Encode(result));
         var target = tokens.Count;
         tokens.Add(Tokenizer.Text);
-        tokens.AddRange(Tokenizer.Encode(response));
+        tokens.AddRange(tokenizer.Encode(response));
         tokens.Add(Tokenizer.Eos);
         return new(tokens.ToArray(), target);
     }
 
-    private static List<int> Start(string input)
+    private static List<int> Start(string input, DialogueTokenizer tokenizer)
     {
         var tokens = new List<int> { Tokenizer.Bos };
-        tokens.AddRange(Tokenizer.Encode(input));
+        tokens.AddRange(tokenizer.Encode(input));
         tokens.Add(Tokenizer.Sep);
         return tokens;
     }
@@ -2211,13 +2258,14 @@ internal sealed class TrainingData
         tokens.Add(Tokenizer.Action(decision.Action));
     }
 
-    private static void AddCallBody(List<int> tokens, string tool, IReadOnlyList<string> arguments)
+    private static void AddCallBody(
+        List<int> tokens, string tool, IReadOnlyList<string> arguments, DialogueTokenizer tokenizer)
     {
-        tokens.AddRange(Tokenizer.Encode(tool));
+        tokens.AddRange(tokenizer.Encode(tool));
         foreach (var argument in arguments)
         {
             tokens.Add(Tokenizer.ArgumentSeparator);
-            tokens.AddRange(Tokenizer.Encode(argument));
+            tokens.AddRange(tokenizer.Encode(argument));
         }
     }
 

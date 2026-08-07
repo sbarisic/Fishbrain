@@ -3,7 +3,8 @@ namespace Fishbrain;
 /// <summary>A scalar value and the tiny reverse-mode autograd graph behind it.</summary>
 internal sealed class Value
 {
-    private static bool _recording = true;
+    [ThreadStatic]
+    private static int _noGradDepth;
     private readonly Value[] _children;
     private readonly double[] _localGrads;
 
@@ -24,9 +25,8 @@ internal sealed class Value
 
     public static IDisposable NoGrad()
     {
-        var previous = _recording;
-        _recording = false;
-        return new RecordingScope(previous);
+        _noGradDepth++;
+        return new RecordingScope();
     }
 
     public static Value operator +(Value a, Value b) =>
@@ -81,7 +81,7 @@ internal sealed class Value
         }
 
         var data = Math.Log(sum) + maximum - logits[target].Data;
-        if (!_recording) return new Value(data);
+        if (_noGradDepth > 0) return new Value(data);
 
         var children = logits.ToArray();
         var localGrads = new double[children.Length];
@@ -109,7 +109,7 @@ internal sealed class Value
         }
 
         var data = 0.0;
-        if (!_recording)
+        if (_noGradDepth > 0)
         {
             for (var i = 0; i < count; i++) data += a[aStart + i].Data * b[bStart + i].Data;
             return new Value(data);
@@ -174,16 +174,17 @@ internal sealed class Value
     }
 
     private static Value Create(double data, Value[] children, double[] localGrads) =>
-        _recording ? new Value(data, children, localGrads) : new Value(data);
+        _noGradDepth == 0 ? new Value(data, children, localGrads) : new Value(data);
 
-    private sealed class RecordingScope(bool previous) : IDisposable
+    private sealed class RecordingScope : IDisposable
     {
         private bool _disposed;
 
         public void Dispose()
         {
             if (_disposed) return;
-            _recording = previous;
+            if (_noGradDepth <= 0) throw new InvalidOperationException("No-gradient scope underflow.");
+            _noGradDepth--;
             _disposed = true;
         }
     }

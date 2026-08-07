@@ -20,7 +20,8 @@ internal sealed record TeachingRow(
     string Source,
     string Split,
     string GroupId,
-    string? Family = null);
+    string? Family = null,
+    string SemanticFamilyId = "");
 
 internal sealed record Candidate(
     string Input,
@@ -29,7 +30,8 @@ internal sealed record Candidate(
     string? Response,
     string Source,
     string GroupId,
-    string? Family = null);
+    string? Family = null,
+    string SemanticFamilyId = "");
 
 internal static class CorpusPipeline
 {
@@ -94,7 +96,9 @@ internal static class CorpusPipeline
 
         if (rows.Count != options.Count)
             throw new InvalidDataException($"Compilation produced {rows.Count} of {options.Count} requested records.");
-        EnsureGlobalUnique(rows, options.Seed);
+        rows = SelectConsistentRows(rows, options.Count, options.Seed, review);
+        ValidateCompilationRows(rows);
+        AssignLeakageSafeSplits(rows, options.Seed);
 
         var ordered = rows.OrderBy(row => StableKey(options.Seed, row.Source, row.GroupId, row.Input), StringComparer.Ordinal).ToArray();
         Directory.CreateDirectory(options.OutputPath);
@@ -125,12 +129,11 @@ internal static class CorpusPipeline
             rows.AddRange(splitRows);
         }
 
-        var expectedSplits = SplitCounts(rows.Count);
-        foreach (var (name, expected) in expectedSplits)
-            if (rows.Count(x => x.Split == name) != expected) throw new InvalidDataException($"Split {name} does not contain {expected} records.");
-
         var keys = new HashSet<string>(StringComparer.Ordinal);
         var groupSplits = new Dictionary<string, string>(StringComparer.Ordinal);
+        var familySplits = new Dictionary<string, string>(StringComparer.Ordinal);
+        var inputSplits = new Dictionary<string, string>(StringComparer.Ordinal);
+        var labels = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var row in rows)
         {
             Validate(row);
@@ -140,7 +143,20 @@ internal static class CorpusPipeline
             if (groupSplits.TryGetValue(group, out var prior) && prior != row.Split)
                 throw new InvalidDataException($"Group leakage for {group}.");
             groupSplits[group] = row.Split;
+            if (familySplits.TryGetValue(row.SemanticFamilyId, out prior) && prior != row.Split)
+                throw new InvalidDataException($"Semantic-family leakage for {row.SemanticFamilyId}.");
+            familySplits[row.SemanticFamilyId] = row.Split;
+            var normalizedInput = NormalizeInput(row.Input);
+            if (inputSplits.TryGetValue(normalizedInput, out prior) && prior != row.Split)
+                throw new InvalidDataException($"Normalized-input leakage for {normalizedInput}.");
+            inputSplits[normalizedInput] = row.Split;
+            var label = JsonSerializer.Serialize(row.Perception, Json) + "|" + row.Action;
+            if (labels.TryGetValue(normalizedInput, out var previousLabel) && previousLabel != label)
+                throw new InvalidDataException($"Contradictory labels for normalized input {normalizedInput}.");
+            labels[normalizedInput] = label;
         }
+
+        AuditNearDuplicateLeakage(rows);
 
         Console.WriteLine($"AUDIT OK {rows.Count} RECORDS");
         Console.WriteLine("SUPERVISION SYNTHETIC INTENT,AFFECT,EXPECTED,LANGUAGE");
@@ -154,6 +170,7 @@ internal static class CorpusPipeline
         ReportGroups(rows, "EXPECTED", row => row.Perception.ResponseExpected ? "TRUE" : "FALSE");
         ReportGroups(rows, "TURN_FORM", TurnForm);
         ReportGroups(rows.Where(row => !string.IsNullOrWhiteSpace(row.Family)), "FAMILY", row => row.Family!);
+        Console.WriteLine($"CORPUS_SHA256 {CorpusHash(rows)}");
     }
 
     private static void ReportGroups(
@@ -399,7 +416,9 @@ internal static class CorpusPipeline
     }
 
     private static TeachingRow Make(string input, NpcState state, TurnPerception perception, string? response, string source, string split, string groupId, string? family = null)
-        => new(DialogueText.Normalize(input), state, perception, Cognition.ActionFor(perception), response is null ? null : DialogueText.Normalize(response), source, split, groupId, family);
+        => new(DialogueText.Normalize(input), state, perception, Cognition.ActionFor(perception),
+            response is null ? null : DialogueText.Normalize(response), source, split, groupId, family,
+            source + ":" + groupId);
 
     private static NpcState StateFor(int index)
     {
@@ -466,6 +485,8 @@ internal static class CorpusPipeline
         if (row.Input.Length > 256) throw new InvalidDataException($"Overlength input in {row.GroupId}.");
         if (string.IsNullOrWhiteSpace(row.Source) || string.IsNullOrWhiteSpace(row.Split) || string.IsNullOrWhiteSpace(row.GroupId))
             throw new InvalidDataException("Missing provenance metadata.");
+        if (string.IsNullOrWhiteSpace(row.SemanticFamilyId))
+            throw new InvalidDataException($"Missing semanticFamilyId in {row.GroupId}.");
     }
 
     private static Dictionary<string, int> ScaleQuotas(int count, SourceManifest manifest)
@@ -500,27 +521,151 @@ internal static class CorpusPipeline
         }
     }
 
-    private static void EnsureGlobalUnique(List<TeachingRow> rows, int seed)
+    private static void ValidateCompilationRows(IEnumerable<TeachingRow> rows)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
+        var labels = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var row in rows)
+        {
+            Validate(row);
+            var key = StateInputKey(row.State, row.Input);
+            if (!keys.Add(key))
+                throw new InvalidDataException($"Duplicate (state,input) record: {row.Input}");
+            var input = NormalizeInput(row.Input);
+            var label = JsonSerializer.Serialize(row.Perception, Json) + "|" + row.Action;
+            if (labels.TryGetValue(input, out var prior) && prior != label)
+                throw new InvalidDataException($"Contradictory labels for normalized input {input}: {prior} versus {label}.");
+            labels[input] = label;
+        }
+    }
+
+    private static List<TeachingRow> SelectConsistentRows(
+        IReadOnlyCollection<TeachingRow> candidates, int required, int seed, List<object> review)
+    {
+        var conflictingInputs = candidates.GroupBy(row => NormalizeInput(row.Input), StringComparer.Ordinal)
+            .Where(group => group.Select(row => JsonSerializer.Serialize(row.Perception, Json) + "|" + row.Action)
+                .Distinct(StringComparer.Ordinal).Skip(1).Any())
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var input in conflictingInputs)
+            review.Add(new { source = "COMPILER", reason = "LABEL_CONTRADICTION_EXCLUDED", input });
+
+        var selected = new List<TeachingRow>(required);
+        var stateInputs = new HashSet<string>(StringComparer.Ordinal);
+        var inputLabels = new Dictionary<string, string>(StringComparer.Ordinal);
+        void Consider(TeachingRow row)
+        {
+            if (selected.Count >= required) return;
+            var input = NormalizeInput(row.Input);
+            if (conflictingInputs.Contains(input)) return;
+            var label = JsonSerializer.Serialize(row.Perception, Json) + "|" + row.Action;
+            if (inputLabels.TryGetValue(input, out var prior) && prior != label) return;
+            if (!stateInputs.Add(StateInputKey(row.State, row.Input))) return;
+            inputLabels[input] = label;
+            selected.Add(row);
+        }
+
+        foreach (var row in candidates.OrderBy(row => StableKey(seed, row.Source, row.GroupId, row.Input), StringComparer.Ordinal))
+            Consider(row);
+        for (var attempt = 1; selected.Count < required && attempt <= 20; attempt++)
+            foreach (var row in BuildSynthetic(required, seed + attempt * 7919)) Consider(row);
+        if (selected.Count != required)
+            throw new InvalidDataException($"Could not select {required} unique, label-consistent records; selected {selected.Count}.");
+        return selected;
+    }
+
+    private static void AssignLeakageSafeSplits(List<TeachingRow> rows, int seed)
+    {
+        var parents = Enumerable.Range(0, rows.Count).ToArray();
+        int Find(int value)
+        {
+            while (parents[value] != value) { parents[value] = parents[parents[value]]; value = parents[value]; }
+            return value;
+        }
+        void Union(int left, int right)
+        {
+            left = Find(left); right = Find(right);
+            if (left != right) parents[right] = left;
+        }
+
+        var exact = new Dictionary<string, int>(StringComparer.Ordinal);
+        var families = new Dictionary<string, int>(StringComparer.Ordinal);
+        var conversations = new Dictionary<string, int>(StringComparer.Ordinal);
+        var nearBuckets = new Dictionary<string, List<int>>(StringComparer.Ordinal);
         for (var index = 0; index < rows.Count; index++)
         {
             var row = rows[index];
-            var key = StateInputKey(row.State, row.Input);
-            if (keys.Add(key)) continue;
-
-            var stateIndex = seed + rows.Count + index * 1000;
-            for (var attempt = 0; attempt < 100_000; attempt++)
-            {
-                var candidate = StateFor(stateIndex + attempt);
-                key = StateInputKey(candidate, row.Input);
-                if (!keys.Add(key)) continue;
-                rows[index] = row with { State = candidate };
-                break;
-            }
-            if (rows[index].State == row.State)
-                throw new InvalidDataException($"Could not assign a unique state to {row.Input}.");
+            Link(exact, NormalizeInput(row.Input), index);
+            Link(families, row.SemanticFamilyId, index);
+            Link(conversations, row.Source + ":" + row.GroupId, index);
+            var words = SignificantWords(row.Input);
+            var bucket = string.Join(' ', words.Take(3));
+            if (!nearBuckets.TryGetValue(bucket, out var candidates)) nearBuckets[bucket] = candidates = [];
+            foreach (var other in candidates)
+                if (NearDuplicate(words, SignificantWords(rows[other].Input))) Union(index, other);
+            candidates.Add(index);
         }
+
+        var components = Enumerable.Range(0, rows.Count).GroupBy(Find)
+            .Select(group => group.ToArray())
+            .OrderBy(group => StableKey(seed, rows[group[0]].SemanticFamilyId, rows[group[0]].Input), StringComparer.Ordinal)
+            .ToArray();
+        var targets = new[] { rows.Count * 8 / 10, rows.Count / 10, rows.Count - rows.Count * 9 / 10 };
+        var names = new[] { "train", "validation", "test" };
+        var counts = new int[3];
+        foreach (var component in components)
+        {
+            var split = Enumerable.Range(0, 3)
+                .OrderByDescending(i => targets[i] - counts[i])
+                .ThenBy(i => i)
+                .First();
+            foreach (var index in component) rows[index] = rows[index] with { Split = names[split] };
+            counts[split] += component.Length;
+        }
+
+        void Link(Dictionary<string, int> map, string key, int index)
+        {
+            if (map.TryGetValue(key, out var other)) Union(index, other); else map[key] = index;
+        }
+    }
+
+    private static void AuditNearDuplicateLeakage(IReadOnlyList<TeachingRow> rows)
+    {
+        var buckets = rows.GroupBy(row => string.Join(' ', SignificantWords(row.Input).Take(3)), StringComparer.Ordinal);
+        foreach (var bucket in buckets)
+        {
+            var values = bucket.ToArray();
+            for (var left = 0; left < values.Length; left++)
+            for (var right = left + 1; right < values.Length; right++)
+                if (values[left].Split != values[right].Split &&
+                    NearDuplicate(SignificantWords(values[left].Input), SignificantWords(values[right].Input)))
+                    throw new InvalidDataException($"Near-duplicate leakage between {values[left].GroupId} and {values[right].GroupId}.");
+        }
+    }
+
+    private static string NormalizeInput(string input) =>
+        string.Join(' ', DialogueText.Normalize(input)
+            .Split(DialogueText.Normalize(input).Where(character =>
+                !char.IsLetterOrDigit(character) && character is not '\'' and not '-').Distinct().ToArray(),
+                StringSplitOptions.RemoveEmptyEntries));
+
+    private static string[] SignificantWords(string input) =>
+        NormalizeInput(input).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+    private static bool NearDuplicate(IReadOnlyCollection<string> left, IReadOnlyCollection<string> right)
+    {
+        if (left.Count == 0 || right.Count == 0 || Math.Abs(left.Count - right.Count) > 2) return false;
+        var a = left.ToHashSet(StringComparer.Ordinal);
+        var b = right.ToHashSet(StringComparer.Ordinal);
+        var union = a.Union(b).Count();
+        return union > 0 && (double)a.Intersect(b).Count() / union >= 0.9;
+    }
+
+    private static string CorpusHash(IEnumerable<TeachingRow> rows)
+    {
+        var canonical = string.Join('\n', rows.OrderBy(row => row.Split).ThenBy(row => row.Source)
+            .ThenBy(row => row.GroupId).ThenBy(row => row.Input).Select(row => JsonSerializer.Serialize(row, Json)));
+        return Convert.ToHexString(SHA256.HashData(Utf8.GetBytes(canonical))).ToLowerInvariant();
     }
 
     private static string StateInputKey(NpcState state, string input) =>
