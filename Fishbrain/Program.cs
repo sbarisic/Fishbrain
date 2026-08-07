@@ -22,8 +22,13 @@ internal static class Program
                     Brain.Resume(args[1], args[2], args.Length == 4 ? Steps(args[3]) : null);
                     break;
                 case "teach":
-                    Count(args, 3, 4);
-                    Brain.Teach(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 40_000);
+                    var teaching = TeachInvocation.Parse(args[1..]);
+                    Brain.Teach(
+                        teaching.CorpusDirectory,
+                        teaching.CheckpointPath,
+                        teaching.PlannedSteps,
+                        teaching.UntilStep,
+                        FindProjectPath());
                     break;
                 case "evaluate":
                     Count(args, 3, 3);
@@ -82,10 +87,62 @@ internal static class Program
         Console.WriteLine("  train DATA.jsonl CHECKPOINT.json [STEPS]");
         Console.WriteLine("  resume DATA.jsonl CHECKPOINT.json [TOTAL_STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
+        Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json");
         Console.WriteLine("  chat CHECKPOINT.json");
         Console.WriteLine("  selftest");
     }
+
+    private static string FindProjectPath()
+    {
+        var besideBuild = Path.GetFullPath(Path.Combine(
+            AppContext.BaseDirectory, "..", "..", "..", "Fishbrain.csproj"));
+        if (File.Exists(besideBuild)) return besideBuild;
+        var beneathWorkingDirectory = Path.GetFullPath(Path.Combine("Fishbrain", "Fishbrain.csproj"));
+        return beneathWorkingDirectory;
+    }
+}
+
+internal sealed record TeachInvocation(
+    string CorpusDirectory,
+    string CheckpointPath,
+    int? PlannedSteps,
+    int? UntilStep)
+{
+    public static TeachInvocation Parse(string[] args)
+    {
+        if (args.Length < 2) throw new ArgumentException("Teach requires a corpus directory and checkpoint path.");
+        if (args.Length == 3 && !args[2].StartsWith("--", StringComparison.Ordinal))
+        {
+            var steps = Positive(args[2], "STEPS");
+            return new(args[0], args[1], steps, steps);
+        }
+        if ((args.Length - 2) % 2 != 0) throw new ArgumentException("Teaching options require values.");
+
+        int? planned = null;
+        int? until = null;
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 2; index < args.Length; index += 2)
+        {
+            var option = args[index];
+            if (!seen.Add(option)) throw new ArgumentException($"Duplicate teaching option '{option}'.");
+            var value = Positive(args[index + 1], option);
+            switch (option.ToLowerInvariant())
+            {
+                case "--planned": planned = value; break;
+                case "--until": until = value; break;
+                default: throw new ArgumentException($"Unknown teaching option '{option}'.");
+            }
+        }
+        if (planned is not null && until is not null && until > planned)
+            throw new ArgumentException("--until cannot exceed --planned.");
+        return new(args[0], args[1], planned, until);
+    }
+
+    private static int Positive(string value, string name) =>
+        int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) && parsed > 0
+            ? parsed
+            : throw new ArgumentException($"{name} must be a positive integer.");
 }
 
 internal static class Evaluation
@@ -262,7 +319,7 @@ internal static class SelfTests
         {
             ("AUTOGRAD", Autograd), ("TOKENIZER", TokenizerChecks), ("COGNITION", CognitionChecks),
             ("MODEL", ModelChecks), ("TRAINING DATA", TrainingDataChecks), ("CHECKPOINT", CheckpointChecks),
-            ("TOOLS", ToolChecks)
+            ("TEACHING", TeachingChecks), ("TOOLS", ToolChecks)
         };
         foreach (var (name, test) in tests) { test(); Console.WriteLine($"PASS {name}"); }
         Console.WriteLine($"PASS ALL {tests.Length} TESTS");
@@ -277,6 +334,22 @@ internal static class SelfTests
         var right = new[] { new Value(3.0), new Value(4.0) };
         var dot = Value.Dot(left, right); dot.Backward();
         Assert(Math.Abs(dot.Data - 11) < 1e-12 && left[0].Grad == 3, "dot gradients");
+
+        var logits = new[] { new Value(1.2), new Value(-0.7), new Value(3.4) };
+        var crossEntropy = Value.CrossEntropy(logits, 2);
+        crossEntropy.Backward();
+        var numeric = NumericCrossEntropy([1.2, -0.7, 3.4], 2);
+        Assert(Math.Abs(crossEntropy.Data - numeric) < 1e-12, "fused cross-entropy value");
+        for (var index = 0; index < logits.Length; index++)
+        {
+            const double epsilon = 1e-6;
+            var plus = new[] { 1.2, -0.7, 3.4 }; plus[index] += epsilon;
+            var minus = new[] { 1.2, -0.7, 3.4 }; minus[index] -= epsilon;
+            var finiteDifference = (NumericCrossEntropy(plus, 2) - NumericCrossEntropy(minus, 2)) / (2 * epsilon);
+            Assert(Math.Abs(logits[index].Grad - finiteDifference) < 1e-7, "fused cross-entropy gradient");
+        }
+        var extreme = Value.CrossEntropy([new Value(10_000), new Value(-10_000)], 0);
+        Assert(double.IsFinite(extreme.Data), "stable fused cross-entropy");
     }
 
     private static void TokenizerChecks()
@@ -320,6 +393,26 @@ internal static class SelfTests
         var causalA = first.DebugSequenceLogits([Tokenizer.Bos, 0, 1]);
         var causalB = first.DebugSequenceLogits([Tokenizer.Bos, 0, 2]);
         Assert(causalA[1].SequenceEqual(causalB[1]), "causal masking");
+        var optimized = Brain.CreateForTesting(TinyConfig());
+        var reference = Brain.CreateForTesting(TinyConfig());
+        int[] equivalenceWindow = [Tokenizer.Bos, 0, 1, Tokenizer.Decide, Tokenizer.Intent(DialogueIntent.Greeting), Tokenizer.Eos];
+        var optimizedLogits = optimized.DebugTargetLogits(equivalenceWindow[..^1], 2, optimizedForward: true);
+        var referenceLogits = reference.DebugTargetLogits(equivalenceWindow[..^1], 2, optimizedForward: false);
+        Assert(optimizedLogits.SelectMany(row => row).SequenceEqual(referenceLogits.SelectMany(row => row)),
+            "optimized forward logit equivalence");
+        var optimizedGradient = optimized.DebugLossAndGradients(equivalenceWindow, 3, optimizedForward: true);
+        var referenceGradient = reference.DebugLossAndGradients(equivalenceWindow, 3, optimizedForward: false);
+        Assert(Math.Abs(optimizedGradient.Loss - referenceGradient.Loss) < 1e-10 &&
+               optimizedGradient.Gradients.Zip(referenceGradient.Gradients)
+                   .All(pair => Math.Abs(pair.First - pair.Second) < 1e-10),
+            "optimized forward gradient equivalence");
+        optimized = Brain.CreateForTesting(TinyConfig());
+        reference = Brain.CreateForTesting(TinyConfig());
+        var optimizedLoss = optimized.DebugTrainSample(equivalenceWindow, 3, 20);
+        var referenceLoss = reference.DebugTrainSampleReference(equivalenceWindow, 3, 20);
+        Assert(Math.Abs(optimizedLoss - referenceLoss) < 1e-10, "optimized forward loss equivalence");
+        Assert(optimized.DebugWeights().Zip(reference.DebugWeights()).All(pair => Math.Abs(pair.First - pair.Second) < 1e-10),
+            "optimized forward update equivalence");
         var window = new[] { Tokenizer.Bos, Tokenizer.Decide, Tokenizer.Intent(DialogueIntent.Greeting), Tokenizer.Eos };
         var before = first.DebugTrainWindow(window, 20); var after = before;
         for (var index = 0; index < 19; index++) after = first.DebugTrainWindow(window, 20);
@@ -372,12 +465,65 @@ internal static class SelfTests
         AssertThrows<InvalidOperationException>(() => Brain.CreateForTesting(TinyConfig()).Tools.Register(tools));
     }
 
+    private static void TeachingChecks()
+    {
+        var defaults = TeachInvocation.Parse(["corpus", "model.json"]);
+        Assert(defaults.PlannedSteps is null && defaults.UntilStep is null, "teaching defaults");
+        var positional = TeachInvocation.Parse(["corpus", "model.json", "123"]);
+        Assert(positional.PlannedSteps == 123 && positional.UntilStep == 123, "positional teaching compatibility");
+        var milestone = TeachInvocation.Parse(["corpus", "model.json", "--until", "8", "--planned", "40"]);
+        Assert(milestone.PlannedSteps == 40 && milestone.UntilStep == 8, "teaching milestone options");
+        AssertThrows<ArgumentException>(() => TeachInvocation.Parse(["corpus", "model.json", "--until"]));
+        AssertThrows<ArgumentException>(() => TeachInvocation.Parse(["corpus", "model.json", "--until", "0"]));
+        AssertThrows<ArgumentException>(() => TeachInvocation.Parse(["corpus", "model.json", "--unknown", "1"]));
+        AssertThrows<ArgumentException>(() => TeachInvocation.Parse(["corpus", "model.json", "--until", "1", "--until", "2"]));
+        AssertThrows<ArgumentException>(() => TeachInvocation.Parse(["corpus", "model.json", "--planned", "10", "--until", "11"]));
+        Assert(TeachingRecovery.Quote("C:\\A B\\O'Brien") == "'C:\\A B\\O''Brien'", "PowerShell path quoting");
+        var recovery = new TeachingRecovery("C:\\P X\\Fishbrain.csproj", "C:\\Data X", "C:\\Model X.json", 40, 8);
+        Assert(recovery.TeachCommand(8) ==
+               "dotnet run -c Release --project 'C:\\P X\\Fishbrain.csproj' -- teach 'C:\\Data X' 'C:\\Model X.json' --planned 40 --until 8",
+            "copy-paste recovery command");
+
+        var directory = Path.Combine(Path.GetTempPath(), $"fishbrain-teaching-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directory);
+        var dataPath = Path.Combine(directory, "data.jsonl");
+        var uninterruptedPath = Path.Combine(directory, "uninterrupted.json");
+        var resumedPath = Path.Combine(directory, "resumed.json");
+        try
+        {
+            File.WriteAllLines(dataPath,
+            [
+                Row("A", "GREETING", "FRIENDLY", true, "RESPOND", "B"),
+                Row("C", "ACTIVITY", "NEUTRAL", false, "NO_RESPONSE", "")
+            ]);
+            var data = TrainingData.Load(dataPath);
+            var uninterrupted = Brain.CreateForTesting(TinyConfig());
+            uninterrupted.DebugTrainCurriculum(data, uninterruptedPath, plannedSteps: 12, untilStep: 12);
+
+            var interrupted = Brain.CreateForTesting(TinyConfig());
+            interrupted.DebugTrainCurriculum(data, resumedPath, plannedSteps: 12, untilStep: 6);
+            var resumed = Brain.Load(resumedPath);
+            resumed.DebugTrainCurriculum(data, resumedPath, plannedSteps: 12, untilStep: 12);
+            Assert(File.ReadAllBytes(uninterruptedPath).SequenceEqual(File.ReadAllBytes(resumedPath)),
+                "exact milestone resume");
+        }
+        finally
+        {
+            if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+    }
+
     private static BrainConfig TinyConfig() => new()
     {
         EmbeddingSize = 8, HeadCount = 2, MlpSize = 12, ContextLength = 24,
         AttentionWindow = 8, PositionPeriod = 8, MaximumOutputLength = 16,
         LearningRate = 0.01, PlannedSteps = 20, Seed = 42
     };
+    private static double NumericCrossEntropy(IReadOnlyList<double> logits, int target)
+    {
+        var maximum = logits.Max();
+        return Math.Log(logits.Sum(value => Math.Exp(value - maximum))) + maximum - logits[target];
+    }
     private static void Assert(bool condition, string message) { if (!condition) throw new InvalidOperationException(message); }
     private static void AssertThrows<T>(Action action) where T : Exception
     { try { action(); } catch (T) { return; } throw new InvalidOperationException($"Expected {typeof(T).Name}."); }

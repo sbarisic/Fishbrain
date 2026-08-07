@@ -62,6 +62,36 @@ internal sealed class Value
     public Value Relu() => Create(Math.Max(0.0, Data), [this], [Data > 0.0 ? 1.0 : 0.0]);
 
     /// <summary>
+    /// Stable fused softmax cross-entropy. One graph node replaces the individual
+    /// exponent, sum, and logarithm nodes while retaining exact logit gradients.
+    /// </summary>
+    public static Value CrossEntropy(IReadOnlyList<Value> logits, int target)
+    {
+        if (logits.Count == 0) throw new ArgumentException("Cross-entropy requires logits.", nameof(logits));
+        if ((uint)target >= (uint)logits.Count) throw new ArgumentOutOfRangeException(nameof(target));
+
+        var maximum = logits.Max(value => value.Data);
+        var exponentials = new double[logits.Count];
+        var sum = 0.0;
+        for (var index = 0; index < logits.Count; index++)
+        {
+            var exponential = Math.Exp(logits[index].Data - maximum);
+            exponentials[index] = exponential;
+            sum += exponential;
+        }
+
+        var data = Math.Log(sum) + maximum - logits[target].Data;
+        if (!_recording) return new Value(data);
+
+        var children = logits.ToArray();
+        var localGrads = new double[children.Length];
+        for (var index = 0; index < localGrads.Length; index++)
+            localGrads[index] = exponentials[index] / sum;
+        localGrads[target] -= 1.0;
+        return new Value(data, children, localGrads);
+    }
+
+    /// <summary>
     /// A fused dot-product node. It keeps the graph compact while retaining exact gradients
     /// for every input scalar.
     /// </summary>

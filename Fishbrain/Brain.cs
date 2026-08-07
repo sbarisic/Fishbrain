@@ -41,6 +41,7 @@ public sealed class BrainConfig
 public sealed class Brain
 {
     private const int CheckpointVersion = 4;
+    private const int TeachingCheckpointInterval = 1_000;
     private const string SafeFallback = "I DO NOT KNOW.";
     private static readonly int[] TextTokens = [.. Enumerable.Range(0, Tokenizer.VisibleCount), Tokenizer.Eos];
 
@@ -239,18 +240,29 @@ public sealed class Brain
         brain.Train(data.Samples, checkpointPath, plannedSteps);
     }
 
-    internal static void Teach(string corpusDirectory, string checkpointPath, int plannedSteps = 40_000)
+    internal static void Teach(
+        string corpusDirectory,
+        string checkpointPath,
+        int? requestedPlannedSteps,
+        int? requestedUntilStep,
+        string projectPath)
     {
-        var trainPath = Path.Combine(corpusDirectory, "train.jsonl");
+        var fullCorpusDirectory = Path.GetFullPath(corpusDirectory);
+        var fullCheckpointPath = Path.GetFullPath(checkpointPath);
+        var trainPath = Path.Combine(fullCorpusDirectory, "train.jsonl");
         var data = TrainingData.Load(trainPath);
-        var validation = TrainingData.Load(Path.Combine(corpusDirectory, "validation.jsonl"));
+        var validation = TrainingData.Load(Path.Combine(fullCorpusDirectory, "validation.jsonl"));
         if (data.LanguageSamples.Count == 0 || data.PerceptionSamples.Count == 0)
             throw new InvalidDataException("Teaching requires both language and perception samples.");
         Brain brain;
-        if (File.Exists(checkpointPath))
+        int plannedSteps;
+        if (File.Exists(fullCheckpointPath))
         {
-            brain = Load(checkpointPath);
-            if (brain._step >= plannedSteps) throw new InvalidOperationException("The teaching checkpoint has already reached the requested step.");
+            brain = Load(fullCheckpointPath);
+            plannedSteps = brain.Config.PlannedSteps;
+            if (requestedPlannedSteps is not null && requestedPlannedSteps != plannedSteps)
+                throw new InvalidOperationException(
+                    $"The checkpoint uses a {plannedSteps}-step curriculum; --planned cannot change it to {requestedPlannedSteps}.");
             if (!brain._trainedTools.SetEquals(data.ToolNames)) throw new InvalidDataException("Teaching tools differ from the checkpoint.");
             if (brain._trainedExamples.Count != data.Examples.Count ||
                 brain._trainedExamples.Any(example => !data.Examples.TryGetValue(example.Key, out var value) || value != example.Value))
@@ -258,11 +270,18 @@ public sealed class Brain
         }
         else
         {
+            plannedSteps = requestedPlannedSteps ?? 40_000;
             var config = new BrainConfig { PlannedSteps = plannedSteps };
             brain = new Brain(config, new DeterministicRandom(config.Seed), data.ToolNames, data.Examples);
         }
+        var untilStep = requestedUntilStep ?? plannedSteps;
+        if (untilStep <= brain._step || untilStep > plannedSteps)
+            throw new ArgumentOutOfRangeException(nameof(requestedUntilStep),
+                $"--until must be greater than completed step {brain._step} and no greater than planned step {plannedSteps}.");
         brain.Config.PlannedSteps = plannedSteps;
-        brain.TrainCurriculum(data, validation, checkpointPath, plannedSteps);
+        var recovery = new TeachingRecovery(
+            Path.GetFullPath(projectPath), fullCorpusDirectory, fullCheckpointPath, plannedSteps, untilStep);
+        brain.TrainCurriculum(data, validation, fullCheckpointPath, plannedSteps, untilStep, recovery);
     }
 
     internal static void Resume(string dataPath, string checkpointPath, int? targetSteps)
@@ -386,6 +405,31 @@ public sealed class Brain
         return loss;
     }
 
+    internal double DebugTrainSampleReference(IReadOnlyList<int> tokens, int firstTargetIndex, int targetSteps)
+    {
+        var loss = CalculateLoss(new TrainingSample([.. tokens], 0, firstTargetIndex), optimizedForward: false);
+        ApplyGradients(targetSteps);
+        return loss;
+    }
+
+    internal (double Loss, double[] Gradients) DebugLossAndGradients(
+        IReadOnlyList<int> tokens, int firstTargetIndex, bool optimizedForward)
+    {
+        var loss = CalculateLoss(
+            new TrainingSample([.. tokens], 0, firstTargetIndex), optimizedForward);
+        return (loss, _parameters.Select(parameter => parameter.Grad).ToArray());
+    }
+
+    internal double[][] DebugTargetLogits(
+        IReadOnlyList<int> tokens, int firstLogitPosition, bool optimizedForward)
+    {
+        using var _ = Value.NoGrad();
+        var logits = optimizedForward
+            ? ForwardTargets(tokens, 0, firstLogitPosition)
+            : Forward(tokens, 0)[firstLogitPosition..];
+        return logits.Select(row => row.Select(value => value.Data).ToArray()).ToArray();
+    }
+
     private static List<int> StartPrompt(string input)
     {
         var tokens = new List<int> { Tokenizer.Bos };
@@ -433,9 +477,15 @@ public sealed class Brain
         Save(checkpointPath);
     }
 
-    private void TrainCurriculum(TrainingData data, TrainingData validation, string checkpointPath, int targetSteps)
+    private void TrainCurriculum(
+        TrainingData data,
+        TrainingData validation,
+        string checkpointPath,
+        int plannedSteps,
+        int untilStep,
+        TeachingRecovery? recovery)
     {
-        Config.PlannedSteps = targetSteps;
+        Config.PlannedSteps = plannedSteps;
         var language = data.LanguageSamples.ToArray();
         var perceptionBuckets = data.PerceptionSamples
             .GroupBy(x => x.Bucket, StringComparer.Ordinal)
@@ -443,10 +493,11 @@ public sealed class Brain
             .Select(x => x.ToArray())
             .ToArray();
         var tools = data.ToolSamples.ToArray();
-        while (_step < targetSteps)
+        var lastSavedStep = -1;
+        while (_step < untilStep)
         {
-            var languageEnd = targetSteps / 5;
-            var perceptionEnd = targetSteps * 3 / 5;
+            var languageEnd = plannedSteps / 5;
+            var perceptionEnd = plannedSteps * 3 / 5;
             TrainingSample sample;
             string phase;
             if (_step < languageEnd)
@@ -478,9 +529,9 @@ public sealed class Brain
             var loss = CalculateLoss(sample);
             _curriculumPhase = phase;
             _samplerPosition = _step;
-            ApplyGradients(targetSteps);
+            ApplyGradients(plannedSteps);
             if (_step == 1 || _step % 10 == 0)
-                Console.WriteLine($"STEP {_step,6} OF {targetSteps,6} PHASE {phase,-10} LOSS {loss:F4}");
+                Console.WriteLine($"STEP {_step,6} OF {plannedSteps,6} PHASE {phase,-10} LOSS {loss:F4}");
             if (_step % 1000 == 0)
             {
                 var validationSamples = validation.PerceptionSamples.Take(8)
@@ -493,10 +544,41 @@ public sealed class Brain
                 }
                 Console.WriteLine($"VALIDATION STEP {_step,6} LOSS {validationLoss:F4} BEST {_bestValidationLoss:F4} AT {_bestValidationStep}");
             }
-            if (_step % 100 == 0) Save(checkpointPath);
+            if (_step % TeachingCheckpointInterval == 0)
+            {
+                SaveTeachingCheckpoint(checkpointPath, recovery);
+                lastSavedStep = _step;
+            }
         }
-        Save(checkpointPath);
+        if (lastSavedStep != _step) SaveTeachingCheckpoint(checkpointPath, recovery);
+        if (recovery is not null) PrintMilestoneCommands(recovery);
     }
+
+    private void SaveTeachingCheckpoint(string checkpointPath, TeachingRecovery? recovery)
+    {
+        Save(checkpointPath);
+        if (recovery is null) return;
+        Console.WriteLine($"CHECKPOINT SAVED STEP {_step}: {recovery.CheckpointPath}");
+        Console.WriteLine("RESUME IF INTERRUPTED:");
+        Console.WriteLine(recovery.TeachCommand(recovery.UntilStep));
+        Console.Out.Flush();
+    }
+
+    private static void PrintMilestoneCommands(TeachingRecovery recovery)
+    {
+        Console.WriteLine("EVALUATE THIS MILESTONE:");
+        Console.WriteLine(recovery.EvaluateCommand());
+        if (recovery.UntilStep < recovery.PlannedSteps)
+        {
+            Console.WriteLine("CONTINUE TO THE FULL CURRICULUM:");
+            Console.WriteLine(recovery.TeachCommand(recovery.PlannedSteps));
+        }
+        Console.Out.Flush();
+    }
+
+    internal void DebugTrainCurriculum(
+        TrainingData data, string checkpointPath, int plannedSteps, int untilStep) =>
+        TrainCurriculum(data, data, checkpointPath, plannedSteps, untilStep, recovery: null);
 
     private static TrainingSample BalancedPerception(TrainingSample[][] buckets, int index)
     {
@@ -522,7 +604,7 @@ public sealed class Brain
         return order;
     }
 
-    private double CalculateLoss(TrainingSample sample)
+    private double CalculateLoss(TrainingSample sample, bool optimizedForward = true)
     {
         var window = sample.Tokens;
         if (window.Length is < 2 or > 257) throw new ArgumentException("A training sample must contain 2-257 tokens.");
@@ -532,21 +614,18 @@ public sealed class Brain
 
         var inputs = new int[window.Length - 1];
         for (var i = 0; i < inputs.Length; i++) inputs[i] = window[i];
-        var logits = Forward(inputs, sample.PositionOffset);
+        var firstLogitPosition = sample.FirstTargetIndex - 1;
+        var logits = optimizedForward
+            ? ForwardTargets(inputs, sample.PositionOffset, firstLogitPosition)
+            : Forward(inputs, sample.PositionOffset)[firstLogitPosition..];
         var total = new Value(0.0);
-        var targetCount = 0;
-
-        for (var i = sample.FirstTargetIndex - 1; i < logits.Length; i++)
+        for (var index = 0; index < logits.Length; index++)
         {
-            var target = window[i + 1];
-            var maximum = logits[i].Max(x => x.Data);
-            var sum = new Value(0.0);
-            foreach (var logit in logits[i]) sum += (logit - maximum).Exp();
-            total += sum.Log() + maximum - logits[i][target];
-            targetCount++;
+            var target = window[sample.FirstTargetIndex + index];
+            total += Value.CrossEntropy(logits[index], target);
         }
 
-        var loss = total / targetCount;
+        var loss = total / logits.Length;
         loss.Backward();
         return loss.Data;
     }
@@ -593,19 +672,32 @@ public sealed class Brain
         return result;
     }
 
+    private Value[][] ForwardTargets(IReadOnlyList<int> tokens, int positionOffset, int firstLogitPosition)
+    {
+        if (tokens.Count is < 1 || tokens.Count > Config.ContextLength)
+            throw new ArgumentOutOfRangeException(nameof(tokens));
+        if (positionOffset < 0) throw new ArgumentOutOfRangeException(nameof(positionOffset));
+        if ((uint)firstLogitPosition >= (uint)tokens.Count)
+            throw new ArgumentOutOfRangeException(nameof(firstLogitPosition));
+
+        var keys = new List<Value[]>(tokens.Count);
+        var values = new List<Value[]>(tokens.Count);
+        var result = new Value[tokens.Count - firstLogitPosition][];
+        // With one Transformer layer, earlier positions contribute to later predictions
+        // only through their keys and values. Their query, MLP, and vocabulary head are unused.
+        for (var position = 0; position < firstLogitPosition; position++)
+            PrepareContextToken(tokens[position], positionOffset + position, keys, values);
+        for (var position = firstLogitPosition; position < tokens.Count; position++)
+            result[position - firstLogitPosition] = ForwardToken(
+                tokens[position], positionOffset + position, keys, values);
+        return result;
+    }
+
     private Value[] ForwardToken(int token, int position, List<Value[]> keys, List<Value[]> values)
     {
-        var x = new Value[Config.EmbeddingSize];
-        for (var i = 0; i < x.Length; i++)
-            x[i] = _tokenEmbedding[token][i] + _positionEmbedding[position % Config.PositionPeriod][i];
-
+        var (x, normalized) = PrepareToken(token, position, keys, values);
         var residual = x;
-        var normalized = RmsNorm(x);
         var query = Linear(normalized, _query);
-        var key = Linear(normalized, _key);
-        var value = Linear(normalized, _value);
-        keys.Add(key);
-        values.Add(value);
 
         var headSize = Config.EmbeddingSize / Config.HeadCount;
         var attention = new Value[Config.EmbeddingSize];
@@ -642,6 +734,24 @@ public sealed class Brain
         return Linear(x, _tokenEmbedding);
     }
 
+    private void PrepareContextToken(int token, int position, List<Value[]> keys, List<Value[]> values) =>
+        PrepareToken(token, position, keys, values);
+
+    private (Value[] X, Value[] Normalized) PrepareToken(
+        int token, int position, List<Value[]> keys, List<Value[]> values)
+    {
+        var x = new Value[Config.EmbeddingSize];
+        for (var i = 0; i < x.Length; i++)
+            x[i] = _tokenEmbedding[token][i] + _positionEmbedding[position % Config.PositionPeriod][i];
+
+        var normalized = RmsNorm(x);
+        var key = Linear(normalized, _key);
+        var value = Linear(normalized, _value);
+        keys.Add(key);
+        values.Add(value);
+        return (x, normalized);
+    }
+
     private double[] NextLogits(IReadOnlyList<int> context)
     {
         var retainedStart = Math.Max(0, context.Count - Config.ContextLength);
@@ -651,8 +761,8 @@ public sealed class Brain
         for (var i = 0; i < count; i++) tail[i] = context[localStart + i];
 
         using var _ = Value.NoGrad();
-        var logits = Forward(tail, localStart - retainedStart);
-        return logits[^1].Select(x => x.Data).ToArray();
+        var logits = ForwardTargets(tail, localStart - retainedStart, tail.Length - 1);
+        return logits[0].Select(x => x.Data).ToArray();
     }
 
     private string GenerateText(List<int> context, double temperature)
@@ -781,11 +891,12 @@ public sealed class Brain
             var localStart = Math.Max(retainedStart, context.Count - brain.Config.AttentionWindow);
             _position = localStart - retainedStart;
             using var _ = Value.NoGrad();
-            Value[]? logits = null;
-            for (var index = localStart; index < context.Count; index++)
-                logits = brain.ForwardToken(context[index], _position++, _keys, _values);
-            Logits = (logits ?? throw new ArgumentException("Inference context cannot be empty.", nameof(context)))
-                .Select(x => x.Data).ToArray();
+            if (localStart >= context.Count)
+                throw new ArgumentException("Inference context cannot be empty.", nameof(context));
+            for (var index = localStart; index < context.Count - 1; index++)
+                brain.PrepareContextToken(context[index], _position++, _keys, _values);
+            var logits = brain.ForwardToken(context[^1], _position++, _keys, _values);
+            Logits = logits.Select(x => x.Data).ToArray();
         }
 
         public double[] Logits { get; private set; }
@@ -888,6 +999,24 @@ public sealed class Brain
         public int BestValidationStep { get; set; }
     }
 
+}
+
+internal sealed record TeachingRecovery(
+    string ProjectPath,
+    string CorpusDirectory,
+    string CheckpointPath,
+    int PlannedSteps,
+    int UntilStep)
+{
+    public string TeachCommand(int untilStep) =>
+        $"dotnet run -c Release --project {Quote(ProjectPath)} -- teach {Quote(CorpusDirectory)} " +
+        $"{Quote(CheckpointPath)} --planned {PlannedSteps} --until {untilStep}";
+
+    public string EvaluateCommand() =>
+        $"dotnet run -c Release --project {Quote(ProjectPath)} -- evaluate " +
+        $"{Quote(Path.Combine(CorpusDirectory, "test.jsonl"))} {Quote(CheckpointPath)}";
+
+    internal static string Quote(string value) => $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
 }
 
 internal static class Tokenizer

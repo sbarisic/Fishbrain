@@ -72,8 +72,25 @@ dotnet run -c Release --project Fishbrain -- chat model-v4.json
 `teach` runs 40,000 deterministic steps: 8,000 language, 16,000 balanced
 perception, then 16,000 joint behavior steps. Calling the same command again
 resumes an incomplete checkpoint with its optimizer, RNG, phase, sampler, and
-validation-best metadata intact. The scalar-autograd design prioritizes clarity,
-so full CPU training is intentionally slow.
+validation-best metadata intact.
+
+Pause at evaluation milestones without changing the 40,000-step schedule:
+
+```powershell
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json --planned 40000 --until 8000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v4.json --planned 40000 --until 16000
+```
+
+The checkpoint stores the planned schedule and rejects an incompatible
+`--planned` value when resumed. Teaching saves every 1,000 steps and after a
+requested milestone. Every save prints a flushed, absolute, copy-paste PowerShell
+resume command; completed milestones also print evaluation and full-curriculum
+continuation commands.
+
+Training retains scalar autograd but skips unused query, attention, MLP, and
+vocabulary work for conditioning-only tokens and uses fused cross-entropy. On the
+development machine, the same 100-step Release fixture improved from 35.929 to
+12.727 seconds (2.82x); full-run speed depends on the CPU and sample mix.
 
 The chat CLI prints the NPC reply together with intent, affect, response
 expectation, action, rapport, mood, topic, goal, and tone.
