@@ -240,11 +240,13 @@ internal static class CorpusPipeline
             ("PLAYER THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true),
             ("PLAYER I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
             ("PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false),
+            ("PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true),
         };
-        for (var index = 0; index < Math.Min(goldens.Length, rows.Count); index++)
+        const int repeats = 12;
+        for (var index = 0; index < Math.Min(goldens.Length * repeats, rows.Count); index++)
         {
             var old = rows[index];
-            var golden = goldens[index];
+            var golden = goldens[index % goldens.Length];
             var perception = new TurnPerception(golden.Intent, golden.Affect, golden.Expected);
             rows[index] = Make(golden.Input, StateFor(seed + index), perception,
                 golden.Expected ? Templates.ResponseFor(golden.Intent, index) : "", "SYNTHETIC", old.Split, old.GroupId, "GOLDEN");
@@ -567,6 +569,7 @@ internal static class SelfTests
         Golden("THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true);
         Golden("I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true);
         Golden("I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false);
+        Golden("HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true);
 
         var one = CorpusPipeline.BuildSynthetic(300, 42);
         var two = CorpusPipeline.BuildSynthetic(300, 42);

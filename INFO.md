@@ -1,20 +1,20 @@
 # Fishbrain Project Notes
 
-This is the detailed engineering record for Fishbrain: its goals, revision 5
-architecture, data and training pipelines, historical v4 results, current
-experiment, and known problems. The [README](README.md) remains the quick-start
+This is the detailed engineering record for Fishbrain: its goals, revision 6
+architecture, data and training pipelines, historical experiments, current
+results, and known problems. The [README](README.md) remains the quick-start
 guide.
 
 ## Purpose and boundaries
 
 Fishbrain is a deliberately tiny, readable GPT-like system for short English NPC
 conversations in small games. It is CPU-only, dependency-free beyond .NET 10, and
-limited to 256-character inputs and replies. The implementation follows the spirit
+limited to short inputs and replies. The implementation follows the spirit
 of [martinskuta/microgpt](https://github.com/martinskuta/microgpt): keep the entire
 learning system small enough for one person to inspect and modify.
 
 The project began as a character-level next-token model, then added local tool
-calls and explicit dialogue state. Revision 5 separates three concerns:
+calls and explicit dialogue state. Revision 6 separates three concerns:
 
 ```text
 LANGUAGE -> PERCEPTION -> BEHAVIOR
@@ -54,6 +54,7 @@ INFO.md                           this engineering record
 Fishbrain/
   Program.cs                      CLI and dependency-free self-tests
   Brain.cs                        model, tokenizer, training, checkpoints, eval
+  WordVocabulary.cs               deterministic input and response vocabularies
   PackedTrainer.cs                contiguous SIMD training forward/backward
   Cognition.cs                    public state types and deterministic reducer
   Value.cs                        scalar inference and forward reference graph
@@ -71,7 +72,7 @@ Downloaded data, compiled datasets, experiment checkpoints, and intermediate
 models are ignored by Git. This avoids redistributing external text and keeps the
 repository small.
 
-## Current model: checkpoint version 5
+## Current model: checkpoint version 6
 
 ### Transformer
 
@@ -82,10 +83,10 @@ repository small.
 | Attention heads | 4 |
 | MLP dimension | 128 |
 | Activation | ReLU |
-| Total context limit | 256 tokens |
-| Active causal attention window | 64 tokens |
-| Positional embedding period | 64 |
-| Maximum generated output | 256 characters |
+| Total context limit | 128 tokens |
+| Active causal attention window | 128 tokens |
+| Positional embedding period | 128 |
+| Maximum generated output | 64 tokens |
 | Initial learning rate | 0.005 |
 | Adam beta 1 / beta 2 | 0.85 / 0.99 |
 | Adam epsilon | `1e-8` |
@@ -93,8 +94,8 @@ repository small.
 | Planned teaching steps | 40,000 |
 
 The layer uses learned token and positional embeddings, RMSNorm, causal
-multi-head attention, residual connections, and a ReLU MLP. Language output
-weights are tied to token embeddings. Three independent linear heads read the
+multi-head attention, residual connections, and a ReLU MLP. A separate response
+output head projects hidden states into the output vocabulary. Three independent linear heads read the
 final current-turn representation for 15 intent, 5 affect, and 2 expectation
 classes. There are no biases, dropout, batches, GPU paths, tensor libraries, or
 external ML packages.
@@ -108,37 +109,20 @@ fixture improved from 35.929 to 12.727 seconds on the development machine, a
 
 ### Tokenizer and vocabulary
 
-The 44 visible characters are:
+V6 uses one token for every lexical word. Apostrophes and hyphens inside a word
+remain part of that word, so `DON'T` and `SELF-AWARE` each use one token.
+`. , ? ! :` are standalone punctuation tokens. Control, cognition, and state
+tokens occupy fixed IDs; corpus words begin at ID 68.
 
-```text
-ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,?!'-:
-```
+Input and response vocabularies are built in deterministic ordinal order from
+the training split and saved in the checkpoint. The response vocabulary contains
+only words that can occur in a response, tool selection, tool arguments, or tool
+results. Input targets are mapped to response IDs during language training.
+Unknown corpus words map to `<UNK>`, which is never eligible for generation.
 
-The v5 language vocabulary retains the 105-token v4 layout:
-
-| IDs | Meaning |
-|---:|---|
-| 0-25 | `A-Z` |
-| 26-35 | `0-9` |
-| 36 | space |
-| 37-43 | `. , ? ! ' - :` |
-| 44-49 | `BOS SEP EOS TEXT CALL RESULT` |
-| 50-51 | `STATE DECIDE` |
-| 52-55 | four rapport levels |
-| 56-59 | four moods |
-| 60-74 | fifteen dialogue intents |
-| 75-78 | original four response actions |
-| 79-82 | four tones |
-| 83-89 | seven topics |
-| 90-96 | seven goals |
-| 97-101 | five user-affect classes |
-| 102-103 | response not expected / expected |
-| 104 | no-response action |
-
-Normalization uppercases input, collapses whitespace, canonicalizes curly
-apostrophes and common Unicode dashes, repairs punctuation spacing, and collapses
-runs of terminal punctuation. Unsupported symbols are rejected. Training rows
-must already use canonical spelling and spacing.
+Normalization uppercases input invariantly, collapses whitespace, canonicalizes
+curly apostrophes and common Unicode dashes, repairs punctuation spacing, and
+collapses runs of terminal punctuation. Unsupported symbols are rejected.
 
 Dialogue and textual tool results may use punctuation. Tool names and string
 arguments remain uppercase alphanumeric identifiers.
@@ -146,7 +130,7 @@ arguments remain uppercase alphanumeric identifiers.
 ## Stateful API and cognition
 
 ```csharp
-var brain = Brain.Load("model-v5-latest.json");
+var brain = Brain.Load("model-v6-latest.json");
 var state = NpcState.Initial;
 
 ReplyResult result = brain.Reply(
@@ -192,7 +176,7 @@ Action selection is constrained and deterministic:
 1. No response expected produces `NO_RESPONSE`.
 2. Game fact produces `CALL_TOOL`.
 3. Unknown produces `CLARIFY`.
-4. Refusal or hostility produces `REFUSE`.
+4. Hostility produces `REFUSE`; a player's refusal produces `RESPOND`.
 5. Everything else produces `RESPOND`.
 
 A no-response turn returns an empty string while still updating state. The CLI
@@ -210,7 +194,7 @@ calls.
 
 Seen ordinary responses may be recalled through exact memory keyed by normalized
 input, pre-turn state, perception, decision, and tone. Memory runs after cognition
-and excludes tool-backed responses. Unseen ordinary dialogue uses free character
+and excludes tool-backed responses. Unseen ordinary dialogue uses free word
 generation. Evaluation disables exact memory so it measures generalization.
 
 ## Local C# tools
@@ -290,7 +274,7 @@ then neutral.
 ## Teaching, checkpoints, and recovery
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json
 ```
 
 The planned curriculum is:
@@ -308,8 +292,8 @@ separate best-perception and best-realization metadata.
 Milestones pause without changing the schedule:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 2000
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 10000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json --planned 40000 --until 2000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json --planned 40000 --until 10000
 ```
 
 `--planned` controls phase boundaries and decay; `--until` only pauses. A resumed
@@ -324,7 +308,7 @@ selects `best-perception`; realization loss selects `best-realization`. Use the
 full evaluator for milestone acceptance:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v5-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v6-latest.json
 ```
 
 Evaluation disables memory and reports intent and affect accuracy/macro-F1,
@@ -581,6 +565,69 @@ References: [.NET SIMD guidance](https://learn.microsoft.com/dotnet/standard/sim
 [`Vector.IsHardwareAccelerated`](https://learn.microsoft.com/dotnet/api/system.numerics.vector.ishardwareaccelerated?view=net-10.0),
 and [`Vector<T>.Count`](https://learn.microsoft.com/dotnet/api/system.numerics.vector-1.count?view=net-10.0).
 
+## Revision 6 implementation and experiment
+
+V6 addresses the remaining v5 output and sparse-construction failures without
+increasing the Transformer width or depth.
+
+- Character tokens were replaced by deterministic word vocabularies. A lexical
+  word, contraction, or hyphenated term is one token; punctuation stays separate.
+- The input embedding and response output head are no longer tied. The trained
+  corpus produced 3,582 input words, 923 output words, and 339,392 parameters.
+- Context, attention, and positional periods are all 128 tokens. Conditioning is
+  limited to 96 tokens and a response target to 32 during teaching.
+- Output constraints reject `<UNK>`, punctuation as the first token, consecutive
+  punctuation, three identical tokens, repeated trigrams, and an incomplete
+  comma or colon ending.
+- Player refusal is distinct from NPC refusal: it selects `RESPOND`, preserves
+  hostile state handling, and learns short acknowledgement responses.
+- The corpus contains 84 state-varied golden anchors covering seven behaviors,
+  including `PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT`.
+- Checkpoint version 6 stores both vocabularies and the separate output head.
+  Versions 2 through 5 fail with an explicit fresh-start message.
+
+The final fresh 40,000-step checkpoint reported these trainer-validation values:
+
+| Metric | Step 40,000 |
+|---|---:|
+| Intent macro-F1 | 0.9068 |
+| Affect macro-F1 | 0.9208 |
+| Expected-response F1 | 0.9970 |
+| Direct / history intent macro-F1 | 1.0000 / 1.0000 |
+| Realization loss | 2.4161 |
+
+The independent 1,000-row test evaluation of `model-v6-latest.json` reported:
+
+| Metric | Result |
+|---|---:|
+| Intent accuracy / macro-F1 | 0.9205 / 0.9240 |
+| Affect accuracy / macro-F1 | 0.8750 / 0.8865 |
+| Expected-response F1 | 0.9987 |
+| No-response F1 | 0.8889 |
+| Action accuracy | 0.9975 |
+| Realization loss | 1.7615 |
+| Invalid / empty / overlength generation | 0% / 0% / 0% |
+| Synthetic intent accuracy / macro-F1 | 1.0000 / 1.0000 |
+| External intent accuracy / macro-F1 | 0.7500 / 0.5913 |
+| Direct / history intent macro-F1 | 0.9007 / 1.0000 |
+| Golden behavior cases | 7 / 7 |
+
+`V6_STAGE_GATE` passes. The long-term `RELEASE_GATE` still fails because external
+intent macro-F1 remains below 0.70. `model-v6-latest.json` is the recommended
+interactive checkpoint: the best-perception and best-realization snapshots have
+better isolated selection metrics but regress one or more golden behaviors.
+
+The required hostile-refusal probe is deterministic for uppercase and lowercase
+ASCII input:
+
+```text
+PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT
+THEN STEP ASIDE.
+
+RAPPORT=0 MOOD=ANNOYED INTENT=REFUSAL AFFECT=HOSTILE EXPECTED=TRUE
+ACTION=RESPOND TOPIC=RELATIONSHIP GOAL=DEESCALATE TONE=COLD
+```
+
 ## Revision history
 
 - **v1:** uppercase character GPT for one NPC reply, using microGPT-style scalar
@@ -595,6 +642,9 @@ and [`Vector<T>.Count`](https://learn.microsoft.com/dotnet/api/system.numerics.v
   training, task-aware validation, source-specific supervision, and richer data
   audit output. The first 40,000-step experiment is complete using the packed
   SIMD training kernel.
+- **v6:** corpus-owned word tokens, separate response output head, full 128-token
+  attention, constrained word generation, corrected player-refusal behavior, and
+  seven state-varied golden behaviors. The 40,000-step experiment is complete.
 
 ## Command reference
 
@@ -609,10 +659,10 @@ dotnet run --project Fishbrain.DataGenerator -- fetch
 dotnet run --project Fishbrain.DataGenerator -- compile --count 10000 --seed 42
 dotnet run --project Fishbrain.DataGenerator -- audit
 
-# Revision 5
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v5-latest.json
-dotnet run -c Release --project Fishbrain -- chat model-v5-latest.json
+# Revision 6
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v6-latest.json
+dotnet run -c Release --project Fishbrain -- chat model-v6-latest.json
 
 # Generic JSONL workflow
 dotnet run --project Fishbrain -- train data.jsonl model.json 10000
@@ -621,13 +671,12 @@ dotnet run --project Fishbrain -- resume data.jsonl model.json
 
 ## Known limitations
 
-- Revision 4 checkpoints are historical archives and do not load in the v5 runtime.
-- Revision 5 has not completed its first full 40,000-step experiment.
-- One layer and 64 character dimensions provide little semantic capacity.
-- The active 64-token window discards older detail despite a 256-token context.
-- Character learning is simple but inefficient for word-level semantics.
-- Free generation can be invalid or nonsensical; the current compromise measured
-  12% invalid output.
+- Revision 2-v5 checkpoints are historical archives and do not load in the v6 runtime.
+- One layer and 64 hidden dimensions provide little semantic capacity.
+- The fixed corpus vocabulary maps unseen words to `<UNK>` and cannot preserve
+  their lexical identity.
+- Word generation can still be semantically weak despite passing structural
+  validity constraints.
 - Exact memory can hide poor generalization, so evaluation turns it off.
 - A tool result is authoritative context, but free paraphrasing may distort it;
   strict guarantees need tool-owned text or deterministic substitution.

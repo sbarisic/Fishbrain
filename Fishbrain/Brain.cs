@@ -11,10 +11,10 @@ public sealed class BrainConfig
     public int EmbeddingSize { get; set; } = 64;
     public int HeadCount { get; set; } = 4;
     public int MlpSize { get; set; } = 128;
-    public int ContextLength { get; set; } = 256;
-    public int AttentionWindow { get; set; } = 64;
-    public int PositionPeriod { get; set; } = 64;
-    public int MaximumOutputLength { get; set; } = 256;
+    public int ContextLength { get; set; } = 128;
+    public int AttentionWindow { get; set; } = 128;
+    public int PositionPeriod { get; set; } = 128;
+    public int MaximumOutputLength { get; set; } = 64;
     public double LearningRate { get; set; } = 0.005;
     public double Beta1 { get; set; } = 0.85;
     public double Beta2 { get; set; } = 0.99;
@@ -41,16 +41,17 @@ public sealed class BrainConfig
 /// <summary>A deliberately tiny, character-level GPT for uppercase video-game dialogue.</summary>
 public sealed class Brain
 {
-    private const int CheckpointVersion = 5;
+    private const int CheckpointVersion = 6;
     private const int TeachingCheckpointInterval = 1_000;
     private const string SafeFallback = "I DO NOT KNOW.";
-    private static readonly int[] TextTokens = [.. Enumerable.Range(0, Tokenizer.VisibleCount), Tokenizer.Eos];
 
     private readonly DeterministicRandom _random;
+    private readonly WordVocabulary _vocabulary;
     private readonly HashSet<string> _trainedTools;
     private readonly Dictionary<string, string> _trainedExamples;
     private readonly List<Value> _parameters = [];
     private readonly Value[][] _tokenEmbedding;
+    private readonly Value[][] _outputHead;
     private readonly Value[][] _positionEmbedding;
     private readonly Value[][] _query;
     private readonly Value[][] _key;
@@ -76,17 +77,21 @@ public sealed class Brain
 
     private Brain(
         BrainConfig config,
+        WordVocabulary vocabulary,
         DeterministicRandom random,
         IEnumerable<string> trainedTools,
         IEnumerable<KeyValuePair<string, string>> trainedExamples)
     {
         config.Validate();
+        Tokenizer.Configure(vocabulary);
         Config = config;
+        _vocabulary = vocabulary;
         _random = random;
         _trainedTools = new HashSet<string>(trainedTools, StringComparer.Ordinal);
         _trainedExamples = new Dictionary<string, string>(trainedExamples, StringComparer.Ordinal);
 
         _tokenEmbedding = CreateMatrix(Tokenizer.VocabularySize, config.EmbeddingSize);
+        _outputHead = CreateMatrix(Tokenizer.OutputSize, config.EmbeddingSize);
         _positionEmbedding = CreateMatrix(config.PositionPeriod, config.EmbeddingSize);
         _query = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
         _key = CreateMatrix(config.EmbeddingSize, config.EmbeddingSize);
@@ -99,6 +104,7 @@ public sealed class Brain
         _expectedHead = CreateMatrix(2, config.EmbeddingSize);
 
         AddParameters(_tokenEmbedding);
+        AddParameters(_outputHead);
         AddParameters(_positionEmbedding);
         AddParameters(_query);
         AddParameters(_key);
@@ -126,14 +132,18 @@ public sealed class Brain
     {
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
-        if (checkpoint.Version is 2 or 3 or 4)
-            throw new InvalidDataException("Fishbrain v5 requires fresh dedicated perception heads; retain the older checkpoint as an archive.");
+        if (checkpoint.Version is 2 or 3 or 4 or 5)
+            throw new InvalidDataException("Fishbrain v6 requires a fresh word vocabulary and response head; retain the older checkpoint as an archive.");
         if (checkpoint.Version != CheckpointVersion)
             throw new InvalidDataException($"Unsupported checkpoint version {checkpoint.Version}.");
         checkpoint.Config.Validate();
+        if (checkpoint.Words.Length == 0 || checkpoint.OutputWords.Length == 0)
+            throw new InvalidDataException("The v6 checkpoint does not contain a word vocabulary.");
+        var vocabulary = new WordVocabulary(checkpoint.Words, checkpoint.OutputWords);
 
         var brain = new Brain(
             checkpoint.Config,
+            vocabulary,
             new DeterministicRandom(checkpoint.Config.Seed),
             checkpoint.TrainedTools ?? [],
             checkpoint.TrainedExamples ?? new Dictionary<string, string>());
@@ -240,10 +250,13 @@ public sealed class Brain
         if (File.Exists(checkpointPath))
             throw new IOException($"Checkpoint '{checkpointPath}' already exists. Use resume or choose another path.");
 
+        var vocabulary = WordVocabulary.Build(dataPath);
+        Tokenizer.Configure(vocabulary);
         var data = TrainingData.Load(dataPath);
         var config = new BrainConfig { PlannedSteps = plannedSteps };
         var brain = new Brain(
             config,
+            vocabulary,
             new DeterministicRandom(config.Seed),
             data.ToolNames,
             data.Examples);
@@ -260,10 +273,6 @@ public sealed class Brain
         var fullCorpusDirectory = Path.GetFullPath(corpusDirectory);
         var fullCheckpointPath = Path.GetFullPath(checkpointPath);
         var trainPath = Path.Combine(fullCorpusDirectory, "train.jsonl");
-        var data = TrainingData.Load(trainPath);
-        var validation = TrainingData.Load(Path.Combine(fullCorpusDirectory, "validation.jsonl"));
-        if (data.LanguageSamples.Count == 0 || data.PerceptionSamples.Count == 0)
-            throw new InvalidDataException("Teaching requires both language and perception samples.");
         Brain brain;
         int plannedSteps;
         if (File.Exists(fullCheckpointPath))
@@ -273,17 +282,24 @@ public sealed class Brain
             if (requestedPlannedSteps is not null && requestedPlannedSteps != plannedSteps)
                 throw new InvalidOperationException(
                     $"The checkpoint uses a {plannedSteps}-step curriculum; --planned cannot change it to {requestedPlannedSteps}.");
-            if (!brain._trainedTools.SetEquals(data.ToolNames)) throw new InvalidDataException("Teaching tools differ from the checkpoint.");
-            if (brain._trainedExamples.Count != data.Examples.Count ||
-                brain._trainedExamples.Any(example => !data.Examples.TryGetValue(example.Key, out var value) || value != example.Value))
-                throw new InvalidDataException("Teaching examples differ from the checkpoint.");
         }
         else
         {
             plannedSteps = requestedPlannedSteps ?? 40_000;
             var config = new BrainConfig { PlannedSteps = plannedSteps };
-            brain = new Brain(config, new DeterministicRandom(config.Seed), data.ToolNames, data.Examples);
+            var vocabulary = WordVocabulary.Build(trainPath);
+            Tokenizer.Configure(vocabulary);
+            var initialData = TrainingData.Load(trainPath);
+            brain = new Brain(config, vocabulary, new DeterministicRandom(config.Seed), initialData.ToolNames, initialData.Examples);
         }
+        var data = TrainingData.Load(trainPath);
+        var validation = TrainingData.Load(Path.Combine(fullCorpusDirectory, "validation.jsonl"));
+        if (data.LanguageSamples.Count == 0 || data.PerceptionSamples.Count == 0)
+            throw new InvalidDataException("Teaching requires both language and perception samples.");
+        if (!brain._trainedTools.SetEquals(data.ToolNames)) throw new InvalidDataException("Teaching tools differ from the checkpoint.");
+        if (brain._trainedExamples.Count != data.Examples.Count ||
+            brain._trainedExamples.Any(example => !data.Examples.TryGetValue(example.Key, out var value) || value != example.Value))
+            throw new InvalidDataException("Teaching examples differ from the checkpoint.");
         var untilStep = requestedUntilStep ?? plannedSteps;
         if (untilStep <= brain._step || untilStep > plannedSteps)
             throw new ArgumentOutOfRangeException(nameof(requestedUntilStep),
@@ -324,6 +340,8 @@ public sealed class Brain
         {
             Version = CheckpointVersion,
             Config = Config,
+            Words = _vocabulary.Words,
+            OutputWords = _vocabulary.OutputWords,
             TrainedTools = _trainedTools.Order(StringComparer.Ordinal).ToArray(),
             TrainedExamples = _trainedExamples
                 .OrderBy(example => example.Key, StringComparer.Ordinal)
@@ -355,12 +373,15 @@ public sealed class Brain
     }
 
     internal static Brain CreateForTesting(BrainConfig config, params string[] trainedTools) =>
-        new(config, new DeterministicRandom(config.Seed), trainedTools, []);
+        new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), trainedTools, []);
+
+    internal static Brain CreateForTesting(BrainConfig config, WordVocabulary vocabulary, params string[] trainedTools) =>
+        new(config, vocabulary, new DeterministicRandom(config.Seed), trainedTools, []);
 
     internal static Brain CreateForTestingWithExamples(
         BrainConfig config,
         IReadOnlyDictionary<string, string> examples) =>
-        new(config, new DeterministicRandom(config.Seed), [], examples);
+        new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), [], examples);
 
     internal double[] DebugNextLogits(IReadOnlyList<int> tokens)
     {
@@ -830,7 +851,8 @@ public sealed class Brain
     private double CalculateLoss(TrainingSample sample, bool optimizedForward = true)
     {
         var window = sample.Tokens;
-        if (window.Length is < 2 or > 257) throw new ArgumentException("A training sample must contain 2-257 tokens.");
+        if (window.Length < 2 || window.Length > Config.ContextLength + 1)
+            throw new ArgumentException($"A training sample must contain 2-{Config.ContextLength + 1} tokens.");
         if (optimizedForward)
             return PackedTrainer.Calculate(Config, _weights, _packedGradients, sample);
 
@@ -850,7 +872,7 @@ public sealed class Brain
         var total = new Value(0.0);
         for (var index = 0; index < logits.Length; index++)
         {
-            var target = window[sample.FirstTargetIndex + index];
+            var target = Tokenizer.OutputId(window[sample.FirstTargetIndex + index]);
             total += Value.CrossEntropy(logits[index], target);
         }
 
@@ -1014,7 +1036,7 @@ public sealed class Brain
     }
 
     private Value[] ForwardToken(int token, int position, List<Value[]> keys, List<Value[]> values)
-        => Linear(ForwardHiddenToken(token, position, keys, values), _tokenEmbedding);
+        => Linear(ForwardHiddenToken(token, position, keys, values), _outputHead);
 
     private Value[] ForwardHiddenToken(int token, int position, List<Value[]> keys, List<Value[]> values)
     {
@@ -1089,19 +1111,63 @@ public sealed class Brain
 
     private string GenerateText(List<int> context, double temperature)
     {
-        var output = new StringBuilder();
+        var output = new List<int>();
         var session = new InferenceSession(this, context);
         for (var i = 0; i < Config.MaximumOutputLength; i++)
         {
-            var token = Sample(session.Logits, TextTokens, temperature);
-            context.Add(token);
-            if (token == Tokenizer.Eos) break;
-            output.Append(Tokenizer.DecodeVisible(token));
-            session.Append(token);
+            var allowed = AllowedTextOutputs(output);
+            var outputToken = Sample(session.Logits, allowed, temperature);
+            if (outputToken == Tokenizer.OutputId(Tokenizer.Eos)) break;
+            output.Add(outputToken);
+            var inputToken = Tokenizer.InputIdFromOutput(outputToken);
+            context.Add(inputToken);
+            session.Append(inputToken);
         }
 
-        var text = output.ToString().Trim();
+        var text = Tokenizer.DetokenizeOutput(output).Trim();
         return text.Length == 0 ? SafeFallback : text;
+    }
+
+    private static int[] AllowedTextOutputs(IReadOnlyList<int> generated)
+    {
+        var allowed = Tokenizer.GeneratedTextOutputs.ToHashSet();
+        var eos = Tokenizer.OutputId(Tokenizer.Eos);
+        if (generated.Count == 0)
+        {
+            allowed.Remove(eos);
+            foreach (var punctuation in new[]
+                     {
+                         Tokenizer.Period, Tokenizer.Comma, Tokenizer.Question,
+                         Tokenizer.Exclamation, Tokenizer.Colon
+                     })
+                allowed.Remove(Tokenizer.OutputId(punctuation));
+        }
+        if (generated.Count >= 2 && generated[^1] == generated[^2])
+            allowed.Remove(generated[^1]);
+        if (generated.Count > 0)
+        {
+            var lastInput = Tokenizer.InputIdFromOutput(generated[^1]);
+            if (lastInput is Tokenizer.Period or Tokenizer.Comma or Tokenizer.Question or
+                Tokenizer.Exclamation or Tokenizer.Colon)
+            {
+                foreach (var punctuation in new[]
+                         {
+                             Tokenizer.Period, Tokenizer.Comma, Tokenizer.Question,
+                             Tokenizer.Exclamation, Tokenizer.Colon
+                         })
+                    allowed.Remove(Tokenizer.OutputId(punctuation));
+                if (lastInput is Tokenizer.Comma or Tokenizer.Colon) allowed.Remove(eos);
+            }
+        }
+        if (generated.Count >= 2)
+        {
+            for (var index = 0; index + 2 < generated.Count; index++)
+            {
+                if (generated[index] == generated[^2] && generated[index + 1] == generated[^1])
+                    allowed.Remove(generated[index + 2]);
+            }
+        }
+        return allowed.Count == 0 ? [eos] : allowed.Order().ToArray();
     }
 
     private bool TryGenerateToolCall(
@@ -1114,84 +1180,48 @@ public sealed class Brain
         arguments = [];
         callBody = [];
 
-        var candidates = Tools.RegisteredNames.Order(StringComparer.Ordinal).ToArray();
+        var candidates = Tools.RegisteredNames.Order(StringComparer.Ordinal)
+            .Select(name => (Name: name, Input: _vocabulary.InputId(name)))
+            .Where(candidate => candidate.Input != Tokenizer.Unknown)
+            .Select(candidate => (candidate.Name, candidate.Input, Output: Tokenizer.OutputId(candidate.Input)))
+            .DistinctBy(candidate => candidate.Output)
+            .ToArray();
         if (candidates.Length == 0) return false;
 
         var body = new List<int>();
-        var prefix = new StringBuilder();
-        ToolRegistry.ToolMethod? selected = null;
         var session = new InferenceSession(this, context);
+        var selectedOutput = Greedy(session.Logits, candidates.Select(candidate => candidate.Output).ToArray());
+        var selectedCandidate = candidates.Single(candidate => candidate.Output == selectedOutput);
+        if (!Tools.TryGet(selectedCandidate.Name, out var selected)) return false;
+        toolName = selectedCandidate.Name;
+        context.Add(selectedCandidate.Input);
+        body.Add(selectedCandidate.Input);
+        session.Append(selectedCandidate.Input);
 
-        while (prefix.Length < 32)
-        {
-            var matching = candidates.Where(x => x.StartsWith(prefix.ToString(), StringComparison.Ordinal)).ToArray();
-            if (matching.Length == 0) return false;
-
-            var allowed = matching
-                .Where(x => x.Length > prefix.Length)
-                .Select(x => Tokenizer.EncodeCharacter(x[prefix.Length]))
-                .Distinct()
-                .ToList();
-
-            var exact = matching.FirstOrDefault(x => x.Length == prefix.Length);
-            if (exact is not null && Tools.TryGet(exact, out var exactTool))
-                allowed.Add(exactTool.ParameterTypes.Length == 0 ? Tokenizer.Eos : Tokenizer.Space);
-
-            var next = Greedy(session.Logits, allowed);
-            context.Add(next);
-            session.Append(next);
-            if (next == Tokenizer.Eos || next == Tokenizer.Space)
-            {
-                if (exact is null || !Tools.TryGet(exact, out selected)) return false;
-                toolName = exact;
-                break;
-            }
-
-            body.Add(next);
-            prefix.Append(Tokenizer.DecodeVisible(next));
-        }
-
-        if (selected is null) return false;
-        if (selected.ParameterTypes.Length == 0)
-        {
-            arguments = [];
-            callBody = body.ToArray();
-            return true;
-        }
-
-        body.Add(Tokenizer.Space);
         var rawArguments = new List<string>();
         for (var parameterIndex = 0; parameterIndex < selected.ParameterTypes.Length; parameterIndex++)
         {
-            var value = new StringBuilder();
-            var maximumLength = selected.ParameterTypes[parameterIndex] == typeof(int) ? 10 : 32;
-            while (value.Length < maximumLength)
+            if (parameterIndex > 0)
             {
-                var allowed = selected.ParameterTypes[parameterIndex] == typeof(int)
-                    ? Enumerable.Range(Tokenizer.DigitStart, 10).ToList()
-                    : Enumerable.Range(0, 36).ToList();
-
-                if (value.Length > 0)
-                    allowed.Add(parameterIndex == selected.ParameterTypes.Length - 1 ? Tokenizer.Eos : Tokenizer.Space);
-
-                var next = Greedy(session.Logits, allowed);
-                context.Add(next);
-                session.Append(next);
-                if (next == Tokenizer.Eos || next == Tokenizer.Space) break;
-                body.Add(next);
-                value.Append(Tokenizer.DecodeVisible(next));
+                context.Add(Tokenizer.ArgumentSeparator);
+                body.Add(Tokenizer.ArgumentSeparator);
+                session.Append(Tokenizer.ArgumentSeparator);
             }
-
-            if (value.Length == 0) return false;
-            rawArguments.Add(value.ToString());
-
-            var expectedDelimiter = parameterIndex == selected.ParameterTypes.Length - 1 ? Tokenizer.Eos : Tokenizer.Space;
-            if (context[^1] != expectedDelimiter)
-            {
-                context.Add(expectedDelimiter);
-                session.Append(expectedDelimiter);
-            }
-            if (expectedDelimiter == Tokenizer.Space) body.Add(Tokenizer.Space);
+            var numeric = selected.ParameterTypes[parameterIndex] == typeof(int);
+            var choices = _vocabulary.OutputWords
+                .Where(word => word.Length is > 0 and <= 32 &&
+                               (numeric ? word.All(char.IsDigit) : word.All(Tokenizer.IsIdentifierCharacter)))
+                .Select(word => _vocabulary.InputId(word))
+                .Select(input => (Input: input, Output: Tokenizer.OutputId(input)))
+                .ToArray();
+            if (choices.Length == 0) return false;
+            var chosenOutput = Greedy(session.Logits, choices.Select(choice => choice.Output).ToArray());
+            var chosen = choices.First(choice => choice.Output == chosenOutput);
+            var value = _vocabulary.WordForInput(chosen.Input);
+            rawArguments.Add(value);
+            context.Add(chosen.Input);
+            body.Add(chosen.Input);
+            session.Append(chosen.Input);
         }
 
         arguments = rawArguments.ToArray();
@@ -1317,6 +1347,8 @@ public sealed class Brain
     {
         public int Version { get; set; }
         public BrainConfig Config { get; set; } = new();
+        public string[] Words { get; set; } = [];
+        public string[] OutputWords { get; set; } = [];
         public string[]? TrainedTools { get; set; }
         public Dictionary<string, string>? TrainedExamples { get; set; }
         public double[] Weights { get; set; } = [];
@@ -1354,37 +1386,43 @@ internal sealed record TeachingRecovery(
 
 internal static class Tokenizer
 {
-    public const int LetterStart = 0;
-    public const int DigitStart = 26;
-    public const int Space = 36;
-    public const int Period = 37;
-    public const int Comma = 38;
-    public const int Question = 39;
-    public const int Exclamation = 40;
-    public const int Apostrophe = 41;
-    public const int Hyphen = 42;
-    public const int Colon = 43;
-    public const int VisibleCount = 44;
-    public const int Bos = 44;
-    public const int Sep = 45;
-    public const int Eos = 46;
-    public const int Text = 47;
-    public const int Call = 48;
-    public const int Result = 49;
-    public const int State = 50;
-    public const int Decide = 51;
-    public const int RapportStart = 52;
-    public const int MoodStart = 56;
-    public const int IntentStart = 60;
-    public const int ActionStart = 75;
-    public const int ToneStart = 79;
-    public const int TopicStart = 83;
-    public const int GoalStart = 90;
-    public const int AffectStart = 97;
-    public const int ExpectedFalse = 102;
-    public const int ExpectedTrue = 103;
-    public const int NoResponseAction = 104;
-    public const int VocabularySize = 105;
+    public const int Bos = 0;
+    public const int Sep = 1;
+    public const int Eos = 2;
+    public const int Text = 3;
+    public const int Call = 4;
+    public const int Result = 5;
+    public const int State = 6;
+    public const int Decide = 7;
+    public const int RapportStart = 8;
+    public const int MoodStart = 12;
+    public const int IntentStart = 16;
+    public const int ActionStart = 31;
+    public const int ToneStart = 36;
+    public const int TopicStart = 40;
+    public const int GoalStart = 47;
+    public const int AffectStart = 54;
+    public const int ExpectedFalse = 59;
+    public const int ExpectedTrue = 60;
+    public const int Period = 61;
+    public const int Comma = 62;
+    public const int Question = 63;
+    public const int Exclamation = 64;
+    public const int Colon = 65;
+    public const int ArgumentSeparator = 66;
+    public const int Unknown = 67;
+    public const int WordStart = 68;
+
+    private static WordVocabulary? _current;
+
+    public static WordVocabulary Current => _current
+        ?? throw new InvalidOperationException("A word vocabulary has not been configured.");
+    public static int VocabularySize => Current.InputSize;
+    public static int OutputSize => Current.OutputSize;
+    public static IReadOnlyCollection<int> GeneratedTextOutputs => Current.GeneratedTextOutputs;
+
+    public static void Configure(WordVocabulary vocabulary) =>
+        _current = vocabulary ?? throw new ArgumentNullException(nameof(vocabulary));
 
     public static string Normalize(string text)
     {
@@ -1453,42 +1491,85 @@ internal static class Tokenizer
     private static char MergeTerminal(char first, char second) =>
         first == '?' || second == '?' ? '?' : first == '!' || second == '!' ? '!' : '.';
 
-    public static int[] Encode(string normalized)
+    public static IReadOnlyList<LexicalToken> Lex(string normalized)
     {
-        var result = new int[normalized.Length];
-        for (var i = 0; i < normalized.Length; i++) result[i] = EncodeCharacter(normalized[i]);
+        var result = new List<LexicalToken>();
+        var word = new StringBuilder();
+        void FlushWord()
+        {
+            if (word.Length == 0) return;
+            result.Add(new LexicalToken(LexicalTokenKind.Word, word.ToString()));
+            word.Clear();
+        }
+
+        foreach (var character in normalized)
+        {
+            if (IsIdentifierCharacter(character) ||
+                character is '\'' or '-' && word.Length > 0)
+            {
+                word.Append(character);
+                continue;
+            }
+            FlushWord();
+            if (character is '.' or ',' or '?' or '!' or ':')
+                result.Add(new LexicalToken(LexicalTokenKind.Punctuation, character.ToString()));
+        }
+        FlushWord();
         return result;
     }
 
-    public static int EncodeCharacter(char character) => character switch
+    public static string NormalizeWord(string word)
     {
-        >= 'A' and <= 'Z' => character - 'A',
-        >= '0' and <= '9' => DigitStart + character - '0',
-        ' ' => Space,
-        '.' => Period,
-        ',' => Comma,
-        '?' => Question,
-        '!' => Exclamation,
-        '\'' => Apostrophe,
-        '-' => Hyphen,
-        ':' => Colon,
-        _ => throw new ArgumentException($"Unsupported visible character '{character}'.")
+        var normalized = Normalize(word);
+        var tokens = Lex(normalized);
+        if (tokens.Count != 1 || tokens[0].Kind != LexicalTokenKind.Word || tokens[0].Text != normalized)
+            throw new InvalidDataException($"'{word}' is not one canonical word.");
+        return normalized;
+    }
+
+    public static int[] Encode(string normalized) => Lex(normalized).Select(token => token.Kind switch
+    {
+        LexicalTokenKind.Word => Current.InputId(token.Text),
+        LexicalTokenKind.Punctuation => token.Text[0] switch
+        {
+            '.' => Period, ',' => Comma, '?' => Question, '!' => Exclamation, ':' => Colon,
+            _ => throw new InvalidDataException($"Unsupported punctuation token '{token.Text}'.")
+        },
+        _ => throw new ArgumentOutOfRangeException()
+    }).ToArray();
+
+    public static string DecodeInputToken(int token) => token switch
+    {
+        Period => ".", Comma => ",", Question => "?", Exclamation => "!", Colon => ":",
+        Unknown => "<UNK>",
+        _ when Current.IsWord(token) => Current.WordForInput(token),
+        _ => throw new ArgumentOutOfRangeException(nameof(token), "Control tokens are not visible text.")
     };
 
-    public static char DecodeVisible(int token) => token switch
+    public static string DetokenizeOutput(IEnumerable<int> outputTokens)
+        => DetokenizeInput(outputTokens.Select(Current.InputIdFromOutput));
+
+    public static string DetokenizeInput(IEnumerable<int> inputTokens)
     {
-        >= 0 and < 26 => (char)('A' + token),
-        >= DigitStart and < Space => (char)('0' + token - DigitStart),
-        Space => ' ',
-        Period => '.',
-        Comma => ',',
-        Question => '?',
-        Exclamation => '!',
-        Apostrophe => '\'',
-        Hyphen => '-',
-        Colon => ':',
-        _ => throw new ArgumentOutOfRangeException(nameof(token), "Internal tokens cannot be decoded as visible text.")
-    };
+        var text = new StringBuilder();
+        foreach (var inputToken in inputTokens)
+        {
+            if (inputToken == Eos) break;
+            if (inputToken is Period or Comma or Question or Exclamation or Colon)
+            {
+                if (text.Length > 0 && text[^1] == ' ') text.Length--;
+                text.Append(DecodeInputToken(inputToken));
+                continue;
+            }
+            if (!Current.IsWord(inputToken)) continue;
+            if (text.Length > 0) text.Append(' ');
+            text.Append(Current.WordForInput(inputToken));
+        }
+        return text.ToString();
+    }
+
+    public static int OutputId(int inputToken) => Current.OutputId(inputToken);
+    public static int InputIdFromOutput(int outputToken) => Current.InputIdFromOutput(outputToken);
 
     public static bool IsVisibleCharacter(char character) =>
         IsIdentifierCharacter(character) || character is ' ' or '.' or ',' or '?' or '!' or '\'' or '-' or ':';
@@ -1498,9 +1579,7 @@ internal static class Tokenizer
 
     public static int Mood(NpcMood value) => MoodStart + (int)value;
     public static int Intent(DialogueIntent value) => IntentStart + (int)value;
-    public static int Action(ResponseAction value) => value == ResponseAction.NoResponse
-        ? NoResponseAction
-        : ActionStart + (int)value;
+    public static int Action(ResponseAction value) => ActionStart + (int)value;
     public static int Tone(ResponseTone value) => ToneStart + (int)value;
     public static int Topic(DialogueTopic value) => TopicStart + (int)value;
     public static int Goal(NpcGoal value) => GoalStart + (int)value;
@@ -1516,6 +1595,9 @@ internal static class Tokenizer
             ? (UserAffect)(token - AffectStart)
             : throw new ArgumentOutOfRangeException(nameof(token));
 }
+
+internal enum LexicalTokenKind { Word, Punctuation }
+internal readonly record struct LexicalToken(LexicalTokenKind Kind, string Text);
 
 internal enum TrainingTask { Language, Perception, Tool }
 
@@ -1768,7 +1850,7 @@ internal sealed class TrainingData
         tokens.AddRange(Tokenizer.Encode(tool));
         foreach (var argument in arguments)
         {
-            tokens.Add(Tokenizer.Space);
+            tokens.Add(Tokenizer.ArgumentSeparator);
             tokens.AddRange(Tokenizer.Encode(argument));
         }
     }
@@ -1824,7 +1906,7 @@ internal static class DialogueKeys
 
 internal sealed class TrainingData
 {
-    internal const int ConditioningLength = 64;
+    internal const int ConditioningLength = 96;
     internal const int TargetChunkLength = 32;
     internal const int MaximumSampleLength = ConditioningLength + TargetChunkLength;
 
@@ -2040,7 +2122,7 @@ internal sealed class TrainingData
         tokens.AddRange(Tokenizer.Encode(tool));
         foreach (var argument in arguments)
         {
-            tokens.Add(Tokenizer.Space);
+            tokens.Add(Tokenizer.ArgumentSeparator);
             tokens.AddRange(Tokenizer.Encode(argument));
         }
     }

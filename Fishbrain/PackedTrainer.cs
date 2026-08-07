@@ -56,9 +56,9 @@ internal sealed class PackedTrainer
             var position = firstPosition + index;
             var hidden = ForwardHidden(tokens, position);
             targets[index] = hidden;
-            var target = sample.Tokens[sample.FirstTargetIndex + index];
+            var target = Tokenizer.OutputId(sample.Tokens[sample.FirstTargetIndex + index]);
             loss += CrossEntropy(
-                _layout.TokenEmbedding, Tokenizer.VocabularySize, _config.EmbeddingSize,
+                _layout.OutputHead, Tokenizer.OutputSize, _config.EmbeddingSize,
                 hidden.Final, target, 1.0 / targetCount, hidden.DFinal);
         }
 
@@ -456,7 +456,8 @@ internal sealed class PackedTrainer
         {
             var size = config.EmbeddingSize;
             TokenEmbedding = 0;
-            PositionEmbedding = TokenEmbedding + Tokenizer.VocabularySize * size;
+            OutputHead = TokenEmbedding + Tokenizer.VocabularySize * size;
+            PositionEmbedding = OutputHead + Tokenizer.OutputSize * size;
             Query = PositionEmbedding + config.PositionPeriod * size;
             Key = Query + size * size;
             Value = Key + size * size;
@@ -470,6 +471,7 @@ internal sealed class PackedTrainer
         }
 
         public int TokenEmbedding { get; }
+        public int OutputHead { get; }
         public int PositionEmbedding { get; }
         public int Query { get; }
         public int Key { get; }

@@ -261,7 +261,7 @@ internal static class Evaluation
             Console.WriteLine($"GOLDEN {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
                               $"EXPECTED {result.Expected} PREDICTED {result.Predicted}");
         Console.WriteLine($"GOLDEN_CASES {(goldenPass ? "PASS" : "FAIL")}");
-        Console.WriteLine($"V5_STAGE_GATE {(v5StagePass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V6_STAGE_GATE {(v5StagePass ? "PASS" : "FAIL")}");
         Console.WriteLine($"RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
     }
 
@@ -331,7 +331,8 @@ internal static class Evaluation
             ("SHORT_CLARIFICATION", "PLAYER WHAT?", DialogueIntent.Clarification, UserAffect.Neutral, true),
             ("HOSTILE_GRATITUDE", "PLAYER THANK YOU, IDIOT.", DialogueIntent.Gratitude, UserAffect.Hostile, true),
             ("NEGATED_GRATITUDE", "PLAYER I WAS NOT THANKING YOU.", DialogueIntent.Clarification, UserAffect.Frustrated, true),
-            ("NO_RESPONSE_ACTIVITY", "PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false)
+            ("NO_RESPONSE_ACTIVITY", "PLAYER I AM JUST LOOKING AROUND.", DialogueIntent.Activity, UserAffect.Neutral, false),
+            ("HOSTILE_REFUSAL", "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT", DialogueIntent.Refusal, UserAffect.Hostile, true)
         };
         return cases.Select(item =>
         {
@@ -404,12 +405,19 @@ internal static class SelfTests
 
     private static void TokenizerChecks()
     {
-        const string visible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,?!'-:";
-        Assert(new string(Tokenizer.Encode(visible).Select(Tokenizer.DecodeVisible).ToArray()) == visible, "roundtrip");
-        Assert(Tokenizer.VocabularySize == 105 && Tokenizer.AffectStart == 97, "stable language token layout");
-        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 104, "no-response token");
+        Tokenizer.Configure(WordVocabulary.Testing());
+        const string visible = "HELLO, FRIEND!";
+        Assert(Tokenizer.DetokenizeOutput(Tokenizer.Encode(visible).Select(Tokenizer.OutputId)) == visible, "word roundtrip");
+        Assert(Tokenizer.WordStart == 68 && Tokenizer.AffectStart == 54, "stable v6 control layout");
+        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 35, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
         Assert(Tokenizer.Normalize("it’s ready — now??") == "IT'S READY-NOW?", "unicode punctuation normalization");
+        const string refusal = "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT";
+        Assert(Tokenizer.Normalize("player Hey i don’t want To help YOU, idiot") == refusal,
+            "input always normalizes to uppercase");
+        var refusalTokens = Tokenizer.Lex(refusal).Select(token => token.Text).ToArray();
+        Assert(refusalTokens.SequenceEqual(["PLAYER", "HEY", "I", "DON'T", "WANT", "TO", "HELP", "YOU", ",", "IDIOT"]),
+            "one token per word with standalone punctuation");
         Assert(Brain.ExtractCurrentPlayerTurn("HELLO, FRIEND!") == "HELLO, FRIEND!", "plain current turn");
         Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC GREETINGS. PLAYER WHAT?") == "WHAT?", "history current turn");
         Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER WAIT. NPC YES. PLAYER THANKS.") == "THANKS.", "multi-turn current turn");
@@ -438,6 +446,13 @@ internal static class SelfTests
         var distressed = new TurnPerception(DialogueIntent.Unknown, UserAffect.Distressed, true);
         Assert(Cognition.Apply(NpcState.Initial, distressed, new(Cognition.ActionFor(distressed))).State.ActiveGoal == NpcGoal.HelpPlayer,
             "distressed goal");
+        var hostileRefusal = new TurnPerception(DialogueIntent.Refusal, UserAffect.Hostile, true);
+        var hostileRefusalAction = Cognition.ActionFor(hostileRefusal);
+        var hostileRefusalTransition = Cognition.Apply(NpcState.Initial, hostileRefusal, new(hostileRefusalAction));
+        Assert(hostileRefusalAction == ResponseAction.Respond &&
+               hostileRefusalTransition.State.ActiveGoal == NpcGoal.Deescalate &&
+               hostileRefusalTransition.Tone == ResponseTone.Cold,
+            "hostile player refusal is acknowledged with de-escalation");
     }
 
     private static void ModelChecks()
@@ -446,7 +461,7 @@ internal static class SelfTests
         Assert(first.DebugWeights().SequenceEqual(second.DebugWeights()), "deterministic initialization");
         var fullFirst = Brain.CreateForTesting(new BrainConfig()); var fullSecond = Brain.CreateForTesting(new BrainConfig());
         Assert(fullFirst.Config.EmbeddingSize == 64 && fullFirst.DebugWeights().SequenceEqual(fullSecond.DebugWeights()), "64D deterministic initialization");
-        Assert(first.DebugNextLogits([Tokenizer.Bos]).Length == 105, "logit count");
+        Assert(first.DebugNextLogits([Tokenizer.Bos]).Length == Tokenizer.OutputSize, "logit count");
         var causalA = first.DebugSequenceLogits([Tokenizer.Bos, 0, 1]);
         var causalB = first.DebugSequenceLogits([Tokenizer.Bos, 0, 2]);
         Assert(causalA[1].SequenceEqual(causalB[1]), "causal masking");
@@ -463,7 +478,8 @@ internal static class SelfTests
             "packed forward loss equivalence");
         var gradientChecks = new[]
         {
-            0, 8, 31, optimizedGradient.Gradients.Length / 4,
+            0, 8, 31, new PackedTrainer.Layout(TinyConfig()).OutputHead,
+            optimizedGradient.Gradients.Length / 4,
             optimizedGradient.Gradients.Length / 2,
             optimizedGradient.Gradients.Length - 1
         }.Distinct();
@@ -493,11 +509,13 @@ internal static class SelfTests
                 Row("PLAYER WHERE ARE YOU FROM?", "IDENTITY", "NEUTRAL", true, "RESPOND", null, "CLINC150"),
                 Row("PLAYER I AM WORRIED.", "UNKNOWN", "DISTRESSED", false, "NORESPONSE", "", "GOEMOTIONS")
             ]);
+            var vocabulary = WordVocabulary.Build(path);
+            Tokenizer.Configure(vocabulary);
             var data = TrainingData.Load(path);
             Assert(data.PerceptionSamples.Count >= 3 && data.LanguageSamples.Count >= 1, "task streams");
             Assert(data.PerceptionSamples.All(sample => sample.PerceptionTarget is not null), "dedicated perception targets");
             var history = data.PerceptionSamples.Single(sample => sample.PerceptionTarget?.Intent == DialogueIntent.Clarification);
-            var classifiedText = new string(history.Tokens[1..^1].Select(Tokenizer.DecodeVisible).ToArray());
+            var classifiedText = Tokenizer.DetokenizeInput(history.Tokens[1..^1]);
             Assert(classifiedText == "WHAT?", "perception classifies current turn only");
             Assert(data.PerceptionSamples.Single(sample => sample.Source == "CLINC150").TargetFields == PerceptionFields.Intent,
                 "CLINC intent-only supervision");
@@ -506,7 +524,7 @@ internal static class SelfTests
             Assert(data.Examples.Count == 1, "exact memory forms");
 
             var config = TinyConfig();
-            var brain = Brain.CreateForTesting(config);
+            var brain = Brain.CreateForTesting(config, vocabulary);
             var perceptionGradient = brain.DebugLossAndGradients(history);
             var layout = new PackedTrainer.Layout(config);
             foreach (var parameterIndex in new[] { 0, layout.Key, layout.IntentHead, layout.AffectHead, layout.ExpectedHead })

@@ -31,7 +31,12 @@ internal static class Templates
         [DialogueIntent.Gratitude] = ["THANK YOU!", "I APPRECIATE YOUR HELP.", "YOU HAVE MY THANKS.", "THANK YOU, IDIOT."],
         [DialogueIntent.Apology] = ["I AM SORRY.", "PLEASE FORGIVE ME.", "THAT WAS MY MISTAKE.", "I APOLOGIZE."],
         [DialogueIntent.Agreement] = ["YES, I AGREE.", "THAT SOUNDS FAIR.", "WE HAVE AN AGREEMENT.", "I ACCEPT THAT."],
-        [DialogueIntent.Refusal] = ["NO, I CANNOT DO THAT.", "I WILL NOT DO IT.", "THAT IS NOT ALLOWED.", "I REFUSE."],
+        [DialogueIntent.Refusal] =
+        [
+            "NO, I CANNOT DO THAT.", "I WILL NOT DO IT.", "THAT IS NOT ALLOWED.", "I REFUSE.",
+            "I DON'T WANT TO HELP YOU.", "I DO NOT WANT TO HELP YOU, IDIOT.",
+            "I WON'T HELP YOU.", "I REFUSE TO HELP YOU, IDIOT."
+        ],
         [DialogueIntent.Hostility] = ["YOU ARE USELESS!", "GET OUT OF MY WAY!", "SHUT UP, IDIOT!", "I HATE YOU."],
     };
 
@@ -49,7 +54,7 @@ internal static class Templates
         [DialogueIntent.Gratitude] = ["YOU ARE WELCOME!", "GLAD I COULD HELP.", "IT WAS MY PLEASURE."],
         [DialogueIntent.Apology] = ["I FORGIVE YOU.", "DO NOT WORRY.", "YOUR APOLOGY IS ACCEPTED."],
         [DialogueIntent.Agreement] = ["YES, I AGREE.", "THAT IS ACCEPTABLE.", "WE ARE AGREED."],
-        [DialogueIntent.Refusal] = ["I CANNOT DO THAT.", "NO.", "I MUST REFUSE."],
+        [DialogueIntent.Refusal] = ["UNDERSTOOD.", "I WILL HANDLE IT MYSELF.", "THEN STEP ASIDE."],
         [DialogueIntent.Hostility] = ["LET US SPEAK CALMLY.", "CALM YOURSELF.", "I WILL NOT ARGUE WITH YOU."],
     };
 
@@ -70,12 +75,13 @@ internal static class Templates
         else if (ContainsAny(value, "GOODBYE", "FAREWELL", "SEE YOU", "MUST GO", "UNTIL NEXT")) intent = DialogueIntent.Farewell;
         else if (ContainsAny(value, "HELLO", "GREETINGS", "GOOD DAY", "WELL MET", "HI ") || value == "HI") intent = DialogueIntent.Greeting;
         else if (ContainsAny(value, "WHO ARE YOU", "YOUR NAME", "ABOUT YOURSELF", "ARE YOU A BOT", "WHERE ARE YOU FROM", "HOW OLD ARE YOU")) intent = DialogueIntent.Identity;
+        else if (ContainsAny(value, "I REFUSE", "WILL NOT", "WON'T", "CANNOT DO", "CAN'T DO", "NOT ALLOWED",
+                     "DON'T WANT TO", "DO NOT WANT TO")) intent = DialogueIntent.Refusal;
         else if (ContainsAny(value, "HELP", "ASSIST", "CAN YOU", "COULD YOU", "WOULD YOU", "I NEED", "WHAT CAN YOU DO")) intent = DialogueIntent.Assistance;
         else if (ContainsAny(value, "EXPLAIN", "WHAT DO YOU MEAN", "DO NOT UNDERSTAND", "SAY THAT AGAIN", "BE MORE SPECIFIC")) intent = DialogueIntent.Clarification;
         else if (ContainsAny(value, "WHAT ARE YOU DOING", "WHAT IS GOING ON", "LOOKING AROUND", "ARE YOU BUSY", "MY WORK")) intent = DialogueIntent.Activity;
         else if (ContainsAny(value, "SILENT", "SAY SOMETHING", "LISTENING", "HEAR ME")) intent = DialogueIntent.Silence;
         else if (ContainsAny(value, "I AGREE", "SOUNDS FAIR", "ACCEPT THAT", "WE AGREE")) intent = DialogueIntent.Agreement;
-        else if (ContainsAny(value, "I REFUSE", "WILL NOT", "CANNOT DO", "NOT ALLOWED")) intent = DialogueIntent.Refusal;
         else if (affect == UserAffect.Hostile) intent = DialogueIntent.Hostility;
         else intent = DialogueIntent.Unknown;
 

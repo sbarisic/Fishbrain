@@ -74,7 +74,7 @@ public static class Cognition
         {
             DialogueIntent.GameFact => ResponseAction.CallTool,
             DialogueIntent.Unknown => ResponseAction.Clarify,
-            DialogueIntent.Refusal or DialogueIntent.Hostility => ResponseAction.Refuse,
+            DialogueIntent.Hostility => ResponseAction.Refuse,
             _ => ResponseAction.Respond
         };
     }

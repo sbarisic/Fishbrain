@@ -1,48 +1,63 @@
 # Fishbrain
 
-Fishbrain is a deliberately tiny, hackable character-level GPT written in C# and
-.NET 10 for short video-game NPC conversations. It is CPU-only and has no external
-NuGet dependencies. The project is based on the idea demonstrated by
-[martinskuta/microgpt](https://github.com/martinskuta/microgpt), adapted to teach
-explicit dialogue perception, persistent NPC behavior, and local C# tool calls.
+Fishbrain is a deliberately tiny, hackable GPT-like model written in C# and
+.NET 10 for short video-game NPC conversations. It is CPU-only and has no
+external NuGet dependencies. The project follows the inspectable spirit of
+[martinskuta/microgpt](https://github.com/martinskuta/microgpt), with explicit
+dialogue perception, persistent NPC state, and local C# tool calls.
 
-## Revision 5
+## Revision 6
 
-The model now learns three visible tasks:
+Revision 6 replaces character generation with deterministic word tokens:
 
 ```text
-LANGUAGE -> PERCEPTION -> BEHAVIOR
+INPUT WORDS -> PERCEPTION -> BEHAVIOR -> OUTPUT WORDS
 ```
 
-It uses one 64-dimensional Transformer layer, four attention heads, a
-128-dimensional MLP, and a 64-character attention window. Inputs and replies are
-limited to 256 characters. The vocabulary accepts uppercase letters, digits,
-spaces, and `. , ? ! ' - :`; normal input is canonicalized automatically.
+Every lexical word is one token, including contractions such as `DON'T` and
+hyphenated words. Punctuation is a separate fixed token. Input is always
+normalized to uppercase, so `player hello` and `PLAYER HELLO` have the same
+representation and result. For example:
 
-Three dedicated perception heads predict intent, user affect, and whether the
-utterance expects a response. Perception classifies only the final player turn;
-response generation retains the full dialogue. C# deterministically selects the
-action and updates `NpcState`. A no-response turn returns an empty string while
-still persisting the state change.
-Novel ordinary dialogue uses free character generation; exact memory is used only
-for seen state/input pairs. Dynamic game facts remain tool-only.
+```text
+PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT
 
-Revision 5 is implemented and its first 40,000-step experiment is complete. The
-v4 baseline remains experimental: at the 32,000-step
-milestone, held-out intent macro-F1 was `0.1554` and 12% of sampled replies were
-invalid. The sequential curriculum exposed task interference: perception training
-forgot language, while joint training repaired language and weakened intent
-classification.
+PLAYER | HEY | I | DON'T | WANT | TO | HELP | YOU | , | IDIOT
+```
 
-See [INFO.md](INFO.md) for the complete architecture and token layout, state and
-tool semantics, data policy, v4 measurements, and the implemented v5 experiment.
+The input and response vocabularies are built deterministically from the
+training corpus and stored in the checkpoint. A separate response output head
+avoids spending generation capacity on input-only words and control tokens.
+Unknown words map to `<UNK>`; the model never generates that token.
+
+The model uses one 64-dimensional Transformer layer, four attention heads, a
+128-dimensional MLP, a 128-token context, and a 128-token causal attention
+window. Three dedicated heads predict intent, user affect, and whether the turn
+expects a response. C# then selects the action and updates `NpcState`
+deterministically. Dynamic game facts remain tool-only.
+
+The completed 40,000-step v6 experiment passes `V6_STAGE_GATE`, generates 100%
+valid sampled replies, and passes all seven golden behavior cases. The exact
+hostile refusal now produces:
+
+```text
+PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT
+THEN STEP ASIDE.
+```
+
+Its state is refusal intent, hostile affect, response expected, respond action,
+zero rapport, annoyed mood, de-escalation goal, and cold tone. The same result is
+produced for lowercase input.
+
+See [INFO.md](INFO.md) for the architecture, token layout, data policy,
+experiment measurements, and compatibility details.
 
 ## Build and test
 
 ```powershell
-dotnet build Fishbrain.slnx
-dotnet run --project Fishbrain -- selftest
-dotnet run --project Fishbrain.DataGenerator -- selftest
+dotnet build Fishbrain.slnx -c Release
+dotnet run -c Release --project Fishbrain -- selftest
+dotnet run -c Release --project Fishbrain.DataGenerator -- selftest
 ```
 
 ## Acquire and compile teaching data
@@ -57,88 +72,67 @@ dotnet run --project Fishbrain.DataGenerator -- compile --count 10000 --seed 42
 dotnet run --project Fishbrain.DataGenerator -- audit
 ```
 
-The deterministic corpus contains 6,000 project-owned synthetic contrast rows,
-2,000 OASST1-derived paired-response rows, 800 CLINC150 decision-only rows, and
-1,200 GoEmotions decision-only rows. Accepted OASST1 pairs are expanded across
-several NPC starting states; all variants from one conversation stay in the same
-split. The output is:
+The deterministic corpus contains 6,000 project-owned synthetic rows, 2,000
+OASST1-derived paired-response rows, 800 CLINC150 decision-only rows, and 1,200
+GoEmotions decision-only rows. Related variants remain in one split. The output
+contains 8,000 training, 1,000 validation, and 1,000 test rows.
 
-```text
-datasets/compiled/train.jsonl        8000
-datasets/compiled/validation.jsonl   1000
-datasets/compiled/test.jsonl         1000
-datasets/compiled/review.jsonl       ambiguous rows excluded from training
-```
+## Teach and evaluate v6
 
-## Teach and evaluate v5
-
-Version 5 starts from fresh 64-dimensional weights because its dedicated
-classifier heads cannot be migrated from v4 vocabulary rows. Keep older
-checkpoints as archives.
+V6 requires a fresh checkpoint because the word vocabularies and separate
+response head are incompatible with v2-v5 parameter layouts.
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json
-dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v5-latest.json
-dotnet run -c Release --project Fishbrain -- chat model-v5-latest.json
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate datasets/compiled/test.jsonl model-v6-latest.json
+dotnet run -c Release --project Fishbrain -- chat model-v6-latest.json
 ```
 
-`teach` runs 40,000 deterministic steps: 2,000 language warmup steps, then
-38,000 steps that alternate balanced perception and realization. Calling the
-same command again resumes an incomplete checkpoint with its optimizer, RNG,
-phase, sampler, and best-metric metadata intact.
+`teach` runs 40,000 deterministic steps: 2,000 language warmup steps followed by
+38,000 steps that alternate balanced perception and realization. It saves every
+1,000 steps and maintains atomic `latest`, `best-perception`, and
+`best-realization` checkpoint roles. An incomplete checkpoint resumes with its
+optimizer, RNG, phase, sampler, vocabulary, and best-metric metadata intact.
 
-Pause at evaluation milestones without changing the 40,000-step schedule:
+Pause at a milestone without changing the planned schedule:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 2000
-dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v5-latest.json --planned 40000 --until 10000
+dotnet run -c Release --project Fishbrain -- teach datasets/compiled model-v6-latest.json --planned 40000 --until 10000
 ```
 
-The checkpoint stores the planned schedule and rejects an incompatible
-`--planned` value when resumed. Teaching saves every 1,000 steps and after a
-requested milestone. Every save prints a flushed, absolute, copy-paste PowerShell
-resume command; completed milestones also print evaluation and full-curriculum
-continuation commands.
+Training uses contiguous `double[]` weights and gradients with fused packed
+kernels accelerated by `System.Numerics.Vector<double>`. The readable scalar
+graph remains the inference and forward-reference implementation.
 
-Training uses a packed `double[]` forward/backward implementation with fused
-matrix-vector, attention, RMSNorm, ReLU, cross-entropy, and Adam kernels. Its hot
-loops use hardware-accelerated `System.Numerics.Vector<double>` without gathering
-from scalar objects. The readable scalar graph remains the inference and forward
-reference implementation. On the development machine, the identical step-7,000
-to step-7,100 Release fixture improved from 15.611 to 2.164 seconds (7.21x).
+### Final v6 measurements
 
-The chat CLI prints the NPC reply together with intent, affect, response
-expectation, action, rapport, mood, topic, goal, and tone.
+| Metric | Result |
+|---|---:|
+| Intent accuracy / macro-F1 | 0.9205 / 0.9240 |
+| Affect accuracy / macro-F1 | 0.8750 / 0.8865 |
+| Response-expected F1 | 0.9987 |
+| Action accuracy | 0.9975 |
+| Realization loss | 1.7615 |
+| Invalid / empty / overlength output | 0% / 0% / 0% |
+| Synthetic intent accuracy / macro-F1 | 1.0000 / 1.0000 |
+| External intent accuracy / macro-F1 | 0.7500 / 0.5913 |
+| Golden behavior cases | 7 / 7 |
 
-At each 1,000-step milestone, teaching reports task-specific perception and
-realization metrics. It saves atomic `latest`, `best-perception`, and
-`best-realization` checkpoint roles.
-
-### Experimental status
-
-- The first v5 run completed all 40,000 steps. Full test evaluation measured
-  intent macro-F1 `0.6184`, affect macro-F1 `0.8045`, expected-response F1
-  `0.9936`, action accuracy `0.8850`, and realization loss `1.8091`.
-- Direct/history intent macro-F1 reached `0.6047`/`0.6489`. Of 100 generated
-  replies, 2% were invalid, none were empty, and none exceeded the length limit.
-- The staged and release gates still fail because output validity is not yet
-  perfect and only one of six golden contrast cases passes.
-
-The committed v4 checkpoints preserve the historical results but are not loaded
-by the v5 runtime. Local v5 datasets and checkpoints remain ignored by Git. See
-[INFO.md](INFO.md#revision-5-implementation) for the full milestone and gate
-record.
+`V6_STAGE_GATE` passes. The stricter long-term `RELEASE_GATE` remains failed
+because external-source intent macro-F1 is below its 0.70 target. The recommended
+interactive checkpoint is `model-v6-latest.json`; model files and compiled data
+remain ignored by Git.
 
 ## API
 
 ```csharp
-var brain = Brain.Load("model-v5-latest.json");
+var brain = Brain.Load("model-v6-latest.json");
 var state = NpcState.Initial;
 
-ReplyResult result = brain.Reply("PLAYER HELLO, HOW ARE YOU?", state);
+ReplyResult result = brain.Reply("player hello, how are you?", state);
 state = result.State;
 
-Console.WriteLine(result.Text);
+Console.WriteLine(result.Text);       // Always uppercase.
 Console.WriteLine(result.Perception);
 ```
 
@@ -161,6 +155,7 @@ can invoke at most one registered synchronous tool, and failures return
 ## Limits
 
 Fishbrain is an educational toy, not a general-purpose language model. Its tiny
-capacity and project-scale corpus are useful for experiments, NPC barks, and
-understanding the whole stack—not for factual, medical, legal, safety-critical,
-or current-information answers.
+capacity and project-scale corpus suit experiments, NPC barks, and learning the
+whole stack—not factual, medical, legal, safety-critical, or current-information
+answers. Checkpoint vocabularies are corpus-specific, and unseen words lose their
+identity through `<UNK>`.
