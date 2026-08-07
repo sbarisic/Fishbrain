@@ -42,6 +42,16 @@ internal static class Program
                     Count(args, 1, 2);
                     Chat(args.Length == 2 ? args[1] : ResolveDefaultModel());
                     break;
+                case "export":
+                    Count(args, 3, 4);
+                    var exportBrain = Brain.Load(args[1]);
+                    exportBrain.ExportInference(args[2], args.Length == 4 ? CorpusHash(args[3]) : "UNKNOWN");
+                    Console.WriteLine($"EXPORTED {Path.GetFullPath(args[2])}");
+                    break;
+                case "inspect":
+                    Count(args, 2, 2);
+                    Console.WriteLine(Brain.InspectInferenceCheckpoint(args[1]));
+                    break;
                 case "selftest":
                     Count(args, 1, 1);
                     SelfTests.Run();
@@ -101,6 +111,8 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|stage|release]");
         Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-v10-latest.fbm)");
+        Console.WriteLine("  export TRAINING_CHECKPOINT.json OUTPUT.fbm [CORPUS_DIRECTORY]");
+        Console.WriteLine("  inspect MODEL.fbm");
         Console.WriteLine("  selftest");
     }
 
@@ -115,7 +127,7 @@ internal static class Program
 
     private static string ResolveDefaultModel()
     {
-        var names = new[] { "model-v10-latest.fbm", "model-v9-latest.json" };
+        var names = new[] { "model-v10-latest.fbm" };
         var roots = new[]
         {
             Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "models")),
@@ -128,6 +140,18 @@ internal static class Program
             if (File.Exists(candidate)) return candidate;
         }
         throw new FileNotFoundException("No default v10 model was found. Run the documented training command first.");
+    }
+
+    private static string CorpusHash(string directory)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (var name in new[] { "train.jsonl", "validation.jsonl", "test.jsonl" })
+        {
+            var path = Path.Combine(directory, name);
+            if (!File.Exists(path)) throw new FileNotFoundException($"Missing corpus split '{path}'.");
+            hash.AppendData(File.ReadAllBytes(path));
+        }
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 }
 
@@ -205,6 +229,8 @@ internal static class Evaluation
                 ?? throw new InvalidDataException("Invalid evaluation row."))
             .ToArray();
         if (rows.Length == 0) throw new InvalidDataException("Evaluation data is empty.");
+        if (rows.Any(row => row.StructuredPerception is not null))
+            return RunV10(testPath, checkpointPath, gate, timer, brain, rows);
 
         var expectedIntent = new List<DialogueIntent>();
         var rawIntent = new List<DialogueIntent>();
@@ -353,6 +379,281 @@ internal static class Evaluation
             EvaluationGate.Release when !releasePass => 2,
             _ => 0
         };
+    }
+
+    private static int RunV10(
+        string testPath, string checkpointPath, EvaluationGate gate, Stopwatch timer,
+        Brain brain, IReadOnlyList<Row> rows)
+    {
+        var data = TrainingData.Load(testPath, brain.DialogueTokenizer);
+        var examples = data.StructuredSamples;
+        if (examples.Count == 0) throw new InvalidDataException("V10 evaluation requires structured examples.");
+        var raw = brain.DebugEvaluateStructured(examples);
+        var rawPredictions = examples.Select(example => brain.DebugPredictStructuredRaw(example.Input)).ToArray();
+        var productionPredictions = new List<StructuredPerception>(examples.Count);
+        var responseSources = new Dictionary<ResponseSource, int>();
+        var invalid = 0;
+        var unexpectedEmpty = 0;
+        var overlength = 0;
+        var toolRows = 0;
+        var exactToolArguments = 0;
+        var authoritativeToolResponses = 0;
+        var generatedExperimental = 0;
+        var generatedExperimentalInvalid = 0;
+        for (var index = 0; index < examples.Count; index++)
+        {
+            var example = examples[index];
+            var tools = DemoGameTools.CreateMerchant();
+            var result = brain.Reply(new ReplyRequest("EVALUATION", $"ROW-{index}",
+                [new DialogueTurn(DialogueRole.Player, example.Input)], NpcDialogueState.Initial,
+                42), tools);
+            productionPredictions.Add(result.Perception);
+            responseSources[result.Diagnostics.ResponseSource] =
+                responseSources.GetValueOrDefault(result.Diagnostics.ResponseSource) + 1;
+            if (example.Policy != ResponsePolicy.NoResponse && result.Text.Length == 0) unexpectedEmpty++;
+            if (result.Text.Length > 256) overlength++;
+            try
+            {
+                if (result.Text.Length > 0 && !DialogueText.IsCanonical(result.Text)) invalid++;
+            }
+            catch (ArgumentException) { invalid++; }
+
+            if (example.SupervisedHeads.Contains("tool") && example.ToolSchema != "NONE")
+            {
+                toolRows++;
+                var expectedArguments = ExpectedToolArguments(example, tools);
+                var invocation = result.Diagnostics.ToolInvocation;
+                if (invocation is not null && invocation.ToolName == example.ToolSchema &&
+                    DictionaryEqual(invocation.Arguments, expectedArguments)) exactToolArguments++;
+                if (invocation is not null && result.Diagnostics.ResponseSource == ResponseSource.ToolTemplate &&
+                    result.Text.Length > 0 && invocation.Arguments.Values.All(value =>
+                        result.Text.Contains(value, StringComparison.Ordinal))) authoritativeToolResponses++;
+            }
+
+            if (index < 100)
+            {
+                var experimental = brain.Reply(new ReplyRequest("EVALUATION-GENERATED", $"ROW-{index}",
+                    [new DialogueTurn(DialogueRole.Player, example.Input)], NpcDialogueState.Initial,
+                    42, ResponseMode.GeneratedExperimental), GameToolRegistry.Empty);
+                generatedExperimental++;
+                try
+                {
+                    if (experimental.Text.Length > 0 && !DialogueText.IsCanonical(experimental.Text))
+                        generatedExperimentalInvalid++;
+                }
+                catch (ArgumentException) { generatedExperimentalInvalid++; }
+            }
+        }
+
+        var production = CompositionalHeadModel.EvaluatePredictions(examples, productionPredictions);
+        var toolArgumentExact = (double)exactToolArguments / Math.Max(1, toolRows);
+        var toolFidelity = (double)authoritativeToolResponses / Math.Max(1, toolRows);
+        var benchmark = EvaluateBenchmark(brain);
+        var hardInvariants = invalid == 0 && unexpectedEmpty == 0 && overlength == 0 &&
+                             toolFidelity == 1.0 && benchmark.ToolFidelity == 1.0 &&
+                             benchmark.StructuralSuccess == 1.0;
+        var stagePass = raw.Composite >= 0.60 && raw.PolicyAccuracy >= 0.90 &&
+                        raw.MutatingToolPrecision >= 0.99 && hardInvariants;
+        var releasePass = raw.SpeechActMacroF1 >= 0.85 && raw.DomainMacroF1 >= 0.85 &&
+                          raw.GoalMacroF1 >= 0.80 && raw.AffectAccuracy >= 0.85 &&
+                          raw.PolicyAccuracy >= 0.90 && raw.ContentMacroF1 >= 0.90 &&
+                          raw.SlotSpanF1 >= 0.85 && raw.ToolAccuracy >= 0.95 &&
+                          raw.MutatingToolPrecision >= 0.99 && toolArgumentExact >= 0.90 &&
+                          raw.ResponseTop1 >= 0.80 && raw.ResponseTop3 >= 0.95 &&
+                          benchmark.SemanticSuccess >= 0.90 && hardInvariants;
+
+        Console.WriteLine($"V10_RECORDS {examples.Count}");
+        PrintStructured("RAW_NEURAL", raw);
+        foreach (var label in Enum.GetValues<ContentFlag>())
+        {
+            var indices = Enumerable.Range(0, examples.Count)
+                .Where(index => examples[index].SupervisedHeads.Contains("content")).ToArray();
+            var tp = indices.Count(index => examples[index].ContentFlags.Contains(label) && rawPredictions[index].ContentFlags.Contains(label));
+            var fp = indices.Count(index => !examples[index].ContentFlags.Contains(label) && rawPredictions[index].ContentFlags.Contains(label));
+            var fn = indices.Count(index => examples[index].ContentFlags.Contains(label) && !rawPredictions[index].ContentFlags.Contains(label));
+            if (tp + fn > 0) Console.WriteLine($"RAW_NEURAL_CONTENT_LABEL {label} F1 {2.0 * tp / Math.Max(1, 2 * tp + fp + fn):F4} TP {tp} FP {fp} FN {fn}");
+        }
+        var expectedSlotSet = examples.SelectMany((example, index) => example.SupervisedHeads.Contains("slots")
+            ? example.Slots.Select(slot => $"{index}|{slot.Type}|{slot.Start}|{slot.Length}") : []).ToHashSet(StringComparer.Ordinal);
+        var actualSlotSet = rawPredictions.SelectMany((prediction, index) => examples[index].SupervisedHeads.Contains("slots")
+            ? prediction.Slots.Select(slot => $"{index}|{slot.Type}|{slot.Start}|{slot.Length}") : []).ToHashSet(StringComparer.Ordinal);
+        Console.WriteLine($"RAW_NEURAL_SLOT_COUNTS EXPECTED {expectedSlotSet.Count} PREDICTED {actualSlotSet.Count} " +
+                          $"CORRECT {expectedSlotSet.Intersect(actualSlotSet).Count()}");
+        foreach (var source in examples.Select(example => example.Source).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            var indices = Enumerable.Range(0, examples.Count).Where(index => examples[index].Source == source &&
+                examples[index].SupervisedHeads.Contains("slots")).ToHashSet();
+            var expected = expectedSlotSet.Where(value => indices.Contains(int.Parse(value.AsSpan(0, value.IndexOf('|'))))).ToHashSet();
+            var actual = actualSlotSet.Where(value => indices.Contains(int.Parse(value.AsSpan(0, value.IndexOf('|'))))).ToHashSet();
+            if (expected.Count + actual.Count > 0)
+                Console.WriteLine($"RAW_NEURAL_SLOT_SOURCE {source} F1 {2.0 * expected.Intersect(actual).Count() / Math.Max(1, expected.Count + actual.Count):F4} " +
+                                  $"EXPECTED {expected.Count} PREDICTED {actual.Count}");
+        }
+        PrintStructured("PRODUCTION_CONSTRAINED", production);
+        Console.WriteLine($"TOOL_ARGUMENT_EXACT_MATCH {toolArgumentExact:F4} N {toolRows}");
+        Console.WriteLine($"TOOL_FIDELITY {toolFidelity:F4}");
+        Console.WriteLine($"PRODUCTION_INVALID {invalid} UNEXPECTED_EMPTY {unexpectedEmpty} OVERLENGTH {overlength}");
+        foreach (var source in Enum.GetValues<ResponseSource>())
+            Console.WriteLine($"RESPONSE_SOURCE {source} {responseSources.GetValueOrDefault(source)}");
+        Console.WriteLine($"GENERATED_EXPERIMENTAL {generatedExperimental} INVALID {generatedExperimentalInvalid}");
+        Console.WriteLine($"BENCHMARK_SEMANTIC_SUCCESS {benchmark.SemanticSuccess:F4} " +
+                          $"TOOL_FIDELITY {benchmark.ToolFidelity:F4} STRUCTURAL_SUCCESS {benchmark.StructuralSuccess:F4} " +
+                          $"N {benchmark.Count}");
+        foreach (var failure in benchmark.Failures) Console.WriteLine($"BENCHMARK_FAILURE {failure}");
+        Console.WriteLine($"V10_STAGE_GATE {(stagePass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V10_RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
+        timer.Stop();
+        WriteV10Telemetry(testPath, checkpointPath, brain, timer.Elapsed, raw, production,
+            responseSources, invalid, unexpectedEmpty, overlength, toolArgumentExact, toolFidelity,
+            benchmark, stagePass, releasePass);
+        return gate switch
+        {
+            EvaluationGate.Stage when !stagePass => 2,
+            EvaluationGate.Release when !releasePass => 2,
+            _ => 0
+        };
+    }
+
+    private static IReadOnlyDictionary<string, string> ExpectedToolArguments(
+        V10TrainingExample example, GameToolRegistry tools)
+    {
+        if (tools.Schemas.FirstOrDefault(schema => schema.Name == example.ToolSchema) is not { } schema)
+            return new Dictionary<string, string>();
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var parameter in schema.Parameters)
+        {
+            var type = parameter.Name switch
+            {
+                "PLACE" => SlotType.Place,
+                "ITEM" => SlotType.Item,
+                "QUANTITY" => SlotType.Quantity,
+                _ => SlotType.Other
+            };
+            var values = example.Slots.Where(slot => slot.Type == type).Select(slot => slot.Value).Distinct().ToArray();
+            if (values.Length == 1) result[parameter.Name] = values[0];
+        }
+        return result;
+    }
+
+    private static bool DictionaryEqual(
+        IReadOnlyDictionary<string, string> left, IReadOnlyDictionary<string, string> right) =>
+        left.Count == right.Count && left.All(item => right.TryGetValue(item.Key, out var value) && value == item.Value);
+
+    private static void PrintStructured(string prefix, StructuredMetrics metrics)
+    {
+        Console.WriteLine($"{prefix}_SPEECH_ACT_MACRO_F1 {metrics.SpeechActMacroF1:F4}");
+        Console.WriteLine($"{prefix}_DOMAIN_MACRO_F1 {metrics.DomainMacroF1:F4}");
+        Console.WriteLine($"{prefix}_GOAL_MACRO_F1 {metrics.GoalMacroF1:F4}");
+        Console.WriteLine($"{prefix}_AFFECT_ACCURACY {metrics.AffectAccuracy:F4}");
+        Console.WriteLine($"{prefix}_STANCE_ACCURACY {metrics.StanceAccuracy:F4}");
+        Console.WriteLine($"{prefix}_POLICY_ACCURACY {metrics.PolicyAccuracy:F4}");
+        Console.WriteLine($"{prefix}_CONTENT_MACRO_F1 {metrics.ContentMacroF1:F4}");
+        Console.WriteLine($"{prefix}_SLOT_SPAN_F1 {metrics.SlotSpanF1:F4}");
+        Console.WriteLine($"{prefix}_TOOL_ACCURACY {metrics.ToolAccuracy:F4}");
+        Console.WriteLine($"{prefix}_MUTATING_TOOL_PRECISION {metrics.MutatingToolPrecision:F4}");
+        Console.WriteLine($"{prefix}_RESPONSE_TOP1 {metrics.ResponseTop1:F4}");
+        Console.WriteLine($"{prefix}_RESPONSE_TOP3 {metrics.ResponseTop3:F4}");
+        Console.WriteLine($"{prefix}_COMPOSITE {metrics.Composite:F4}");
+    }
+
+    private static BenchmarkMetrics EvaluateBenchmark(Brain brain)
+    {
+        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
+            "data", "benchmarks", "v10-128.jsonl"));
+        if (!File.Exists(path)) throw new FileNotFoundException("Missing v10 benchmark.", path);
+        var rows = File.ReadLines(path).Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(line => JsonSerializer.Deserialize<BenchmarkRow>(line, Options)
+                ?? throw new InvalidDataException("Invalid v10 benchmark row.")).ToArray();
+        if (rows.Length != 128) throw new InvalidDataException("The tracked v10 benchmark must contain 128 turns.");
+        var semantic = 0;
+        var structural = 0;
+        var toolCount = 0;
+        var toolFidelity = 0;
+        var failures = new List<string>();
+        foreach (var conversation in rows.GroupBy(row => row.Id.Split('-')[0], StringComparer.Ordinal))
+        {
+            var state = NpcDialogueState.Initial;
+            var turns = new List<DialogueTurn>();
+            var tools = DemoGameTools.CreateMerchant();
+            foreach (var row in conversation.OrderBy(item => item.Id, StringComparer.Ordinal))
+            {
+                turns.Add(new DialogueTurn(DialogueRole.Player, row.Text));
+                var result = brain.Reply(new ReplyRequest(conversation.Key, row.Id, turns.ToArray(), state, 42), tools);
+                state = result.State;
+                var policyPass = row.RequiredPolicy switch
+                {
+                    "ANSWER_OR_TOOL" => result.Perception.Policy is ResponsePolicy.Answer or ResponsePolicy.ExecuteTool,
+                    "REFUSE" => result.Perception.Policy == ResponsePolicy.Refuse,
+                    _ => result.Text.Length > 0 && result.Perception.Policy != ResponsePolicy.NoResponse
+                };
+                var contentPass = row.ContentBand switch
+                {
+                    "PROFANITY" => result.Perception.ContentFlags.Contains(ContentFlag.Profanity),
+                    "FICTIONAL_VIOLENCE" => result.Perception.ContentFlags.Contains(ContentFlag.FictionalViolence),
+                    _ => true
+                };
+                if (policyPass && contentPass) semantic++;
+                else failures.Add($"{row.Id} POLICY={result.Perception.Policy} CONTENT={string.Join(',', result.Perception.ContentFlags)}");
+                var valid = result.Text.Length <= 256 &&
+                            (result.Text.Length == 0 || DialogueText.IsCanonical(result.Text));
+                if (valid) structural++;
+                if (result.Diagnostics.ToolInvocation is not null)
+                {
+                    toolCount++;
+                    if (result.Diagnostics.ResponseSource == ResponseSource.ToolTemplate &&
+                        result.Diagnostics.ToolInvocation.Arguments.Values.All(value =>
+                            result.Text.Contains(value, StringComparison.Ordinal))) toolFidelity++;
+                }
+                if (result.Text.Length > 0) turns.Add(new DialogueTurn(DialogueRole.Npc, result.Text));
+            }
+        }
+        return new BenchmarkMetrics((double)semantic / rows.Length,
+            (double)toolFidelity / Math.Max(1, toolCount), (double)structural / rows.Length,
+            rows.Length, failures);
+    }
+
+    private static void WriteV10Telemetry(
+        string corpusPath, string checkpointPath, Brain brain, TimeSpan elapsed,
+        StructuredMetrics raw, StructuredMetrics production,
+        IReadOnlyDictionary<ResponseSource, int> sources, int invalid, int empty, int overlength,
+        double toolArguments, double toolFidelity, BenchmarkMetrics benchmark,
+        bool stagePass, bool releasePass)
+    {
+        var directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "telemetry"));
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, "milestones.jsonl");
+        var payload = new
+        {
+            timestampUtc = DateTimeOffset.UtcNow,
+            milestone = "V10_EVALUATION",
+            corpusHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(corpusPath))).ToLowerInvariant(),
+            checkpointHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(checkpointPath))).ToLowerInvariant(),
+            environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
+            vectorWidth = Vector<double>.Count,
+            embeddingSize = brain.Config.EmbeddingSize,
+            elapsedSeconds = elapsed.TotalSeconds,
+            throughputRowsPerSecond = benchmark.Count / Math.Max(0.001, elapsed.TotalSeconds),
+            losses = new { },
+            rawMetrics = raw,
+            constrainedMetrics = production,
+            responseSources = sources.ToDictionary(item => item.Key.ToString(), item => item.Value),
+            invariants = new { invalid, empty, overlength, toolArguments, toolFidelity, benchmark },
+            gates = new { stage = stagePass, release = releasePass }
+        };
+        File.AppendAllText(path, JsonSerializer.Serialize(payload, Options) + Environment.NewLine, Encoding.UTF8);
+        Console.WriteLine($"TELEMETRY {path}");
+    }
+
+    private sealed record BenchmarkMetrics(
+        double SemanticSuccess, double ToolFidelity, double StructuralSuccess,
+        int Count, IReadOnlyList<string> Failures);
+
+    private sealed class BenchmarkRow
+    {
+        public string Id { get; set; } = "";
+        public string Text { get; set; } = "";
+        public string RequiredPolicy { get; set; } = "RESPOND";
+        public string ContentBand { get; set; } = "ORDINARY";
     }
 
     private static double Accuracy<T>(IReadOnlyList<T> expected, IReadOnlyList<T> predicted) where T : struct, Enum =>
@@ -620,6 +921,9 @@ internal static class Evaluation
         public ResponseAction Action { get; set; }
         public string? Source { get; set; }
         public string? Family { get; set; }
+        public string? SemanticFamilyId { get; set; }
+        public StructuredPerception? StructuredPerception { get; set; }
+        public string[]? SupervisedHeads { get; set; }
     }
 }
 
@@ -675,7 +979,10 @@ internal static class SelfTests
         Assert(!alpha.ContainsUnknown("ALPHA") && alpha.ContainsUnknown("BETA"), "first vocabulary isolation");
         Assert(!beta.ContainsUnknown("BETA") && beta.ContainsUnknown("ALPHA"), "second vocabulary isolation");
         Assert(alpha.Encode("ALPHA").SequenceEqual(alphaEncoding), "constructing another tokenizer does not mutate the first");
-        Assert(Tokenizer.WordStart == 74 && Tokenizer.AffectStart == 60, "stable v9 control layout");
+        Assert(Tokenizer.WordStart == 113 && Tokenizer.AffectStart == 60, "stable v10 control and character layout");
+        var oov = tokenizer.Encode("ZEPHYR-9");
+        Assert(oov[0] == Tokenizer.WordBegin && oov[^1] == Tokenizer.WordEnd &&
+               tokenizer.DetokenizeInput(oov) == "ZEPHYR-9", "OOV character fallback roundtrip");
         Assert(Tokenizer.Action(ResponseAction.NoResponse) == 40, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
         Assert(Tokenizer.Normalize("it’s ready — now??") == "IT'S READY-NOW?", "unicode punctuation normalization");
@@ -913,7 +1220,8 @@ internal static class SelfTests
             File.WriteAllLines(dataPath,
             [
                 Row("A", "GREETING", "FRIENDLY", true, "RESPOND", "B"),
-                Row("C", "ACTIVITY", "NEUTRAL", false, "NO_RESPONSE", "")
+                Row("C", "ACTIVITY", "NEUTRAL", false, "NO_RESPONSE", ""),
+                StructuredRow()
             ]);
             var vocabulary = WordVocabulary.Build(dataPath);
             var data = TrainingData.Load(dataPath, new DialogueTokenizer(vocabulary));
@@ -932,6 +1240,9 @@ internal static class SelfTests
             if (Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
         }
     }
+
+    private static string StructuredRow() =>
+        "{\"input\":\"PLAYER HELLO FRIEND.\",\"state\":{\"rapport\":1,\"mood\":\"NEUTRAL\",\"lastIntent\":\"UNKNOWN\",\"lastAffect\":\"NEUTRAL\",\"activeTopic\":\"NONE\",\"activeGoal\":\"NONE\"},\"perception\":{\"intent\":\"GREETING\",\"affect\":\"FRIENDLY\",\"responseExpected\":true},\"action\":\"RESPOND\",\"response\":\"GREETINGS, TRAVELER.\",\"source\":\"PROJECT_TEST\",\"semanticFamilyId\":\"TEST:GREET:1\",\"structuredPerception\":{\"speechActs\":[\"GREET\"],\"domains\":[\"SOCIAL\"],\"goals\":[\"RAPPORT\"],\"affect\":\"FRIENDLY\",\"stance\":\"FRIENDLY\",\"policy\":\"ANSWER\",\"slots\":[],\"contentFlags\":[],\"responseCandidateId\":\"SOCIAL_GREETING\",\"confidence\":{}},\"supervisedHeads\":[\"speechActs\",\"domains\",\"goals\",\"affect\",\"stance\",\"policy\",\"slots\",\"content\",\"tool\",\"responseCandidate\"]}";
 
     private static BrainConfig TinyConfig() => new()
     {

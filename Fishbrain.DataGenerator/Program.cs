@@ -15,9 +15,15 @@ internal static class Program
                     await CorpusPipeline.FetchAsync(options);
                     return 0;
                 case "compile":
-                    CorpusPipeline.Compile(options);
+                    V10CorpusPipeline.Compile(options);
                     return 0;
                 case "audit":
+                    V10CorpusPipeline.Audit(options);
+                    return 0;
+                case "compile-v9":
+                    CorpusPipeline.Compile(options);
+                    return 0;
+                case "audit-v9":
                     CorpusPipeline.Audit(options);
                     return 0;
                 case "selftest" when args.Length == 1:
@@ -30,7 +36,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"ERROR {exception.Message}");
+            Console.Error.WriteLine($"ERROR {exception}");
             return 1;
         }
     }
@@ -39,7 +45,7 @@ internal static class Program
     {
         Console.WriteLine("FISHBRAIN TEACHING DATA");
         Console.WriteLine("  fetch [--manifest data/sources.json] [--raw data/raw]");
-        Console.WriteLine("  compile [--count 10000] [--seed 42] [--raw data/raw] [--output data/compiled]");
+        Console.WriteLine("  compile [--count 30000] [--seed 42] [--raw data/raw] [--output data/compiled]");
         Console.WriteLine("  audit [--input data/compiled] [--manifest data/sources.json]");
         Console.WriteLine("  selftest");
     }
@@ -57,7 +63,7 @@ internal sealed record CliOptions(
     {
         var rootManifest = Path.Combine("data", "sources.json");
         var manifest = File.Exists(rootManifest) ? rootManifest : Path.Combine(AppContext.BaseDirectory, "sources.json");
-        var result = new CliOptions(manifest, Path.Combine("data", "raw"), Path.Combine("data", "compiled"), Path.Combine("data", "compiled"), 10_000, 42);
+        var result = new CliOptions(manifest, Path.Combine("data", "raw"), Path.Combine("data", "compiled"), Path.Combine("data", "compiled"), 30_000, 42);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < args.Length; index += 2)
         {

@@ -20,7 +20,7 @@
       "revision": "828f8093932c8fe6ca7936c3d2e52903b1c523de",
       "license": "CC-BY-3.0",
       "attribution": "An Evaluation Dataset for Intent Classification and Out-of-Scope Prediction, Larson et al.",
-      "quota": 800,
+      "quota": 500,
       "files": [
         {
           "path": "clinc150.json",
@@ -30,11 +30,39 @@
       ]
     },
     {
+      "name": "SLURP_TEXT",
+      "revision": "8eb16545762be97ace75334109d73824217311f1",
+      "license": "CC-BY-4.0",
+      "attribution": "SLURP textual annotations, Bastianelli, Vanzo, Swietojanski, and Rieser",
+      "quota": 500,
+      "files": [
+        {
+          "path": "slurp-train.jsonl",
+          "url": "https://raw.githubusercontent.com/pswietojanski/slurp/8eb16545762be97ace75334109d73824217311f1/dataset/slurp/train.jsonl",
+          "sha256": "4a05a3de6c7f028aff298c4a90196e6a3fecd1938d96fb1c125d6fd10d5e301e"
+        }
+      ]
+    },
+    {
+      "name": "MASSIVE_EN",
+      "revision": "1.1",
+      "license": "CC-BY-4.0",
+      "attribution": "MASSIVE 1.1, Amazon Alexa AI and SLURP contributors",
+      "quota": 500,
+      "files": [
+        {
+          "path": "massive-1.1.tar.gz",
+          "url": "https://amazon-massive-nlu-dataset.s3.amazonaws.com/amazon-massive-dataset-1.1.tar.gz",
+          "sha256": "4cba5faa11c71437928e17cb1b9b3d8b8e727e7ea363a3a9a8045e19c0491577"
+        }
+      ]
+    },
+    {
       "name": "GOEMOTIONS",
       "revision": "b24f2136e8ef405b900b5619760126304f190941",
       "license": "Apache-2.0",
       "attribution": "GoEmotions: A Dataset of Fine-Grained Emotions, Demszky et al.",
-      "quota": 1200,
+      "quota": 1000,
       "files": [
         {
           "path": "go-train.tsv",
@@ -50,6 +78,34 @@
           "path": "go-test.tsv",
           "url": "https://raw.githubusercontent.com/google-research/google-research/b24f2136e8ef405b900b5619760126304f190941/goemotions/data/test.tsv",
           "sha256": "0587b2dd8b27b97352adbfc3fb083d46005c8946657fdc2b1ca8b1cc7f1f8be4"
+        }
+      ]
+    },
+    {
+      "name": "TASKMASTER1",
+      "revision": "d92cb6af3005f1dc09c39e75e7daf4a04905e00b",
+      "license": "CC-BY-4.0",
+      "attribution": "Taskmaster-1, Byrne et al., Google LLC",
+      "quota": 1000,
+      "files": [
+        {
+          "path": "taskmaster1-self-dialogs.json",
+          "url": "https://raw.githubusercontent.com/google-research-datasets/Taskmaster/d92cb6af3005f1dc09c39e75e7daf4a04905e00b/TM-1-2019/self-dialogs.json",
+          "sha256": "1e590ed0ccee279e40c2fb9e083d3b9417477c6bfe35ce5b2277167698dd858d"
+        }
+      ]
+    },
+    {
+      "name": "CIVIL_COMMENTS",
+      "revision": "fd8a8ed",
+      "license": "CC0-1.0",
+      "attribution": "Civil Comments, Jigsaw and the Civil Comments contributors",
+      "quota": 1000,
+      "files": [
+        {
+          "path": "civil-comments-validation.parquet",
+          "url": "https://huggingface.co/datasets/google/civil_comments/resolve/main/data/validation-00000-of-00001.parquet?download=true",
+          "sha256": "2e0eb65474e7e1290df8689fc93eea783160c898c09ae15382c0a9662367bd03"
         }
       ]
     }

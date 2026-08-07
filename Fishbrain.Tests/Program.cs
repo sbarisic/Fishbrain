@@ -9,15 +9,21 @@ var tests = new (string Name, Action Test)[]
     ("TOOL FIDELITY", ToolFidelity),
     ("MUTATION IDEMPOTENCY", MutationIdempotency),
     ("TOOL EXCEPTION", ToolException),
-    ("CONCURRENT REPLIES", ConcurrentReplies)
+    ("CONCURRENT REPLIES", ConcurrentReplies),
+    ("DETERMINISTIC SAMPLING", DeterministicSampling),
+    ("OOV SLOT PRESERVATION", OovSlotPreservation),
+    ("MULTI INTENT", MultiIntent),
+    ("STATE CONSISTENCY", StateConsistency),
+    ("TOOL SCHEMA VALIDATION", ToolSchemaValidation),
+    ("COMPACT CHECKPOINT", CompactCheckpoint)
 };
 foreach (var (name, test) in tests) { test(); Console.WriteLine($"PASS {name}"); }
 Console.WriteLine($"PASS ALL {tests.Length} RUNTIME TESTS");
 
 static Brain TestBrain() => Brain.CreateForTesting(new BrainConfig
 {
-    EmbeddingSize = 8, HeadCount = 2, MlpSize = 12, ContextLength = 16,
-    AttentionWindow = 16, PositionPeriod = 16, MaximumOutputLength = 8, Seed = 17
+    EmbeddingSize = 8, HeadCount = 2, MlpSize = 12, ContextLength = 64,
+    AttentionWindow = 64, PositionPeriod = 64, MaximumOutputLength = 8, Seed = 17
 });
 
 static ReplyRequest Request(string text, NpcDialogueState? state = null, string turnId = "1") =>
@@ -26,8 +32,10 @@ static ReplyRequest Request(string text, NpcDialogueState? state = null, string 
 
 static void StructuredRoles()
 {
-    var result = TestBrain().Reply(Request("where is the npc inn?"), DemoGameTools.CreateMerchant());
-    Assert(result.Text == "I CANNOT LOCATE NPC INN.", "literal role words remain utterance text");
+    var result = TestBrain().Reply(
+        Request("where is the npc inn? npc hello."),
+        DemoGameTools.CreateMerchant());
+    Assert(result.Text == "I CANNOT LOCATE THE NPC INN.", $"literal role words remain utterance text: {result.Text}");
     Assert(result.Text == result.Text.ToUpperInvariant(), "response normalization");
 }
 
@@ -43,7 +51,7 @@ static void BoundedHistory()
     var result = TestBrain().Reply(request, DemoGameTools.CreateMerchant());
     Assert(result.Diagnostics.PackedTurnCount < turns.Length, "history bounded by complete turns");
     Assert(result.Diagnostics.PackedTokenCount >= 5, "current turn always retained");
-    Assert(result.Text == "INN IS NORTH BY THE FOUNTAIN.", "current turn survives packing");
+    Assert(result.Text == "THE INN IS NORTH BY THE FOUNTAIN.", "current turn survives packing");
 }
 
 static void ToolFidelity()
@@ -77,7 +85,77 @@ static void ConcurrentReplies()
     var tools = DemoGameTools.CreateMerchant();
     var outputs = new ReplyResult[32];
     Parallel.For(0, outputs.Length, index => outputs[index] = brain.Reply(Request("where is the inn?"), tools));
-    Assert(outputs.All(result => result.Text == "INN IS NORTH BY THE FOUNTAIN."), "32-way replies are independent");
+    Assert(outputs.All(result => result.Text == "THE INN IS NORTH BY THE FOUNTAIN."), "32-way replies are independent");
+}
+
+static void DeterministicSampling()
+{
+    var brain = TestBrain();
+    var request = Request("tell me about the road") with { Seed = 917, ResponseMode = ResponseMode.GeneratedExperimental };
+    var first = brain.Reply(request, GameToolRegistry.Empty);
+    var second = brain.Reply(request, GameToolRegistry.Empty);
+    Assert(first.Text == second.Text && first.Perception.Policy == second.Perception.Policy,
+        "same request seed is deterministic");
+}
+
+static void OovSlotPreservation()
+{
+    var result = TestBrain().Reply(Request("where is Zephyr-9?"), DemoGameTools.CreateMerchant());
+    Assert(result.Diagnostics.OovWords.Contains("ZEPHYR-9"), "OOV word reported");
+    Assert(result.Diagnostics.ToolInvocation?.Arguments["PLACE"] == "ZEPHYR-9", "OOV span copied to tool");
+    Assert(result.Text == "I CANNOT LOCATE ZEPHYR-9.", "OOV authoritative field rendered unchanged");
+}
+
+static void MultiIntent()
+{
+    var result = TestBrain().Reply(Request("where is the inn and buy 2 rope?"), DemoGameTools.CreateMerchant());
+    Assert(result.Perception.SpeechActs.Count >= 2, "multiple speech acts retained");
+    Assert(result.Plan.PendingActions.Count == 1, "second recognized tool goal queued");
+}
+
+static void StateConsistency()
+{
+    var brain = TestBrain();
+    var state = NpcDialogueState.Initial;
+    for (var index = 0; index < 20; index++)
+    {
+        var result = brain.Reply(Request(index % 2 == 0 ? "hello friend" : "you are an idiot", state, index.ToString()),
+            GameToolRegistry.Empty);
+        state = result.State;
+        state.Validate();
+        Assert(state.ActiveDomains.Count <= 4 && state.ActiveGoals.Count <= 4 && state.PendingActions.Count <= 3,
+            "state bounds preserved");
+    }
+}
+
+static void ToolSchemaValidation()
+{
+    var threw = false;
+    try { _ = new GameToolRegistry([new InvalidSchemaTool()]); }
+    catch (ArgumentException) { threw = true; }
+    Assert(threw, "invalid schema rejected at registry construction");
+}
+
+static void CompactCheckpoint()
+{
+    var directory = Path.Combine(Path.GetTempPath(), "fishbrain-v10-checkpoint-" + Guid.NewGuid().ToString("N"));
+    Directory.CreateDirectory(directory);
+    try
+    {
+        var path = Path.Combine(directory, "model.fbm");
+        TestBrain().ExportInference(path, new string('a', 64));
+        var loaded = Brain.Load(path);
+        var result = loaded.Reply(Request("where is Zephyr-9?"), DemoGameTools.CreateMerchant());
+        Assert(result.Text == "I CANNOT LOCATE ZEPHYR-9.", "compact checkpoint roundtrip");
+        var bytes = File.ReadAllBytes(path);
+        bytes[^1] ^= 0x5a;
+        File.WriteAllBytes(path, bytes);
+        var corruptRejected = false;
+        try { _ = Brain.Load(path); }
+        catch (InvalidDataException) { corruptRejected = true; }
+        Assert(corruptRejected, "corrupt compact checkpoint rejected");
+    }
+    finally { Directory.Delete(directory, true); }
 }
 
 static void Assert(bool condition, string message)
@@ -110,4 +188,10 @@ sealed class ThrowingBuyTool : IGameTool
 {
     public ToolSchema Schema { get; } = CountingBuyTool.BuySchema();
     public GameToolResult Execute(GameToolInvocation invocation) => throw new InvalidOperationException("DEMO FAILURE");
+}
+
+sealed class InvalidSchemaTool : IGameTool
+{
+    public ToolSchema Schema { get; } = new("bad name", [], [], false, []);
+    public GameToolResult Execute(GameToolInvocation invocation) => new(true, new Dictionary<string, string>());
 }

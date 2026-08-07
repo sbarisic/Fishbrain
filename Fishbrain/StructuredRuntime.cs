@@ -35,7 +35,7 @@ public sealed partial class Brain
         var packed = PackTurns(request.Turns);
         var current = DialogueText.Normalize(request.Turns[^1].Text);
         var legacyState = ToLegacyState(request.State);
-        var rawLegacy = DebugPredictRawPerception(current, legacyState);
+        var rawLegacy = DebugPredictRawCurrentTurn(current, legacyState);
         var constrainedLegacy = Cognition.Constrain(rawLegacy, current);
         var slots = ExtractSlots(current);
         var raw = ComposePerception(rawLegacy, current, slots, tools, constrained: false);
@@ -53,6 +53,14 @@ public sealed partial class Brain
                 Confidence = MergeConfidence(perception.Confidence, "TOOL", toolDecision.Confidence)
             };
             if (!toolDecision.CanExecute) constraints.Add("TOOL_CONFIDENCE_OR_SLOT_GATE");
+        }
+        else if (_structuredHeads.Updates > 0 &&
+                 perception.Policy is not (ResponsePolicy.Clarify or ResponsePolicy.Refuse or ResponsePolicy.NoResponse) &&
+                 (BelowCalibration(perception, "POLICY", "policy") ||
+                  BelowCalibration(perception, "RESPONSE_CANDIDATE", "responseCandidate")))
+        {
+            perception = perception with { Policy = ResponsePolicy.Clarify, ResponseCandidateId = "CLARIFY" };
+            constraints.Add("VALIDATION_CALIBRATED_CONFIDENCE_GATE");
         }
 
         GameToolInvocation? invocation = null;
@@ -81,7 +89,7 @@ public sealed partial class Brain
         }
         else if (request.ResponseMode == ResponseMode.GeneratedExperimental)
         {
-            text = DebugReplyWithoutMemory(current, legacyState).Text;
+            text = GeneratedReply(packed.Text, current, legacyState, request.Seed).Text;
             source = ResponseSource.GeneratedExperimental;
         }
         else if (perception.Policy == ResponsePolicy.Clarify)
@@ -121,6 +129,11 @@ public sealed partial class Brain
         return new ReplyResult(text, state, raw, perception, plan, tone, diagnostics);
     }
 
+    private bool BelowCalibration(StructuredPerception perception, string confidenceName, string schemaName) =>
+        perception.Confidence.TryGetValue(confidenceName, out var confidence) &&
+        _confidenceCalibration.TryGetValue(schemaName, out var calibration) &&
+        confidence < calibration.Threshold;
+
     private static void ValidateRequest(ReplyRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.ConversationId) || request.ConversationId.Length > 128)
@@ -146,6 +159,10 @@ public sealed partial class Brain
             var role = turns[index].Role == DialogueRole.Player ? "PLAYER" : "NPC";
             var complete = role + " " + DialogueText.TerminateTurn(normalized);
             var tokens = _tokenizer.Encode(complete).Length;
+            if (index == turns.Count - 1 && tokens > Config.ContextLength)
+                throw new ArgumentException(
+                    $"The current turn requires {tokens} tokens, but the model context allows {Config.ContextLength}.",
+                    nameof(turns));
             if (index != turns.Count - 1 && count + tokens > Config.ContextLength) break;
             retained.Add((complete, tokens));
             count += tokens;
@@ -158,6 +175,8 @@ public sealed partial class Brain
         TurnPerception legacy, string current, IReadOnlyList<DialogueSlot> slots,
         GameToolRegistry tools, bool constrained)
     {
+        var learned = _structuredHeads.Updates > 0 ? PredictStructuredCurrentTurn(current, slots) : null;
+        if (learned is not null && !constrained) return learned;
         var speechActs = SpeechActsFor(legacy.Intent, current);
         var domains = DomainsFor(legacy.Intent, current);
         var goals = GoalsFor(legacy.Intent, current);
@@ -185,8 +204,56 @@ public sealed partial class Brain
             ["TOOL"] = tool.Confidence,
             ["RESPONSE_CANDIDATE"] = 0.90
         });
-        return new StructuredPerception(speechActs, domains, goals, legacy.Affect, stance, policy,
+        var ruleBased = new StructuredPerception(speechActs, domains, goals, legacy.Affect, stance, policy,
             slots, content, tool.Name, CandidateIdFor(legacy.Intent, policy, domains), confidence);
+        if (learned is null) return ruleBased;
+        var constrainedPolicy = learned.Policy;
+        if (tool.Name is not null)
+            constrainedPolicy = tool.CanExecute ? ResponsePolicy.ExecuteTool : ResponsePolicy.Clarify;
+        else if (ruleBased.Policy == ResponsePolicy.Refuse)
+            constrainedPolicy = ResponsePolicy.Refuse;
+        else if (constrainedPolicy == ResponsePolicy.ExecuteTool)
+            constrainedPolicy = ResponsePolicy.Clarify;
+        else if (constrainedPolicy == ResponsePolicy.NoResponse &&
+                 !current.Contains("ONLY LOOKING AROUND", StringComparison.Ordinal))
+            constrainedPolicy = ResponsePolicy.Acknowledge;
+        if (current.EndsWith('?') &&
+            constrainedPolicy == ResponsePolicy.Acknowledge)
+            constrainedPolicy = ResponsePolicy.Answer;
+        if (current.Contains("JUMP OFF", StringComparison.Ordinal))
+            constrainedPolicy = ResponsePolicy.Refuse;
+        return learned with
+        {
+            SpeechActs = learned.SpeechActs.Concat(ruleBased.SpeechActs).Distinct().Order().ToArray(),
+            Domains = learned.Domains.Concat(ruleBased.Domains).Distinct().Take(4).Order().ToArray(),
+            Goals = learned.Goals.Concat(ruleBased.Goals).Distinct().Take(4).Order().ToArray(),
+            Policy = constrainedPolicy,
+            ResponseCandidateId = constrainedPolicy == learned.Policy
+                ? learned.ResponseCandidateId
+                : CandidateIdFor(legacy.Intent, constrainedPolicy, ruleBased.Domains),
+            Slots = slots,
+            ContentFlags = learned.ContentFlags.Concat(ruleBased.ContentFlags).Distinct().Order().ToArray(),
+            Confidence = constrainedPolicy == learned.Policy
+                ? learned.Confidence
+                : MergeConfidence(learned.Confidence, "POLICY", confidence["POLICY"])
+        };
+    }
+
+    private StructuredPerception PredictStructuredCurrentTurn(
+        string current, IReadOnlyList<DialogueSlot> preservedSlots)
+    {
+        const int playerPrefixLength = 7;
+        var shifted = preservedSlots.Select(slot => slot with
+        {
+            Start = checked(slot.Start + playerPrefixLength)
+        }).ToArray();
+        var learned = _structuredHeads.Predict("PLAYER " + current, shifted);
+        return learned with
+        {
+            Slots = learned.Slots.Where(slot => slot.Start >= playerPrefixLength)
+                .Select(slot => slot with { Start = slot.Start - playerPrefixLength })
+                .ToArray()
+        };
     }
 
     private static IReadOnlyList<SpeechAct> SpeechActsFor(DialogueIntent intent, string text)
@@ -277,7 +344,7 @@ public sealed partial class Brain
     {
         var padded = " " + text + " ";
         var flags = new HashSet<ContentFlag>();
-        if (new[] { " FUCK ", " SHIT ", " BITCH ", " IDIOT ", " ASSHOLE " }.Any(padded.Contains)) flags.Add(ContentFlag.Profanity);
+        if (new[] { " FUCK ", " SHIT ", " BITCH ", " IDIOT ", " ASSHOLE ", " DAMN ", " HELL " }.Any(padded.Contains)) flags.Add(ContentFlag.Profanity);
         if (new[] { " KILL ", " ATTACK ", " SHOOT ", " STAB ", " FIGHT " }.Any(padded.Contains)) flags.Add(ContentFlag.FictionalViolence);
         if (new[] { " GUTS ", " DISEMBOWEL ", " DECAPITATE ", " GORE " }.Any(padded.Contains)) flags.Add(ContentFlag.GraphicViolence);
         if (new[] { " OR ELSE ", " I WILL KILL ", " YOU WILL DIE " }.Any(padded.Contains)) flags.Add(ContentFlag.Threat);
@@ -303,9 +370,10 @@ public sealed partial class Brain
     {
         var slots = new List<DialogueSlot>();
         AddMatches(SlotType.Quantity, "\\b[0-9]+\\b", 1.0);
-        AddCapture(SlotType.Place, "\\bWHERE (?:IS|ARE) (?:THE )?(?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)(?:[?.!]|$)", 0.99);
-        AddCapture(SlotType.Item, "\\b(?:PRICE|COST) OF (?:THE )?(?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)(?:[?.!]|$)", 0.99);
-        AddCapture(SlotType.Item, "\\b(?:BUY|SELL|PURCHASE) (?:ME )?(?:[0-9]+ )?(?:SOME )?(?<VALUE>[A-Z][A-Z '\\-]{0,31}?)(?:[?.!]|$)", 0.98);
+        const string end = "(?=, CASE[0-9A-F]+[?.!]|[?.!]|$)";
+        AddCapture(SlotType.Place, "\\bWHERE (?:IS|ARE) (?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)" + end, 0.99);
+        AddCapture(SlotType.Item, "\\b(?:PRICE|COST) OF (?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)" + end, 0.99);
+        AddCapture(SlotType.Item, "\\b(?:BUY|SELL|PURCHASE) (?:ME )?(?:[0-9]+ )?(?:SOME )?(?<VALUE>[A-Z][A-Z '\\-]{0,31}?)" + end, 0.98);
         foreach (var item in new[] { "IRON SWORD", "HEALTH POTION", "ROPE", "WARES" })
         {
             var index = text.IndexOf(item, StringComparison.Ordinal);
@@ -334,7 +402,7 @@ public sealed partial class Brain
         var padded = " " + text + " ";
         var recognized = new List<string>();
         if (padded.Contains(" WHERE IS ", StringComparison.Ordinal) || padded.Contains(" WHERE ARE ", StringComparison.Ordinal)) recognized.Add("LOOKUP_LOCATION");
-        if (new[] { " LIST WARES ", " SHOW ME YOUR WARES ", " WHAT DO YOU SELL ", " NEED WARES ", " SOME WARES " }.Any(padded.Contains)) recognized.Add("LIST_WARES");
+        if (new[] { " LIST WARES", " SHOW ME YOUR WARES", " WHAT DO YOU SELL", " NEED WARES", " SOME WARES" }.Any(padded.Contains)) recognized.Add("LIST_WARES");
         if (padded.Contains(" PRICE ", StringComparison.Ordinal) || padded.Contains(" COST ", StringComparison.Ordinal)) recognized.Add("LOOKUP_PRICE");
         if (padded.Contains(" BUY ", StringComparison.Ordinal) || padded.Contains(" PURCHASE ", StringComparison.Ordinal)) recognized.Add("BUY");
         if (padded.Contains(" SELL ", StringComparison.Ordinal) && !padded.Contains(" WHAT DO YOU SELL ", StringComparison.Ordinal)) recognized.Add("SELL");

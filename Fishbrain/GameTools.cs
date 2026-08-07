@@ -218,7 +218,12 @@ public static class DemoGameTools
         public GameToolResult Execute(GameToolInvocation invocation)
         {
             var place = invocation.Arguments["PLACE"];
-            var direction = place switch { "INN" => "NORTH BY THE FOUNTAIN", "MARKET" => "EAST OF THE GATE", _ => null };
+            var direction = place switch
+            {
+                "INN" or "THE INN" => "NORTH BY THE FOUNTAIN",
+                "MARKET" or "THE MARKET" => "EAST OF THE GATE",
+                _ => null
+            };
             return direction is null
                 ? new(false, Fields(("PLACE", place)), "NOT_FOUND")
                 : new(true, Fields(("PLACE", place), ("DIRECTION", direction)));
