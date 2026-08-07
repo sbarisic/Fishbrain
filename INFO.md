@@ -47,6 +47,7 @@ The language model uses one Transformer layer with these settings:
 | Context length | 128 tokens |
 | Attention window | 128 tokens |
 | Maximum generated output | 64 tokens |
+| Compositional feature width | 512 |
 | Planned steps | 40,000 |
 | Structured updates | 90 percent |
 | Generation updates | 10 percent |
@@ -60,6 +61,8 @@ The structured model uses hashed sparse features. Independent heads use the corr
 - Slots use token-level BIO softmax cross-entropy.
 
 Validation calibrates confidence thresholds. Production clarifies when a required decision is below its threshold.
+
+The completed release curriculum selected step 39,000 as `model-v10-latest.fbm`. Its held-out raw composite score is 0.9748, slot span F1 is 0.8828, and the release gate passes. The compiler, checkpoint, training telemetry, and evaluation telemetry use corpus hash `416df5f33ceb58f65f6f590290c261fe7981c7a67fc7a03df7209a1528c0bd12`.
 
 ## Perception schema
 

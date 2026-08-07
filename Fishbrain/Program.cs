@@ -503,9 +503,9 @@ internal static class Evaluation
         Console.WriteLine($"V10_STAGE_GATE {(stagePass ? "PASS" : "FAIL")}");
         Console.WriteLine($"V10_RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
         timer.Stop();
-        WriteV10Telemetry(testPath, checkpointPath, brain, timer.Elapsed, raw, production,
+        WriteV10Telemetry(checkpointPath, brain, timer.Elapsed, raw, production,
             responseSources, invalid, unexpectedEmpty, overlength, toolArgumentExact, toolFidelity,
-            benchmark, stagePass, releasePass);
+            benchmark, examples.Count, stagePass, releasePass);
         return gate switch
         {
             EvaluationGate.Stage when !stagePass => 2,
@@ -613,11 +613,11 @@ internal static class Evaluation
     }
 
     private static void WriteV10Telemetry(
-        string corpusPath, string checkpointPath, Brain brain, TimeSpan elapsed,
+        string checkpointPath, Brain brain, TimeSpan elapsed,
         StructuredMetrics raw, StructuredMetrics production,
         IReadOnlyDictionary<ResponseSource, int> sources, int invalid, int empty, int overlength,
         double toolArguments, double toolFidelity, BenchmarkMetrics benchmark,
-        bool stagePass, bool releasePass)
+        int recordCount, bool stagePass, bool releasePass)
     {
         var directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "telemetry"));
         Directory.CreateDirectory(directory);
@@ -626,13 +626,13 @@ internal static class Evaluation
         {
             timestampUtc = DateTimeOffset.UtcNow,
             milestone = "V10_EVALUATION",
-            corpusHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(corpusPath))).ToLowerInvariant(),
+            corpusHash = brain.DebugCorpusHash,
             checkpointHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(checkpointPath))).ToLowerInvariant(),
             environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
             vectorWidth = Vector<double>.Count,
             embeddingSize = brain.Config.EmbeddingSize,
             elapsedSeconds = elapsed.TotalSeconds,
-            throughputRowsPerSecond = benchmark.Count / Math.Max(0.001, elapsed.TotalSeconds),
+            throughputRowsPerSecond = recordCount / Math.Max(0.001, elapsed.TotalSeconds),
             losses = new { },
             rawMetrics = raw,
             constrainedMetrics = production,

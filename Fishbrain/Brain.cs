@@ -469,6 +469,7 @@ public sealed partial class Brain
         return Forward(tokens, 0).Select(row => row.Select(value => value.Data).ToArray()).ToArray();
     }
     internal double[] DebugWeights() => (double[])_weights.Clone();
+    internal string DebugCorpusHash => _corpusHash;
 
     internal TurnPerception DebugPredictPerception(string dialogue, NpcState state)
     {
@@ -867,6 +868,20 @@ public sealed partial class Brain
             .SelectMany(index => familiesBySource.Where(source => index < source.Length).Select(source => source[index]))
             .ToArray();
         if (families.Length == 0) throw new InvalidDataException("V10 teaching requires structured samples.");
+        var slotFamiliesBySource = data.StructuredSamples
+            .Where(example => example.SupervisedHeads.Contains("slots"))
+            .GroupBy(example => example.Source, StringComparer.Ordinal)
+            .OrderBy(group => group.Key, StringComparer.Ordinal)
+            .Select(source => source.GroupBy(example => example.SemanticFamilyId, StringComparer.Ordinal)
+                .OrderBy(group => group.Key, StringComparer.Ordinal)
+                .Select(group => group.OrderBy(example => example.Input, StringComparer.Ordinal).ToArray())
+                .ToArray())
+            .ToArray();
+        if (slotFamiliesBySource.Length == 0)
+            throw new InvalidDataException("V10 teaching requires slot-supervised samples.");
+        var slotFamilies = Enumerable.Range(0, slotFamiliesBySource.Max(source => source.Length))
+            .SelectMany(index => slotFamiliesBySource.Where(source => index < source.Length).Select(source => source[index]))
+            .ToArray();
 
         var timer = System.Diagnostics.Stopwatch.StartNew();
         var intervalStart = timer.Elapsed;
@@ -886,6 +901,10 @@ public sealed partial class Brain
                 var progress = (double)_step / Math.Max(1, plannedSteps - 1);
                 var learningRate = 0.14 * (1.0 - 0.75 * progress);
                 loss = _structuredHeads.Train(example, learningRate);
+                var slotFamily = slotFamilies[structuredStep % slotFamilies.Length];
+                var slotExample = slotFamily[DeterministicIndex(structuredStep / slotFamilies.Length,
+                    slotFamily.Length, 1877)];
+                loss = (loss + _structuredHeads.TrainSlotsOnly(slotExample, learningRate)) * 0.5;
                 _step++;
             }
             else

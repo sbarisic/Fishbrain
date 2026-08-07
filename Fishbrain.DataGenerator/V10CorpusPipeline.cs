@@ -115,7 +115,7 @@ internal static class V10CorpusPipeline
         AuditLeakage(rows);
         AuditBenchmark(rows, options.InputPath);
         Console.WriteLine("V10 AUDIT OK 30000 RECORDS");
-        Console.WriteLine($"CORPUS_SHA256 {CorpusHash(rows)}");
+        Console.WriteLine($"CORPUS_SHA256 {CorpusHash(options.InputPath)}");
         Report(rows);
     }
 
@@ -782,11 +782,12 @@ internal static class V10CorpusPipeline
         .Split(DialogueText.Normalize(text).Where(character => !char.IsLetterOrDigit(character) && character is not '\'' and not '-').Distinct().ToArray(),
             StringSplitOptions.RemoveEmptyEntries));
 
-    private static string CorpusHash(IEnumerable<V10CorpusRow> rows)
+    private static string CorpusHash(string directory)
     {
-        var canonical = string.Join('\n', rows.OrderBy(row => row.Split).ThenBy(row => row.Source)
-            .ThenBy(row => row.GroupId).Select(row => JsonSerializer.Serialize(row, Json)));
-        return Convert.ToHexString(SHA256.HashData(Utf8.GetBytes(canonical))).ToLowerInvariant();
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        foreach (var name in new[] { "train.jsonl", "validation.jsonl", "test.jsonl" })
+            hash.AppendData(File.ReadAllBytes(Path.Combine(directory, name)));
+        return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
     private static string SourceChecksum(SourceDefinition definition) =>

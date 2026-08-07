@@ -21,7 +21,7 @@ internal sealed record V10TrainingExample(
 
 internal sealed class CompositionalHeadModel
 {
-    private const int FeatureCount = 256;
+    private const int FeatureCount = 512;
     private const int SlotClassCount = 1 + 2 * 14;
     private readonly string[] _tools;
     private readonly string[] _candidates;
@@ -82,6 +82,13 @@ internal sealed class CompositionalHeadModel
             loss += train();
             heads++;
         }
+    }
+
+    public double TrainSlotsOnly(V10TrainingExample example, double learningRate)
+    {
+        if (!example.SupervisedHeads.Contains("slots"))
+            throw new ArgumentException("The auxiliary slot pass requires slot supervision.", nameof(example));
+        return TrainSlots(example, learningRate * 0.05);
     }
 
     public StructuredPerception Predict(string input, IReadOnlyList<DialogueSlot> preservedSlots)

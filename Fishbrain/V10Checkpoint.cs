@@ -128,9 +128,33 @@ public sealed partial class Brain
         if (!reader.ReadBytes(V10Magic.Length).SequenceEqual(V10Magic))
             throw new InvalidDataException("Invalid Fishbrain inference checkpoint magic.");
         var length = reader.ReadInt32();
-        var header = Encoding.UTF8.GetString(reader.ReadBytes(length));
+        if (length is <= 0 or > 16_777_216) throw new InvalidDataException("Invalid checkpoint header length.");
+        var headerBytes = reader.ReadBytes(length);
+        var header = JsonSerializer.Deserialize<V10InferenceHeader>(headerBytes)
+            ?? throw new InvalidDataException("Checkpoint header is empty.");
         _ = LoadInferenceCheckpoint(path);
-        return header;
+        return JsonSerializer.Serialize(new
+        {
+            header.Format,
+            header.Version,
+            header.CompletedSteps,
+            header.CorpusHash,
+            CheckpointSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant(),
+            FileBytes = stream.Length,
+            header.Config,
+            VocabularyWords = header.Words.Length,
+            OutputWords = header.OutputWords.Length,
+            LabelSchemas = header.LabelSchemas.ToDictionary(item => item.Key, item => item.Value.Length),
+            ConfidenceCalibration = header.ConfidenceCalibration,
+            ToolSchemas = header.ToolSchemas.Select(schema => schema.Name).ToArray(),
+            ResponseCandidates = header.CandidateCatalog.Select(candidate => candidate.Id).ToArray(),
+            header.TransformerWeightCount,
+            header.StructuredWeightCount,
+            header.StructuredUpdates,
+            header.WeightEncoding,
+            header.WeightsSha256,
+            Integrity = "VALID"
+        }, new JsonSerializerOptions { WriteIndented = true });
     }
 
     private sealed class V10InferenceHeader

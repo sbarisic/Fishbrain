@@ -302,6 +302,8 @@ public sealed partial class Brain
         };
         var padded = " " + text + " ";
         AddDomain([" BUY ", " SELL ", " PRICE ", " WARES ", " TRADE "], DialogueDomain.TradeEconomy);
+        AddDomain([" WHAT CAN YOU DO ", " HOW CAN YOU HELP ", " CAN YOU HELP "], DialogueDomain.Assistance);
+        AddDomain([" WHO ARE YOU ", " WHERE ARE YOU FROM "], DialogueDomain.Identity);
         AddDomain([" WHERE ", " ROAD ", " INN ", " MARKET ", " FOLLOW "], DialogueDomain.LocationNavigation);
         AddDomain([" SWORD ", " POTION ", " INVENTORY ", " ITEM "], DialogueDomain.ItemsInventory);
         AddDomain([" QUEST ", " MISSION ", " TASK "], DialogueDomain.QuestTask);
@@ -459,7 +461,7 @@ public sealed partial class Brain
         var eligible = V10Candidates.Where(candidate =>
             candidate.AllowedPolicies.Contains(perception.Policy) &&
             (candidate.AllowedDomains.Count == 0 || candidate.AllowedDomains.Intersect(perception.Domains).Any()) &&
-            !candidate.RequiresToolResult).ToArray();
+            !candidate.RequiresToolResult && CandidateSemanticsMatch(candidate.Id, perception)).ToArray();
         if (eligible.Length == 0) return null;
         var expected = perception.ResponseCandidateId;
         var ranked = eligible.Select(candidate => (Candidate: candidate, Score:
@@ -469,6 +471,19 @@ public sealed partial class Brain
             .OrderByDescending(item => item.Score).ThenBy(item => item.Candidate.Id, StringComparer.Ordinal).First();
         return ranked.Score >= 0.5 ? ranked.Candidate : null;
     }
+
+    private static bool CandidateSemanticsMatch(string candidateId, StructuredPerception perception) =>
+        candidateId switch
+        {
+            "SOCIAL_GREETING" => perception.SpeechActs.Contains(SpeechAct.Greet),
+            "SOCIAL_FAREWELL" => perception.SpeechActs.Contains(SpeechAct.Farewell),
+            "IDENTITY_TRAVELER" => perception.Domains.Contains(DialogueDomain.Identity),
+            "WELLBEING_CALM" => perception.Domains.Contains(DialogueDomain.Wellbeing),
+            "ASSISTANCE_ASK" => perception.Domains.Contains(DialogueDomain.Assistance),
+            "ACTIVITY_HELP" => perception.Domains.Contains(DialogueDomain.Activity),
+            "HOSTILE_BOUNDARY" => perception.Stance == DialogueStance.Hostile,
+            _ => true
+        };
 
     private static string? CandidateIdFor(
         DialogueIntent intent, ResponsePolicy policy, IReadOnlyList<DialogueDomain> domains) => policy switch

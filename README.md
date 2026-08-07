@@ -6,6 +6,27 @@ V10 separates learned perception from game authority. The model predicts speech 
 
 The Transformer has one layer and 64-dimensional embeddings. Production replies use learned candidate ranking and typed tool templates. Free word generation is an experimental mode.
 
+## Current release checkpoint
+
+The tracked `model-v10-latest.fbm` is the best structured checkpoint from the completed 40,000-step curriculum. The selected checkpoint is step 39,000. It is 9,753,313 bytes and has SHA-256 `5b11f3db1759f3885e45151fa4d2ba76b8395ef3b0736db2fd34c7ae6cfea384`.
+
+The release evaluation passed on the 3,000-row held-out split:
+
+| Metric | Result |
+|---|---:|
+| Speech-act macro-F1 | 0.9947 |
+| Domain macro-F1 | 0.9554 |
+| Goal macro-F1 | 0.9759 |
+| Affect accuracy | 0.9706 |
+| Policy accuracy | 1.0000 |
+| Content macro-F1 | 0.9939 |
+| Slot span F1 | 0.8828 |
+| Tool accuracy and mutating precision | 1.0000 |
+| Candidate top-1 and top-3 | 1.0000 |
+| Benchmark semantic assertions | 0.9453 |
+
+Tool argument match, tool fidelity, and benchmark structural invariants are 1.0000. Invalid, unexpected empty, and overlength output counts are zero.
+
 ## Run the latest model
 
 Run these commands from the repository root:
@@ -52,7 +73,7 @@ Console.WriteLine(result.Diagnostics.ResponseSource);
 
 The final structured turn must have the `Player` role. Words such as `PLAYER` and `NPC` inside the text have no structural meaning.
 
-The runtime keeps only complete recent turns that fit the context. It always keeps the current player turn.
+The runtime keeps only complete recent turns that fit the context. It always keeps the current player turn. It rejects a current turn that cannot fit as one complete turn.
 
 ## Response modes
 
