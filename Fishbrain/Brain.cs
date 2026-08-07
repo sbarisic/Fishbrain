@@ -41,7 +41,7 @@ public sealed class BrainConfig
 /// <summary>A deliberately tiny word-level GPT for uppercase video-game dialogue.</summary>
 public sealed class Brain
 {
-    private const int CheckpointVersion = 7;
+    private const int CheckpointVersion = 8;
     private const int TeachingCheckpointInterval = 1_000;
     private const string SafeFallback = "I DO NOT KNOW.";
 
@@ -138,13 +138,13 @@ public sealed class Brain
     {
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
-        if (checkpoint.Version is >= 2 and <= 6)
-            throw new InvalidDataException("Fishbrain v7 requires fresh intent heads, control tokens, and response catalog; retain the older checkpoint as an archive.");
+        if (checkpoint.Version is >= 2 and <= 7)
+            throw new InvalidDataException("Fishbrain v8 requires fresh intent heads and control tokens; retain the older checkpoint as an archive.");
         if (checkpoint.Version != CheckpointVersion)
             throw new InvalidDataException($"Unsupported checkpoint version {checkpoint.Version}.");
         checkpoint.Config.Validate();
         if (checkpoint.Words.Length == 0 || checkpoint.OutputWords.Length == 0)
-            throw new InvalidDataException("The v7 checkpoint does not contain a word vocabulary.");
+            throw new InvalidDataException("The v8 checkpoint does not contain a word vocabulary.");
         var vocabulary = new WordVocabulary(checkpoint.Words, checkpoint.OutputWords);
 
         var brain = new Brain(
@@ -193,7 +193,8 @@ public sealed class Brain
         var input = Tokenizer.Normalize(recentDialogue);
         if (input.Length == 0) throw new ArgumentException("Dialogue cannot be empty.", nameof(recentDialogue));
 
-        var perception = PredictPerception(input);
+        var currentTurn = ExtractCurrentPlayerTurn(input);
+        var perception = Cognition.Constrain(PredictPerception(input), currentTurn);
         var expectedAction = Cognition.ActionFor(perception);
         var decision = new TurnDecision(expectedAction);
 
@@ -250,7 +251,7 @@ public sealed class Brain
 
         var text = GenerateText(responsePrompt, temperature);
         if (decision.Action != ResponseAction.CallTool)
-            text = SelectSafeResponse(text, input, perception.Intent, transition.Tone);
+            text = SelectSafeResponse(text, input, perception.Intent, decision.Action, transition.Tone);
         return new ReplyResult(text, transition.State, perception, decision, transition.Tone);
     }
 
@@ -420,7 +421,7 @@ public sealed class Brain
         state.Validate();
         var input = Tokenizer.Normalize(dialogue);
         if (input.Length == 0) throw new ArgumentException("Dialogue cannot be empty.", nameof(dialogue));
-        return PredictPerception(input);
+        return Cognition.Constrain(PredictPerception(input), ExtractCurrentPlayerTurn(input));
     }
 
     internal static string ExtractCurrentPlayerTurn(string normalizedDialogue)
@@ -1150,6 +1151,7 @@ public sealed class Brain
         string generated,
         string input,
         DialogueIntent intent,
+        ResponseAction action,
         ResponseTone tone)
     {
         var key = DialogueKeys.Catalog(intent, tone);
@@ -1162,7 +1164,16 @@ public sealed class Brain
                 .Order(StringComparer.Ordinal)
                 .ToArray();
         }
-        if (candidates.Length == 0) return generated;
+        if (candidates.Length == 0)
+        {
+            return action switch
+            {
+                ResponseAction.Clarify => "PLEASE EXPLAIN.",
+                ResponseAction.Refuse => "I WILL NOT DO THAT.",
+                ResponseAction.Respond => "I HEAR YOU.",
+                _ => generated
+            };
+        }
 
         var currentTurn = ExtractCurrentPlayerTurn(input);
         var inputWords = Tokenizer.Lex(currentTurn)
@@ -1461,21 +1472,21 @@ internal static class Tokenizer
     public const int RapportStart = 8;
     public const int MoodStart = 12;
     public const int IntentStart = 16;
-    public const int ActionStart = 33;
-    public const int ToneStart = 38;
-    public const int TopicStart = 42;
-    public const int GoalStart = 49;
-    public const int AffectStart = 56;
-    public const int ExpectedFalse = 61;
-    public const int ExpectedTrue = 62;
-    public const int Period = 63;
-    public const int Comma = 64;
-    public const int Question = 65;
-    public const int Exclamation = 66;
-    public const int Colon = 67;
-    public const int ArgumentSeparator = 68;
-    public const int Unknown = 69;
-    public const int WordStart = 70;
+    public const int ActionStart = 34;
+    public const int ToneStart = 39;
+    public const int TopicStart = 43;
+    public const int GoalStart = 50;
+    public const int AffectStart = 58;
+    public const int ExpectedFalse = 63;
+    public const int ExpectedTrue = 64;
+    public const int Period = 65;
+    public const int Comma = 66;
+    public const int Question = 67;
+    public const int Exclamation = 68;
+    public const int Colon = 69;
+    public const int ArgumentSeparator = 70;
+    public const int Unknown = 71;
+    public const int WordStart = 72;
 
     private static WordVocabulary? _current;
 

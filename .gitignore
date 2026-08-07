@@ -11,6 +11,7 @@ data/models/model.*.json
 data/models/model-v5-*.json
 data/models/model-v6-*.json
 data/models/model-v7-*.json
+data/models/model-v8-*.json
 data/logs/
 
 # Downloaded and externally-derived teaching corpora stay local.

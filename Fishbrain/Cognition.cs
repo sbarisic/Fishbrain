@@ -5,13 +5,13 @@ public enum DialogueIntent
 {
     Unknown, Greeting, Farewell, Wellbeing, Identity, Assistance, Clarification,
     Activity, Silence, Gratitude, Apology, Agreement, Refusal, Hostility, GameFact,
-    Directive, Statement
+    Directive, Statement, UnsafeDirective
 }
 public enum UserAffect { Neutral, Friendly, Distressed, Frustrated, Hostile }
 public enum ResponseAction { Respond, Clarify, CallTool, Refuse, NoResponse }
 public enum ResponseTone { Neutral, Warm, Calm, Cold }
 public enum DialogueTopic { None, Self, Wellbeing, Assistance, Activity, Relationship, GameFact }
-public enum NpcGoal { None, BuildRapport, HelpPlayer, ClarifyRequest, ResolveGameFact, EndConversation, Deescalate }
+public enum NpcGoal { None, BuildRapport, HelpPlayer, ClarifyRequest, ResolveGameFact, EndConversation, Deescalate, AvoidDanger }
 
 public sealed record NpcState(
     byte Rapport,
@@ -71,6 +71,41 @@ public static class DialogueText
 
 public static class Cognition
 {
+    public static TurnPerception Constrain(TurnPerception perception, string? canonicalTurn = null)
+    {
+        ArgumentNullException.ThrowIfNull(perception);
+        Validate(perception);
+        var constrained = perception;
+        if (canonicalTurn is not null)
+        {
+            var paddedTurn = " " + canonicalTurn + " ";
+            var explicitCorrection = paddedTurn.Contains(" NOT WHAT ", StringComparison.Ordinal) ||
+                                     paddedTurn.Contains(" NOT THANKING ", StringComparison.Ordinal);
+            if (explicitCorrection)
+            {
+                constrained = constrained with
+                {
+                    Intent = DialogueIntent.Clarification,
+                    ResponseExpected = true,
+                    Affect = constrained.Affect is UserAffect.Neutral or UserAffect.Friendly
+                        ? UserAffect.Frustrated
+                        : constrained.Affect
+                };
+            }
+        }
+
+        constrained = constrained.Intent switch
+        {
+            DialogueIntent.Statement => constrained with { ResponseExpected = false },
+            DialogueIntent.Greeting or DialogueIntent.Farewell or
+                DialogueIntent.Directive or DialogueIntent.UnsafeDirective => constrained with { ResponseExpected = true },
+            _ => constrained
+        };
+        return canonicalTurn?.EndsWith("?", StringComparison.Ordinal) == true
+            ? constrained with { ResponseExpected = true }
+            : constrained;
+    }
+
     public static ResponseAction ActionFor(TurnPerception perception)
     {
         ArgumentNullException.ThrowIfNull(perception);
@@ -80,7 +115,7 @@ public static class Cognition
         {
             DialogueIntent.GameFact => ResponseAction.CallTool,
             DialogueIntent.Unknown => ResponseAction.Clarify,
-            DialogueIntent.Hostility => ResponseAction.Refuse,
+            DialogueIntent.Hostility or DialogueIntent.UnsafeDirective => ResponseAction.Refuse,
             _ => ResponseAction.Respond
         };
     }
@@ -124,7 +159,7 @@ public static class Cognition
             DialogueIntent.Identity => DialogueTopic.Self,
             DialogueIntent.Wellbeing => DialogueTopic.Wellbeing,
             DialogueIntent.Assistance or DialogueIntent.Clarification => DialogueTopic.Assistance,
-            DialogueIntent.Activity or DialogueIntent.Directive => DialogueTopic.Activity,
+            DialogueIntent.Activity or DialogueIntent.Directive or DialogueIntent.UnsafeDirective => DialogueTopic.Activity,
             DialogueIntent.GameFact => DialogueTopic.GameFact,
             DialogueIntent.Unknown => state.ActiveTopic,
             _ => DialogueTopic.Relationship
@@ -135,6 +170,7 @@ public static class Cognition
             DialogueIntent.Greeting or DialogueIntent.Silence or DialogueIntent.Gratitude or
                 DialogueIntent.Apology or DialogueIntent.Agreement => NpcGoal.BuildRapport,
             DialogueIntent.Assistance or DialogueIntent.Directive => NpcGoal.HelpPlayer,
+            DialogueIntent.UnsafeDirective => NpcGoal.AvoidDanger,
             DialogueIntent.Clarification or DialogueIntent.Unknown => NpcGoal.ClarifyRequest,
             DialogueIntent.GameFact => NpcGoal.ResolveGameFact,
             DialogueIntent.Farewell => NpcGoal.EndConversation,

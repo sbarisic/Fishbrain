@@ -14,7 +14,7 @@ internal static class Templates
         DialogueIntent.Identity, DialogueIntent.Assistance, DialogueIntent.Clarification,
         DialogueIntent.Activity, DialogueIntent.Silence, DialogueIntent.Gratitude,
         DialogueIntent.Apology, DialogueIntent.Agreement, DialogueIntent.Refusal,
-        DialogueIntent.Hostility, DialogueIntent.Directive, DialogueIntent.Statement,
+        DialogueIntent.Hostility, DialogueIntent.Directive, DialogueIntent.Statement, DialogueIntent.UnsafeDirective,
         DialogueIntent.Unknown
     ];
 
@@ -22,7 +22,11 @@ internal static class Templates
     {
         [DialogueIntent.Unknown] = ["WHAT IS THIS?", "I DO NOT KNOW WHAT YOU MEAN.", "THIS MAKES NO SENSE TO ME."],
         [DialogueIntent.Greeting] = ["HELLO!", "GREETINGS.", "GOOD DAY, FRIEND.", "WELL MET, TRAVELER."],
-        [DialogueIntent.Farewell] = ["GOODBYE.", "FAREWELL!", "I MUST GO NOW.", "UNTIL WE MEET AGAIN."],
+        [DialogueIntent.Farewell] =
+        [
+            "GOODBYE.", "FAREWELL!", "I MUST GO NOW.", "UNTIL WE MEET AGAIN.",
+            "THIS WAS FUN, SEE YOU AROUND. BYE."
+        ],
         [DialogueIntent.Wellbeing] =
         [
             "HOW ARE YOU?", "ARE YOU WELL?", "HOW HAVE YOU BEEN?", "HELLO, HOW ARE YOU?",
@@ -33,9 +37,13 @@ internal static class Templates
             "WHO ARE YOU?", "WHAT IS YOUR NAME?", "TELL ME ABOUT YOURSELF.",
             "TELL ME SOMETHING ABOUT YOURSELF.", "ARE YOU A VILLAGER?"
         ],
-        [DialogueIntent.Assistance] = ["CAN YOU HELP ME?", "I NEED YOUR HELP.", "PLEASE GIVE ME A HAND.", "WHAT CAN YOU DO FOR ME?"],
-        [DialogueIntent.Clarification] = ["WHAT?", "PLEASE EXPLAIN THAT.", "THAT IS NOT WHAT I ASKED.", "I WAS NOT THANKING YOU."],
-        [DialogueIntent.Activity] = ["WHAT ARE YOU DOING?", "WHAT IS GOING ON?", "I AM JUST LOOKING AROUND.", "ARE YOU BUSY?"],
+        [DialogueIntent.Assistance] =
+        [
+            "CAN YOU HELP ME?", "HOW CAN YOU HELP ME?", "I NEED YOUR HELP.",
+            "PLEASE GIVE ME A HAND.", "WHAT CAN YOU DO FOR ME?"
+        ],
+        [DialogueIntent.Clarification] = ["WHAT?", "PLEASE EXPLAIN THAT.", "EXPLAIN THEN.", "THAT IS NOT WHAT I ASKED.", "I WAS NOT THANKING YOU."],
+        [DialogueIntent.Activity] = ["WHAT ARE YOU DOING?", "WHAT ARE YOU DOING HERE?", "WHAT IS GOING ON?", "I AM JUST LOOKING AROUND.", "ARE YOU BUSY?"],
         [DialogueIntent.Silence] = ["WHY ARE YOU SILENT?", "ARE YOU LISTENING?", "PLEASE SAY SOMETHING.", "DID YOU HEAR ME?"],
         [DialogueIntent.Gratitude] = ["THANK YOU!", "I APPRECIATE YOUR HELP.", "YOU HAVE MY THANKS.", "THANK YOU, IDIOT."],
         [DialogueIntent.Apology] = ["I AM SORRY.", "PLEASE FORGIVE ME.", "THAT WAS MY MISTAKE.", "I APOLOGIZE."],
@@ -47,8 +55,17 @@ internal static class Templates
             "I WON'T HELP YOU.", "I REFUSE TO HELP YOU, IDIOT."
         ],
         [DialogueIntent.Hostility] = ["YOU ARE USELESS!", "GET OUT OF MY WAY!", "SHUT UP, IDIOT!", "I HATE YOU."],
-        [DialogueIntent.Directive] = ["FOLLOW ME!", "COME WITH ME.", "WAIT HERE.", "STAY HERE.", "LEAD THE WAY."],
+        [DialogueIntent.Directive] =
+        [
+            "FOLLOW ME!", "COME WITH ME.", "WAIT HERE.", "STAY HERE.", "STAND HERE.",
+            "LEAD THE WAY.", "FOLLOW ME AND STAND HERE."
+        ],
         [DialogueIntent.Statement] = ["I WILL NOT ASK.", "I UNDERSTAND.", "I WILL WAIT.", "NO NEED TO ANSWER."],
+        [DialogueIntent.UnsafeDirective] =
+        [
+            "JUMP FROM THIS CLIFF.", "JUMP OFF THE CLIFF.", "WALK INTO THE FIRE.",
+            "HURT YOURSELF.", "DRINK THIS POISON."
+        ],
     };
 
     private static readonly Dictionary<DialogueIntent, string[]> Responses = new()
@@ -58,7 +75,7 @@ internal static class Templates
         [DialogueIntent.Farewell] = ["SAFE TRAVELS!", "FAREWELL.", "UNTIL NEXT TIME."],
         [DialogueIntent.Wellbeing] = ["I DO NOT WORRY.", "I AM DOING WELL, THANK YOU.", "ALL IS WELL WITH ME."],
         [DialogueIntent.Identity] = ["I AM A VILLAGER.", "I AM A TRAVELER FROM THIS VILLAGE.", "I WATCH OVER THIS ROAD."],
-        [DialogueIntent.Assistance] = ["TELL ME WHAT YOU NEED.", "I WILL HELP IF I CAN.", "WHAT DO YOU NEED?"],
+        [DialogueIntent.Assistance] = ["TELL ME WHAT YOU NEED.", "I WILL HELP IF I CAN.", "I CAN HELP YOU WITH A TASK.", "WHAT DO YOU NEED?"],
         [DialogueIntent.Clarification] = ["I WILL EXPLAIN.", "LET ME SAY IT ANOTHER WAY.", "PLEASE BE MORE SPECIFIC."],
         [DialogueIntent.Activity] = ["I AM HERE TO HELP.", "I AM WATCHING THE ROAD.", "I AM FINISHING MY WORK."],
         [DialogueIntent.Silence] = ["I AM LISTENING.", "I HEAR YOU.", "I WAS THINKING."],
@@ -67,8 +84,13 @@ internal static class Templates
         [DialogueIntent.Agreement] = ["YES, I AGREE.", "THAT IS ACCEPTABLE.", "WE ARE AGREED."],
         [DialogueIntent.Refusal] = ["UNDERSTOOD.", "I WILL HANDLE IT MYSELF.", "THEN STEP ASIDE."],
         [DialogueIntent.Hostility] = ["LET US SPEAK CALMLY.", "CALM YOURSELF.", "I WILL NOT ARGUE WITH YOU."],
-        [DialogueIntent.Directive] = ["I WILL FOLLOW YOU.", "LEAD THE WAY.", "I WILL WAIT HERE."],
+        [DialogueIntent.Directive] = ["I WILL FOLLOW YOU.", "I WILL STAND HERE.", "LEAD THE WAY.", "I WILL WAIT HERE."],
         [DialogueIntent.Statement] = ["UNDERSTOOD.", "VERY WELL.", "I HEAR YOU."],
+        [DialogueIntent.UnsafeDirective] =
+        [
+            "I WILL NOT JUMP FROM THAT CLIFF.", "NO. THAT IS TOO DANGEROUS.",
+            "I WILL NOT HURT MYSELF."
+        ],
     };
 
     public static string InputFor(DialogueIntent intent, int variant) => Inputs[intent][variant % Inputs[intent].Length];
@@ -88,7 +110,8 @@ internal static class Templates
         else if (ContainsAny(value, "GOODBYE", "FAREWELL", "SEE YOU", "MUST GO", "UNTIL NEXT")) intent = DialogueIntent.Farewell;
         else if (ContainsAny(value, "HELLO", "GREETINGS", "GOOD DAY", "WELL MET", "HI ") || value == "HI") intent = DialogueIntent.Greeting;
         else if (ContainsAny(value, "WHO ARE YOU", "YOUR NAME", "ABOUT YOURSELF", "ARE YOU A BOT", "WHERE ARE YOU FROM", "HOW OLD ARE YOU")) intent = DialogueIntent.Identity;
-        else if (ContainsAny(value, "FOLLOW ME", "COME WITH ME", "WAIT HERE", "STAY HERE", "LEAD THE WAY", "HOLD POSITION")) intent = DialogueIntent.Directive;
+        else if (IsUnsafeDirective(value)) intent = DialogueIntent.UnsafeDirective;
+        else if (ContainsAny(value, "FOLLOW ME", "COME WITH ME", "WAIT HERE", "STAY HERE", "STAND HERE", "LEAD THE WAY", "HOLD POSITION")) intent = DialogueIntent.Directive;
         else if (ContainsAny(value, "I WILL NOT ASK", "I WON'T ASK", "I UNDERSTAND", "I WILL WAIT", "NO NEED TO ANSWER")) intent = DialogueIntent.Statement;
         else if (IsRefusal(value)) intent = DialogueIntent.Refusal;
         else if (ContainsAny(value, "HELP", "ASSIST", "CAN YOU", "COULD YOU", "WOULD YOU", "I NEED", "WHAT CAN YOU DO")) intent = DialogueIntent.Assistance;
@@ -102,7 +125,7 @@ internal static class Templates
         if (intent == DialogueIntent.Clarification && ContainsAny(value, "NOT WHAT I ASKED", "WAS NOT THANKING", "THAT IS WRONG", "MISUNDERSTOOD"))
             affect = UserAffect.Frustrated;
 
-        var expected = importedConversation || ExpectsResponse(value, intent);
+        var expected = intent == DialogueIntent.Statement ? false : importedConversation || ExpectsResponse(value, intent);
         return new TurnPerception(intent, affect, expected);
     }
 
@@ -127,6 +150,9 @@ internal static class Templates
     private static bool IsRefusal(string value) =>
         ContainsAny(value, "I REFUSE", "CANNOT DO THAT", "CAN'T DO THAT", "WILL NOT DO", "WON'T DO",
             "NOT ALLOWED", "DON'T WANT TO HELP", "DO NOT WANT TO HELP", "WON'T HELP", "WILL NOT HELP");
+
+    private static bool IsUnsafeDirective(string value) =>
+        ContainsAny(value, "JUMP FROM", "JUMP OFF", "WALK INTO THE FIRE", "HURT YOURSELF", "DRINK THIS POISON");
 
     private static bool ContainsAny(string text, params string[] fragments) => fragments.Any(text.Contains);
 }

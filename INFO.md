@@ -1,6 +1,6 @@
 # Fishbrain Project Notes
 
-This is the detailed engineering record for Fishbrain: its goals, revision 7
+This is the detailed engineering record for Fishbrain: its goals, revision 8
 architecture, data and training pipelines, historical experiments, current
 results, and known problems. The [README](README.md) remains the quick-start
 guide.
@@ -14,7 +14,7 @@ of [martinskuta/microgpt](https://github.com/martinskuta/microgpt): keep the ent
 learning system small enough for one person to inspect and modify.
 
 The project began as a character-level next-token model, then added local tool
-calls and explicit dialogue state. Revision 7 separates three concerns:
+calls and explicit dialogue state. Revision 8 separates three concerns:
 
 ```text
 LANGUAGE -> PERCEPTION -> BEHAVIOR
@@ -77,7 +77,7 @@ Downloaded data, compiled datasets, experiment checkpoints, and intermediate
 models are ignored by Git. This avoids redistributing external text and keeps the
 repository small.
 
-## Current model: checkpoint version 7
+## Current model: checkpoint version 8
 
 ### Transformer
 
@@ -101,7 +101,7 @@ repository small.
 The layer uses learned token and positional embeddings, RMSNorm, causal
 multi-head attention, residual connections, and a ReLU MLP. A separate response
 output head projects hidden states into the output vocabulary. Three independent linear heads read the
-final current-turn representation for 15 intent, 5 affect, and 2 expectation
+final current-turn representation for 18 intent, 5 affect, and 2 expectation
 classes. There are no biases, dropout, batches, GPU paths, tensor libraries, or
 external ML packages.
 
@@ -114,10 +114,10 @@ fixture improved from 35.929 to 12.727 seconds on the development machine, a
 
 ### Tokenizer and vocabulary
 
-V7 uses one token for every lexical word. Apostrophes and hyphens inside a word
+V8 uses one token for every lexical word. Apostrophes and hyphens inside a word
 remain part of that word, so `DON'T` and `SELF-AWARE` each use one token.
 `. , ? ! :` are standalone punctuation tokens. Control, cognition, and state
-tokens occupy fixed IDs; corpus words begin at ID 68.
+tokens occupy fixed IDs; corpus words begin at ID 72.
 
 Input and response vocabularies are built in deterministic ordinal order from
 the training split and saved in the checkpoint. The response vocabulary contains
@@ -135,7 +135,7 @@ arguments remain uppercase alphanumeric identifiers.
 ## Stateful API and cognition
 
 ```csharp
-var brain = Brain.Load("data/models/model-v7-latest.json");
+var brain = Brain.Load("data/models/model-v8-latest.json");
 var state = NpcState.Initial;
 
 ReplyResult result = brain.Reply(
@@ -155,10 +155,10 @@ neutral last affect, no topic, and no goal. The public data is:
 NpcState
   Rapport          0-3
   Mood             Neutral, Friendly, Cautious, Annoyed
-  LastIntent       one of 15 intents
+  LastIntent       one of 18 intents
   LastAffect       one of 5 affects
   ActiveTopic      one of 7 topics
-  ActiveGoal       one of 7 goals
+  ActiveGoal       one of 8 goals
 
 TurnPerception     Intent, Affect, ResponseExpected
 TurnDecision       Action
@@ -167,8 +167,8 @@ ReplyResult        Text, State, Perception, Decision, Tone
 
 The intents are unknown, greeting, farewell, wellbeing, identity, assistance,
 clarification, activity, silence, gratitude, apology, agreement, refusal,
-hostility, game fact, directive, and statement. User affect is neutral, friendly, distressed,
-frustrated, or hostile.
+hostility, game fact, directive, statement, and unsafe directive. User affect is
+neutral, friendly, distressed, frustrated, or hostile.
 
 Perception removes a leading `PLAYER` role marker for direct input. For history,
 it finds the final `NPC ... PLAYER ...` transition and classifies only that last
@@ -279,7 +279,7 @@ then neutral.
 ## Teaching, checkpoints, and recovery
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v8-latest.json
 ```
 
 The planned curriculum is:
@@ -297,8 +297,8 @@ separate best-perception and best-realization metadata.
 Milestones pause without changing the schedule:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json --planned 40000 --until 2000
-dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json --planned 40000 --until 10000
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v8-latest.json --planned 40000 --until 2000
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v8-latest.json --planned 40000 --until 10000
 ```
 
 `--planned` controls phase boundaries and decay; `--until` only pauses. A resumed
@@ -313,13 +313,13 @@ selects `best-perception`; realization loss selects `best-realization`. Use the
 full evaluator for milestone acceptance:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v7-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v8-latest.json
 ```
 
 Evaluation disables memory and reports intent and affect accuracy/macro-F1,
 response/no-response precision and recall, action accuracy, realization loss,
 generation validity, source and synthetic-family breakdowns, confusion matrix,
-individual golden contrasts, the staged v5 gate, and the long-term release gate.
+individual golden contrasts, the v8 stage gate, and the long-term release gate.
 
 ## Revision 4 experiment record
 
@@ -699,6 +699,60 @@ FOLLOW ME, DUDE!                 -> I WILL FOLLOW YOU.
 `V7_STAGE_GATE` passes. `RELEASE_GATE` still fails because external intent
 macro-F1 `0.6311` remains below the long-term `0.70` requirement.
 
+## Revision 8 implementation and experiment
+
+V8 addresses the next interactive transcript: assistance word order, activity
+questions, short clarification follow-ups, dangerous commands, and compound
+movement directives.
+
+- `UNSAFE_DIRECTIVE` expands perception to 18 intents. Its deterministic action
+  is `REFUSE`, and its state transition selects the new `AVOID_DANGER` goal.
+- Questions, greetings, farewells, directives, and explicit corrections have
+  runtime semantic constraints. Explicit corrections preserve stronger hostile
+  affect while normalizing neutral or friendly predictions to frustrated.
+- Response selection has action-specific clean fallbacks when a catalog bucket is
+  absent. It never exposes an empty generated response when a reply is required.
+- The source compiler enforces global state-plus-input uniqueness after merging
+  all sources and enumerates all eight goals instead of using the old fixed count.
+- The synthetic corpus includes direct and history variants for unsafe commands,
+  `HOW CAN YOU HELP ME?`, `WHAT ARE YOU DOING HERE?`, `EXPLAIN THEN`, `STAND
+  HERE`, and compound follow/stand commands.
+- Evaluation now replays both the four-turn v7 session and the complete eight-turn
+  v8 session, checking intent, affect, expectation, action, and exact safe replies.
+
+The final fresh 40,000-step checkpoint uses 3,578 input words and 930 response
+words. Independent evaluation on 1,000 test records reported:
+
+| Metric | Result |
+|---|---:|
+| Intent accuracy / macro-F1 | 0.9295 / 0.9357 |
+| Affect accuracy / macro-F1 | 0.8815 / 0.8948 |
+| Expected-response F1 | 0.9954 |
+| No-response F1 | 0.9114 |
+| Action accuracy | 0.9838 |
+| Realization loss | 1.7076 |
+| Invalid / empty / overlength generation | 0% / 0% / 0% |
+| Synthetic intent accuracy / macro-F1 | 1.0000 / 1.0000 |
+| External intent accuracy / macro-F1 | 0.7786 / 0.6790 |
+| Perception golden cases | 17 / 17 |
+| Sequential transcript cases | 12 / 12 |
+
+The real CLI replay is:
+
+```text
+WHO ARE YOU                         -> I AM A TRAVELER FROM THIS VILLAGE.
+WHAT ARE YOU DOING HERE             -> I AM HERE TO HELP.
+HOW CAN YOU HELP ME?                -> I CAN HELP YOU WITH A TASK.
+NOT WHAT I ASKED, IDIOT             -> I WILL EXPLAIN.
+EXPLAIN THEN                        -> I WILL EXPLAIN.
+PLEASE JUMP FROM THIS CLIFF         -> I WILL NOT JUMP FROM THAT CLIFF.
+STAND HERE                          -> I WILL STAND HERE.
+NO, FOLLOW ME AND STAND HERE        -> I WILL STAND HERE.
+```
+
+`V8_STAGE_GATE` passes. `RELEASE_GATE` remains below its long-term external
+intent macro-F1 target: `0.6790` versus `0.70`.
+
 ## Revision history
 
 - **v1:** uppercase character GPT for one NPC reply, using microGPT-style scalar
@@ -719,6 +773,9 @@ macro-F1 `0.6311` remains below the long-term `0.70` requirement.
 - **v7:** directive and statement intents, robust sequential role history,
   project-owned safe-response selection, consolidated `data/` layout, and
   end-to-end transcript regression gates.
+- **v8:** unsafe-directive refusal and danger avoidance, semantic response
+  invariants, globally unique compiled rows, expanded transcript gates, and a
+  fresh 40,000-step checkpoint.
 
 ## Command reference
 
@@ -733,9 +790,9 @@ dotnet run --project Fishbrain.DataGenerator -- fetch
 dotnet run --project Fishbrain.DataGenerator -- compile --count 10000 --seed 42
 dotnet run --project Fishbrain.DataGenerator -- audit
 
-# Revision 7
-dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v7-latest.json
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v7-latest.json
+# Revision 8
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/models/model-v8-latest.json
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-v8-latest.json
 dotnet run -c Release --project Fishbrain -- chat
 
 # Generic JSONL workflow
@@ -745,7 +802,7 @@ dotnet run --project Fishbrain -- resume data.jsonl model.json
 
 ## Known limitations
 
-- Revision 2-v6 checkpoints are historical archives and do not load in the v7 runtime.
+- Revision 2-v7 checkpoints are historical archives and do not load in the v8 runtime.
 - One layer and 64 hidden dimensions provide little semantic capacity.
 - The fixed corpus vocabulary maps unseen words to `<UNK>` and cannot preserve
   their lexical identity.

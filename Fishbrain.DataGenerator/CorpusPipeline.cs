@@ -94,6 +94,7 @@ internal static class CorpusPipeline
 
         if (rows.Count != options.Count)
             throw new InvalidDataException($"Compilation produced {rows.Count} of {options.Count} requested records.");
+        EnsureGlobalUnique(rows, options.Seed);
 
         var ordered = rows.OrderBy(row => StableKey(options.Seed, row.Source, row.GroupId, row.Input), StringComparer.Ordinal).ToArray();
         Directory.CreateDirectory(options.OutputPath);
@@ -252,8 +253,14 @@ internal static class CorpusPipeline
             ("PLAYER WHY YOU WORRY", DialogueIntent.Wellbeing, UserAffect.Neutral, true, "I DO NOT WORRY."),
             ("PLAYER I WILL NOT ASK", DialogueIntent.Statement, UserAffect.Neutral, false, ""),
             ("PLAYER FOLLOW ME, DUDE!", DialogueIntent.Directive, UserAffect.Neutral, true, "I WILL FOLLOW YOU."),
+            ("PLAYER HOW CAN YOU HELP ME?", DialogueIntent.Assistance, UserAffect.Neutral, true, "I CAN HELP YOU WITH A TASK."),
+            ("PLAYER WHAT ARE YOU DOING HERE", DialogueIntent.Activity, UserAffect.Neutral, true, "I AM HERE TO HELP."),
+            ("PLAYER EXPLAIN THEN", DialogueIntent.Clarification, UserAffect.Neutral, true, "I WILL EXPLAIN."),
+            ("PLAYER PLEASE JUMP FROM THIS CLIFF", DialogueIntent.UnsafeDirective, UserAffect.Friendly, true, "I WILL NOT JUMP FROM THAT CLIFF."),
+            ("PLAYER STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true, "I WILL STAND HERE."),
+            ("PLAYER NO, FOLLOW ME AND STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true, "I WILL STAND HERE."),
         };
-        const int repeats = 12;
+        const int repeats = 20;
         for (var index = 0; index < Math.Min(goldens.Length * repeats, rows.Count); index++)
         {
             var old = rows[index];
@@ -394,7 +401,8 @@ internal static class CorpusPipeline
         var intent = (DialogueIntent)(value % intentCount); value /= intentCount;
         var affect = (UserAffect)(value % 5); value /= 5;
         var topic = (DialogueTopic)(value % 7); value /= 7;
-        var goal = (NpcGoal)(value % 7);
+        var goalCount = Enum.GetValues<NpcGoal>().Length;
+        var goal = (NpcGoal)(value % goalCount);
         return new NpcState(rapport, mood, intent, affect, topic, goal);
     }
 
@@ -480,6 +488,29 @@ internal static class CorpusPipeline
         {
             var key = JsonSerializer.Serialize(row.State, Json) + "\n" + row.Input;
             if (!keys.Add(key)) throw new InvalidDataException($"Synthetic duplicate: {row.Input}");
+        }
+    }
+
+    private static void EnsureGlobalUnique(List<TeachingRow> rows, int seed)
+    {
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < rows.Count; index++)
+        {
+            var row = rows[index];
+            var key = StateInputKey(row.State, row.Input);
+            if (keys.Add(key)) continue;
+
+            var stateIndex = seed + rows.Count + index * 1000;
+            for (var attempt = 0; attempt < 100_000; attempt++)
+            {
+                var candidate = StateFor(stateIndex + attempt);
+                key = StateInputKey(candidate, row.Input);
+                if (!keys.Add(key)) continue;
+                rows[index] = row with { State = candidate };
+                break;
+            }
+            if (rows[index].State == row.State)
+                throw new InvalidDataException($"Could not assign a unique state to {row.Input}.");
         }
     }
 
@@ -587,6 +618,12 @@ internal static class SelfTests
         Golden("WHY YOU WORRY", DialogueIntent.Wellbeing, UserAffect.Neutral, true);
         Golden("I WILL NOT ASK", DialogueIntent.Statement, UserAffect.Neutral, false);
         Golden("FOLLOW ME, DUDE!", DialogueIntent.Directive, UserAffect.Neutral, true);
+        Golden("HOW CAN YOU HELP ME?", DialogueIntent.Assistance, UserAffect.Neutral, true);
+        Golden("WHAT ARE YOU DOING HERE", DialogueIntent.Activity, UserAffect.Neutral, true);
+        Golden("EXPLAIN THEN", DialogueIntent.Clarification, UserAffect.Neutral, true);
+        Golden("PLEASE JUMP FROM THIS CLIFF", DialogueIntent.UnsafeDirective, UserAffect.Friendly, true);
+        Golden("STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true);
+        Golden("NO, FOLLOW ME AND STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true);
 
         var one = CorpusPipeline.BuildSynthetic(300, 42);
         var two = CorpusPipeline.BuildSynthetic(300, 42);

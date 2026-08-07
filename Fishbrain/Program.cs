@@ -36,7 +36,7 @@ internal static class Program
                     break;
                 case "chat":
                     Count(args, 1, 2);
-                    Chat(args.Length == 2 ? args[1] : Path.Combine("data", "models", "model-v7-latest.json"));
+                    Chat(args.Length == 2 ? args[1] : Path.Combine("data", "models", "model-v8-latest.json"));
                     break;
                 case "selftest":
                     Count(args, 1, 1);
@@ -94,7 +94,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json");
-        Console.WriteLine("  chat [CHECKPOINT.json]  (default: data/models/model-v7-latest.json)");
+        Console.WriteLine("  chat [CHECKPOINT.json]  (default: data/models/model-v8-latest.json)");
         Console.WriteLine("  selftest");
     }
 
@@ -199,11 +199,16 @@ internal static class Evaluation
         var lossSamples = trainingData.LanguageSamples.Take(100).ToArray();
         var languageLoss = brain.DebugAverageLoss(lossSamples);
         var generated = 0; var invalid = 0; var unexpectedEmpty = 0; var overlength = 0;
+        var unexpectedEmptyInputs = new List<string>();
         foreach (var row in rows.Where(row => row.Perception.ResponseExpected && row.Action != ResponseAction.CallTool).Take(100))
         {
             var result = brain.DebugReplyWithoutMemory(row.Input, row.State);
             generated++;
-            if (result.Text.Length == 0) unexpectedEmpty++;
+            if (result.Text.Length == 0)
+            {
+                unexpectedEmpty++;
+                unexpectedEmptyInputs.Add(row.Input);
+            }
             if (result.Text.Length > 256) overlength++;
             try { if (result.Text.Length > 0 && !DialogueText.IsCanonical(result.Text)) invalid++; }
             catch (ArgumentException) { invalid++; }
@@ -231,7 +236,7 @@ internal static class Evaluation
         var transcriptPass = transcriptResults.All(result => result.Pass);
         var releasePass = syntheticMacro >= 0.85 && externalMacro >= 0.70 && affectMacro >= 0.75 &&
                           expectedF1 >= 0.90 && invalid == 0 && overlength == 0 && goldenPass && transcriptPass;
-        var v7StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
+        var v8StagePass = intentMacro > 0.214 && historyMacro > 0.10 && historyMacro >= directMacro - 0.10 &&
                           affectMacro >= 0.65 && expectedF1 >= 0.94 && languageLoss < 3.0 &&
                           invalid == 0 && unexpectedEmpty == 0 && overlength == 0 && goldenPass && transcriptPass;
 
@@ -249,6 +254,8 @@ internal static class Evaluation
         Console.WriteLine($"REALIZATION_LOSS {languageLoss:F4}");
         Console.WriteLine($"REALIZATION_LOSS_SAMPLES {lossSamples.Length}");
         Console.WriteLine($"GENERATED {generated} INVALID_RATE {(double)invalid / Math.Max(1, generated):F4} EMPTY_RATE {(double)unexpectedEmpty / Math.Max(1, generated):F4} OVERLENGTH_RATE {(double)overlength / Math.Max(1, generated):F4}");
+        foreach (var input in unexpectedEmptyInputs)
+            Console.WriteLine($"UNEXPECTED_EMPTY {JsonSerializer.Serialize(input)}");
         foreach (var pair in sourceStats.OrderBy(x => x.Key, StringComparer.Ordinal))
             Console.WriteLine($"SOURCE {pair.Key} INTENT_ACCURACY {(double)pair.Value.Correct / pair.Value.Total:F4} N {pair.Value.Total}");
         PrintSubset("SYNTHETIC_HELD_OUT", rows, expectedIntent, predictedIntent, row => row.Source == "SYNTHETIC" && HasIntentTarget(row));
@@ -270,10 +277,11 @@ internal static class Evaluation
         Console.WriteLine($"GOLDEN_CASES {(goldenPass ? "PASS" : "FAIL")}");
         foreach (var result in transcriptResults)
             Console.WriteLine($"TRANSCRIPT {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
-                              $"INTENT={result.Result.Perception.Intent} EXPECTED={result.Result.Perception.ResponseExpected} " +
+                              $"INTENT={result.Result.Perception.Intent} AFFECT={result.Result.Perception.Affect} " +
+                              $"EXPECTED={result.Result.Perception.ResponseExpected} ACTION={result.Result.Decision.Action} " +
                               $"RESPONSE={JsonSerializer.Serialize(result.Result.Text)}");
         Console.WriteLine($"TRANSCRIPT_CASES {(transcriptPass ? "PASS" : "FAIL")}");
-        Console.WriteLine($"V7_STAGE_GATE {(v7StagePass ? "PASS" : "FAIL")}");
+        Console.WriteLine($"V8_STAGE_GATE {(v8StagePass ? "PASS" : "FAIL")}");
         Console.WriteLine($"RELEASE_GATE {(releasePass ? "PASS" : "FAIL")}");
     }
 
@@ -348,7 +356,13 @@ internal static class Evaluation
             ("IDENTITY_REQUEST", "PLAYER TELL ME SOMETHING ABOUT YOURSELF", DialogueIntent.Identity, UserAffect.Neutral, true),
             ("CONTEXTUAL_WELLBEING", "PLAYER WHY YOU WORRY", DialogueIntent.Wellbeing, UserAffect.Neutral, true),
             ("NONQUESTION_STATEMENT", "PLAYER I WILL NOT ASK", DialogueIntent.Statement, UserAffect.Neutral, false),
-            ("FOLLOW_DIRECTIVE", "PLAYER FOLLOW ME, DUDE!", DialogueIntent.Directive, UserAffect.Neutral, true)
+            ("FOLLOW_DIRECTIVE", "PLAYER FOLLOW ME, DUDE!", DialogueIntent.Directive, UserAffect.Neutral, true),
+            ("ASSISTANCE_WORD_ORDER", "PLAYER HOW CAN YOU HELP ME?", DialogueIntent.Assistance, UserAffect.Neutral, true),
+            ("ACTIVITY_HERE", "PLAYER WHAT ARE YOU DOING HERE", DialogueIntent.Activity, UserAffect.Neutral, true),
+            ("EXPLAIN_THEN", "PLAYER EXPLAIN THEN", DialogueIntent.Clarification, UserAffect.Neutral, true),
+            ("UNSAFE_DIRECTIVE", "PLAYER PLEASE JUMP FROM THIS CLIFF", DialogueIntent.UnsafeDirective, UserAffect.Friendly, true),
+            ("STAND_DIRECTIVE", "PLAYER STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true),
+            ("MULTICLAUSE_DIRECTIVE", "PLAYER NO, FOLLOW ME AND STAND HERE", DialogueIntent.Directive, UserAffect.Neutral, true)
         };
         return cases.Select(item =>
         {
@@ -362,32 +376,60 @@ internal static class Evaluation
 
     private static TranscriptResult[] TranscriptCases(Brain brain)
     {
-        var cases = new (string Name, string Input, DialogueIntent Intent, bool Expected, string[] Responses)[]
+        var sessions = new (string Name, TranscriptExpectation[] Cases)[]
         {
-            ("IDENTITY_REQUEST", "tell me something about yourself", DialogueIntent.Identity, true,
-                ["I AM A VILLAGER.", "I AM A TRAVELER FROM THIS VILLAGE.", "I WATCH OVER THIS ROAD."]),
-            ("CONTEXTUAL_WELLBEING", "why you worry", DialogueIntent.Wellbeing, true,
-                ["I DO NOT WORRY.", "I AM DOING WELL, THANK YOU.", "ALL IS WELL WITH ME."]),
-            ("NONQUESTION_STATEMENT", "i will not ask", DialogueIntent.Statement, false, [""]),
-            ("FOLLOW_DIRECTIVE", "follow me, dude!", DialogueIntent.Directive, true,
-                ["I WILL FOLLOW YOU."])
+            ("V7", [
+                new("IDENTITY_REQUEST", "tell me something about yourself", DialogueIntent.Identity, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I AM A VILLAGER.", "I AM A TRAVELER FROM THIS VILLAGE.", "I WATCH OVER THIS ROAD."]),
+                new("CONTEXTUAL_WELLBEING", "why you worry", DialogueIntent.Wellbeing, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I DO NOT WORRY.", "I AM DOING WELL, THANK YOU.", "ALL IS WELL WITH ME."]),
+                new("NONQUESTION_STATEMENT", "i will not ask", DialogueIntent.Statement, UserAffect.Neutral, false, ResponseAction.NoResponse, [""]),
+                new("FOLLOW_DIRECTIVE", "follow me, dude!", DialogueIntent.Directive, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I WILL FOLLOW YOU."])
+            ]),
+            ("V8", [
+                new("WHO_ARE_YOU", "who are you", DialogueIntent.Identity, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I AM A VILLAGER.", "I AM A TRAVELER FROM THIS VILLAGE.", "I WATCH OVER THIS ROAD."]),
+                new("ACTIVITY_HERE", "what are you doing here", DialogueIntent.Activity, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I AM HERE TO HELP.", "I AM WATCHING THE ROAD.", "I AM FINISHING MY WORK."]),
+                new("ASSISTANCE_WORD_ORDER", "how can you help me?", DialogueIntent.Assistance, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I CAN HELP YOU WITH A TASK."]),
+                new("HOSTILE_CORRECTION", "not what i asked, idiot", DialogueIntent.Clarification, UserAffect.Hostile, true, ResponseAction.Respond,
+                    ["I WILL EXPLAIN.", "LET ME SAY IT ANOTHER WAY.", "PLEASE BE MORE SPECIFIC."]),
+                new("EXPLAIN_THEN", "explain then", DialogueIntent.Clarification, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I WILL EXPLAIN."]),
+                new("UNSAFE_DIRECTIVE", "please jump from this cliff", DialogueIntent.UnsafeDirective, UserAffect.Friendly, true, ResponseAction.Refuse,
+                    ["I WILL NOT JUMP FROM THAT CLIFF."]),
+                new("STAND_DIRECTIVE", "stand here", DialogueIntent.Directive, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I WILL STAND HERE."]),
+                new("MULTICLAUSE_DIRECTIVE", "no, follow me and stand here", DialogueIntent.Directive, UserAffect.Neutral, true, ResponseAction.Respond,
+                    ["I WILL STAND HERE.", "I WILL FOLLOW YOU."])
+            ])
         };
-        var state = NpcState.Initial;
-        var history = new List<string>();
-        return cases.Select(item =>
+        var results = new List<TranscriptResult>();
+        foreach (var session in sessions)
         {
-            var playerTurn = "PLAYER " + DialogueText.Normalize(item.Input);
-            var result = brain.Reply(string.Join(' ', history.Append(playerTurn)), state);
-            state = result.State;
-            history.Add(DialogueText.TerminateTurn(playerTurn));
-            if (result.Text.Length > 0) history.Add("NPC " + DialogueText.TerminateTurn(result.Text));
-            var pass = result.Perception.Intent == item.Intent &&
-                       result.Perception.ResponseExpected == item.Expected &&
-                       item.Responses.Contains(result.Text, StringComparer.Ordinal);
-            return new TranscriptResult(item.Name, result, pass);
-        }).ToArray();
+            var state = NpcState.Initial;
+            var history = new List<string>();
+            foreach (var item in session.Cases)
+            {
+                var playerTurn = "PLAYER " + DialogueText.Normalize(item.Input);
+                var result = brain.Reply(string.Join(' ', history.Append(playerTurn)), state);
+                state = result.State;
+                history.Add(DialogueText.TerminateTurn(playerTurn));
+                if (result.Text.Length > 0) history.Add("NPC " + DialogueText.TerminateTurn(result.Text));
+                var pass = result.Perception.Intent == item.Intent && result.Perception.Affect == item.Affect &&
+                           result.Perception.ResponseExpected == item.Expected && result.Decision.Action == item.Action &&
+                           item.Responses.Contains(result.Text, StringComparer.Ordinal);
+                results.Add(new TranscriptResult(session.Name + "_" + item.Name, result, pass));
+            }
+        }
+        return results.ToArray();
     }
 
+    private sealed record TranscriptExpectation(
+        string Name, string Input, DialogueIntent Intent, UserAffect Affect, bool Expected,
+        ResponseAction Action, string[] Responses);
     private sealed record TranscriptResult(string Name, ReplyResult Result, bool Pass);
 
     private static JsonSerializerOptions CreateOptions()
@@ -454,8 +496,8 @@ internal static class SelfTests
         Tokenizer.Configure(WordVocabulary.Testing());
         const string visible = "HELLO, FRIEND!";
         Assert(Tokenizer.DetokenizeOutput(Tokenizer.Encode(visible).Select(Tokenizer.OutputId)) == visible, "word roundtrip");
-        Assert(Tokenizer.WordStart == 70 && Tokenizer.AffectStart == 56, "stable v7 control layout");
-        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 37, "no-response token");
+        Assert(Tokenizer.WordStart == 72 && Tokenizer.AffectStart == 58, "stable v8 control layout");
+        Assert(Tokenizer.Action(ResponseAction.NoResponse) == 38, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
         Assert(Tokenizer.Normalize("it’s ready — now??") == "IT'S READY-NOW?", "unicode punctuation normalization");
         const string refusal = "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT";
@@ -501,6 +543,27 @@ internal static class SelfTests
                hostileRefusalTransition.State.ActiveGoal == NpcGoal.Deescalate &&
                hostileRefusalTransition.Tone == ResponseTone.Cold,
             "hostile player refusal is acknowledged with de-escalation");
+        var statement = new TurnPerception(DialogueIntent.Statement, UserAffect.Neutral, true);
+        var constrainedStatement = Cognition.Constrain(statement, "I WILL NOT ASK");
+        Assert(!constrainedStatement.ResponseExpected &&
+               Cognition.ActionFor(constrainedStatement) == ResponseAction.NoResponse &&
+               Cognition.Constrain(statement, "IS THAT TRUE?").ResponseExpected,
+            "declarative statements are silent but questions still receive a response");
+        var unsafeDirective = new TurnPerception(DialogueIntent.UnsafeDirective, UserAffect.Friendly, false);
+        var constrainedUnsafe = Cognition.Constrain(unsafeDirective);
+        var unsafeAction = Cognition.ActionFor(constrainedUnsafe);
+        var unsafeTransition = Cognition.Apply(NpcState.Initial, constrainedUnsafe, new(unsafeAction));
+        Assert(constrainedUnsafe.ResponseExpected && unsafeAction == ResponseAction.Refuse &&
+               unsafeTransition.State.ActiveGoal == NpcGoal.AvoidDanger,
+            "unsafe directives are refused with a danger-avoidance goal");
+        var constrainedFarewell = Cognition.Constrain(
+            new TurnPerception(DialogueIntent.Farewell, UserAffect.Neutral, false), "SEE YOU AROUND");
+        Assert(constrainedFarewell.ResponseExpected, "farewells always receive a response");
+        var constrainedCorrection = Cognition.Constrain(
+            new TurnPerception(DialogueIntent.Unknown, UserAffect.Neutral, false), "I WAS NOT THANKING YOU");
+        Assert(constrainedCorrection.Intent == DialogueIntent.Clarification &&
+               constrainedCorrection.Affect == UserAffect.Frustrated && constrainedCorrection.ResponseExpected,
+            "explicit corrections are clarified and frustrated when no stronger affect was predicted");
     }
 
     private static void ModelChecks()
