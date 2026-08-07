@@ -166,3 +166,14 @@ capacity and project-scale corpus suit experiments and NPC barks—not factual,
 medical, legal, safety-critical, or current-information answers. Unknown words
 map to `<UNK>`, and the response safety catalog intentionally trades novelty for
 coherence.
+
+## V10 planning material
+
+- [V9 bug and risk audit](docs/BUGS.md)
+- [320 player and NPC intent catalog](docs/INTENT_CATALOG.md)
+- [64 fantasy and science-fiction confirmation scenarios](docs/GAME_DIALOGUE_SCENARIOS.md)
+- [licensed training-data expansion plan](docs/TRAINING_DATASETS.md)
+
+These documents deliberately separate current v9 behavior from proposed v10
+work. The scenario text is held-out benchmark material and must not be copied
+verbatim into the training split.

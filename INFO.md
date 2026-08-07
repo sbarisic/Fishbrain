@@ -50,6 +50,10 @@ come from registered local tools rather than model memory.
 Fishbrain.slnx
 README.md                         quick start and public overview
 INFO.md                           this engineering record
+docs/BUGS.md                      v9 defect and risk audit
+docs/INTENT_CATALOG.md            compositional catalog of 320 game behaviors
+docs/GAME_DIALOGUE_SCENARIOS.md   held-out fantasy and science-fiction tests
+docs/TRAINING_DATASETS.md         licensed corpus expansion plan
 
 Fishbrain/
   Program.cs                      CLI and dependency-free self-tests
@@ -76,6 +80,10 @@ data/
 Downloaded data, compiled datasets, experiment checkpoints, and intermediate
 models are ignored by Git. This avoids redistributing external text and keeps the
 repository small.
+
+The current audit and v10 research are maintained in [`docs/`](docs/). The
+scenario document is confirmation material, not a training source; generated
+paraphrases must use separate seeds so exact benchmark text stays held out.
 
 ## Current model: checkpoint version 9
 
