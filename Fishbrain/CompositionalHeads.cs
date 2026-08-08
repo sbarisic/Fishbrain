@@ -92,7 +92,7 @@ internal sealed class CompositionalHeadModel
             Math.Max(0, Array.IndexOf(_tools, example.ToolSchema)), learningRate));
         Add("responseCandidate", () => TrainSoftmax(_layout.Candidate, _candidates.Length, features,
             Math.Max(0, Array.IndexOf(_candidates, example.ResponseCandidateId)), learningRate));
-        Add("slots", () => TrainSlots(example, learningRate * 0.10));
+        Add("slots", () => TrainSlots(example, learningRate * 0.20));
         Updates++;
         return loss / Math.Max(1, heads);
 
@@ -127,7 +127,7 @@ internal sealed class CompositionalHeadModel
     {
         if (!example.SupervisedHeads.Contains("slots"))
             throw new ArgumentException("The auxiliary slot pass requires slot supervision.", nameof(example));
-        return TrainSlots(example, learningRate * 0.05);
+        return TrainSlots(example, learningRate * 0.20);
     }
 
     public StructuredPerception Predict(
@@ -328,7 +328,7 @@ internal sealed class CompositionalHeadModel
                     index + 1 < tokens.Length ? tokens[index + 1].Text : "<END>",
                     index > 1 ? tokens[index - 2].Text : "<START2>",
                     index + 2 < tokens.Length ? tokens[index + 2].Text : "<END2>"), target, learningRate,
-                target == 0 ? 1.0 : 2.0);
+                target == 0 ? 1.0 : 8.0);
         }
         return loss / tokens.Length;
     }
