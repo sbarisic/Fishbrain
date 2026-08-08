@@ -399,4 +399,3 @@ public sealed partial class Brain
         tokens.Add(Tokenizer.Goal(state.ActiveGoal));
     }
 }
-

@@ -231,4 +231,3 @@ internal static partial class CorpusCompiler
         return DialogueIntent.Statement;
     }
 }
-

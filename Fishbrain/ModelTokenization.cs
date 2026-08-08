@@ -23,7 +23,6 @@ internal sealed record TeachingRecovery(
 
     internal static string Quote(string value) => $"'{value.Replace("'", "''", StringComparison.Ordinal)}'";
 }
-
 internal static class Tokenizer
 {
     public const int Bos = 0;
@@ -354,4 +353,3 @@ internal static class DialogueKeys
         $"{StateInput(input, state)}|{(int)perception.Intent}|{(int)perception.Affect}|" +
         $"{perception.ResponseExpected}|{(int)decision.Action}|{(int)tone}";
 }
-

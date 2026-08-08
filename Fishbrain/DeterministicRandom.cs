@@ -39,4 +39,3 @@ internal sealed class DeterministicRandom
         return Math.Sqrt(-2.0 * Math.Log(first)) * Math.Cos(2.0 * Math.PI * second);
     }
 }
-

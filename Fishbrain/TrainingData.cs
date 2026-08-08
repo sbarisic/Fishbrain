@@ -360,4 +360,3 @@ internal sealed class TrainingData
         public string? Result { get; set; }
     }
 }
-

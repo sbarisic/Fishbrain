@@ -139,4 +139,3 @@ public sealed partial class Brain
         return order;
     }
 }
-

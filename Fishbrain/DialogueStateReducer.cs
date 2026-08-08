@@ -72,4 +72,3 @@ internal static class DialogueStateReducer
             : null;
     }
 }
-
