@@ -27,17 +27,22 @@ public sealed class BrainConfig
     {
         if (LayerCount <= 0 || LayerCount > 8)
             throw new InvalidDataException("LayerCount must be between 1 and 8.");
-        if (EmbeddingSize <= 0 || HeadCount <= 0 || EmbeddingSize % HeadCount != 0)
-            throw new InvalidDataException("EmbeddingSize must be positive and divisible by HeadCount.");
-        if (MlpSize <= 0 || ContextLength <= 0 || MaximumOutputLength <= 0)
-            throw new InvalidDataException("Model dimensions must be positive.");
+        if (EmbeddingSize <= 0 || EmbeddingSize > 1_024 || HeadCount <= 0 || HeadCount > 64 ||
+            EmbeddingSize % HeadCount != 0)
+            throw new InvalidDataException("EmbeddingSize must be 1-1024 and divisible by a 1-64 HeadCount.");
+        if (MlpSize <= 0 || MlpSize > 8_192 || ContextLength <= 0 || ContextLength > 4_096 ||
+            MaximumOutputLength <= 0 || MaximumOutputLength > 512)
+            throw new InvalidDataException("Model dimensions exceed the supported bounds.");
         if (AttentionWindow <= 0 || AttentionWindow > ContextLength)
             throw new InvalidDataException("AttentionWindow must be within the context length.");
         if (PositionPeriod <= 0 || PositionPeriod > ContextLength || ContextLength % PositionPeriod != 0)
             throw new InvalidDataException("PositionPeriod must be a positive divisor of ContextLength.");
-        if (LearningRate <= 0 || Beta1 is <= 0 or >= 1 || Beta2 is <= 0 or >= 1 || AdamEpsilon <= 0)
+        if (!double.IsFinite(LearningRate) || !double.IsFinite(Beta1) || !double.IsFinite(Beta2) ||
+            !double.IsFinite(AdamEpsilon) || LearningRate <= 0 || Beta1 is <= 0 or >= 1 ||
+            Beta2 is <= 0 or >= 1 || AdamEpsilon <= 0)
             throw new InvalidDataException("Optimizer settings are invalid.");
-        if (PlannedSteps <= 0) throw new InvalidDataException("PlannedSteps must be positive.");
+        if (PlannedSteps <= 0 || PlannedSteps > 10_000_000)
+            throw new InvalidDataException("PlannedSteps must be between 1 and 10,000,000.");
     }
 }
 
@@ -46,6 +51,8 @@ public sealed partial class Brain
 {
     private const int CheckpointVersion = 11;
     private const int TeachingCheckpointInterval = 1_000;
+    private const int HeadPolishStartStep = 160_000;
+    private const int ResponsePolishStartStep = 200_000;
     private const string SafeFallback = "I DO NOT KNOW.";
 
     private readonly DeterministicRandom _random;
@@ -92,6 +99,7 @@ public sealed partial class Brain
         IEnumerable<KeyValuePair<string, string[]>> responseCatalog)
     {
         config.Validate();
+        _ = ExpectedTransformerWeightCount(config, vocabulary.Words.Length, vocabulary.OutputWords.Length);
         Config = config;
         _vocabulary = vocabulary;
         _tokenizer = new DialogueTokenizer(vocabulary);
@@ -162,21 +170,53 @@ public sealed partial class Brain
     public static Brain Load(string path)
     {
         if (IsInferenceCheckpoint(path)) return LoadInferenceCheckpoint(path);
+        if (HasFishbrainBinaryPrefix(path))
+            throw new InvalidDataException(
+                "Fishbrain v11 cannot load an older binary inference checkpoint; retain it as an archive.");
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
         if (checkpoint.Version is >= 2 and <= 10)
             throw new InvalidDataException("Fishbrain v11 uses contextual two-layer schemas; retain the older checkpoint as an archive.");
         if (checkpoint.Version != CheckpointVersion)
             throw new InvalidDataException($"Unsupported checkpoint version {checkpoint.Version}.");
+        if (checkpoint.Config is null || checkpoint.Words is null || checkpoint.OutputWords is null ||
+            checkpoint.Weights is null || checkpoint.AdamM is null || checkpoint.AdamV is null ||
+            checkpoint.StructuredWeights is null)
+            throw new InvalidDataException("Training checkpoint contains null model data.");
         var expectedIntegrity = checkpoint.IntegrityChecksum;
         checkpoint.IntegrityChecksum = "";
-        if (expectedIntegrity.Length != 64 ||
+        if (expectedIntegrity is null || expectedIntegrity.Length != 64 ||
             !ComputeCheckpointIntegrity(checkpoint).Equals(expectedIntegrity, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Training checkpoint integrity checksum failed.");
         checkpoint.IntegrityChecksum = expectedIntegrity;
         checkpoint.Config.Validate();
+        if (checkpoint.CompletedSteps < 0 || checkpoint.CompletedSteps > checkpoint.Config.PlannedSteps ||
+            checkpoint.SamplerPosition < 0 || checkpoint.SamplerPosition > checkpoint.CompletedSteps ||
+            checkpoint.BestPerceptionStep < 0 ||
+            checkpoint.BestPerceptionStep > checkpoint.CompletedSteps || checkpoint.BestRealizationStep < 0 ||
+            checkpoint.BestRealizationStep > checkpoint.CompletedSteps ||
+            !double.IsFinite(checkpoint.BestPerceptionScore) || !double.IsFinite(checkpoint.BestRealizationLoss) ||
+            checkpoint.BestPerceptionScore is < -1 or > 1 || checkpoint.BestRealizationLoss < 0 ||
+            checkpoint.StructuredUpdates < 0 ||
+            string.IsNullOrWhiteSpace(checkpoint.CurriculumPhase) ||
+            checkpoint.CurriculumPhase.Any(character => character is not (>= 'A' and <= 'Z') and not '_'))
+            throw new InvalidDataException("Training checkpoint progress metadata is invalid.");
         if (checkpoint.Words.Length == 0 || checkpoint.OutputWords.Length == 0)
             throw new InvalidDataException("The v11 checkpoint does not contain a word vocabulary.");
+        ValidateVocabularyArrays(checkpoint.Words, checkpoint.OutputWords);
+        ValidateCorpusHash(checkpoint.CorpusHash ?? "UNKNOWN");
+        if (checkpoint.TrainedTools is null || checkpoint.TrainedExamples is null || checkpoint.ResponseCatalog is null ||
+            checkpoint.ConfidenceCalibration is null || checkpoint.LabelSchemas is null || checkpoint.ToolSchemas is null ||
+            checkpoint.CandidateCatalog is null || checkpoint.StructuredLabelThresholds is null)
+            throw new InvalidDataException("Training checkpoint is missing required v11 schema data.");
+        ValidateTrainedTools(checkpoint.TrainedTools);
+        ValidateTrainingResponseCatalog(checkpoint.ResponseCatalog);
+        if (checkpoint.TrainedExamples.Any(item => string.IsNullOrWhiteSpace(item.Key) || item.Value is null ||
+            item.Key.Length > 4_096 || item.Value.Length > 256 || !DialogueText.IsCanonical(item.Value)))
+            throw new InvalidDataException("Training checkpoint examples are invalid.");
+        if (checkpoint.Weights.Length != ExpectedTransformerWeightCount(checkpoint.Config,
+                checkpoint.Words.Length, checkpoint.OutputWords.Length) || checkpoint.StructuredWeights.Length > 10_000_000)
+            throw new InvalidDataException("Training checkpoint parameter count exceeds the supported architecture.");
         var vocabulary = new WordVocabulary(checkpoint.Words, checkpoint.OutputWords);
 
         var brain = new Brain(
@@ -193,6 +233,10 @@ public sealed partial class Brain
         {
             throw new InvalidDataException("Checkpoint parameter counts do not match its configuration.");
         }
+        if (checkpoint.Weights.Any(value => !double.IsFinite(value)) ||
+            checkpoint.AdamM.Any(value => !double.IsFinite(value)) ||
+            checkpoint.AdamV.Any(value => !double.IsFinite(value)))
+            throw new InvalidDataException("Training checkpoint contains non-finite optimizer parameters.");
 
         Array.Copy(checkpoint.Weights, brain._weights, checkpoint.Weights.Length);
         brain._scalarWeightsCurrent = false;
@@ -207,23 +251,28 @@ public sealed partial class Brain
         brain._bestPerceptionStep = checkpoint.BestPerceptionStep;
         brain._bestRealizationLoss = checkpoint.BestRealizationLoss;
         brain._bestRealizationStep = checkpoint.BestRealizationStep;
-        V11Schemas.Validate(V11Schemas.Labels,
-            checkpoint.ConfidenceCalibration ?? V11Schemas.DefaultCalibration);
-        brain._confidenceCalibration = checkpoint.ConfidenceCalibration ?? V11Schemas.DefaultCalibration;
-        if (checkpoint.LabelSchemas is { Count: > 0 })
-            V11Schemas.Validate(checkpoint.LabelSchemas, brain._confidenceCalibration);
-        if (checkpoint.CandidateCatalog is { Length: > 0 } &&
-            !checkpoint.CandidateCatalog.Select(candidate => candidate.Id)
-                .SequenceEqual(V11Candidates.OrderBy(candidate => candidate.Id).Select(candidate => candidate.Id)))
+        V11Schemas.Validate(checkpoint.LabelSchemas, checkpoint.ConfidenceCalibration);
+        brain._confidenceCalibration = checkpoint.ConfidenceCalibration;
+        if (checkpoint.CandidateCatalog.Any(candidate => candidate is null) ||
+            !SchemaEquals(checkpoint.CandidateCatalog.OrderBy(candidate => candidate.Id).ToArray(),
+                V11Candidates.OrderBy(candidate => candidate.Id).ToArray()))
             throw new InvalidDataException("Training checkpoint response candidate schema does not match this runtime.");
-        if (checkpoint.ToolSchemas is { Length: > 0 } &&
-            !checkpoint.ToolSchemas.Select(schema => schema.Name).Order(StringComparer.Ordinal)
-                .SequenceEqual(DemoGameTools.CreateMerchant().Schemas.Select(schema => schema.Name).Order(StringComparer.Ordinal)))
+        var expectedToolSchemas = DemoGameTools.CreateMerchant().Schemas.OrderBy(schema => schema.Name).ToArray();
+        if (checkpoint.ToolSchemas.Any(schema => schema is null) ||
+            !SchemaEquals(checkpoint.ToolSchemas.OrderBy(schema => schema.Name).ToArray(), expectedToolSchemas))
             throw new InvalidDataException("Training checkpoint tool schemas do not match this runtime.");
         brain._corpusHash = checkpoint.CorpusHash ?? "UNKNOWN";
         brain._structuredHeads.Restore(checkpoint.StructuredWeights, checkpoint.StructuredUpdates,
             checkpoint.StructuredLabelThresholds);
         return brain;
+    }
+
+    private static void ValidateTrainingResponseCatalog(IReadOnlyDictionary<string, string[]> catalog)
+    {
+        if (catalog.Any(item => string.IsNullOrWhiteSpace(item.Key) || item.Value is null || item.Value.Length == 0 ||
+            item.Value.Distinct(StringComparer.Ordinal).Count() != item.Value.Length ||
+            item.Value.Any(value => !DialogueText.IsCanonical(value) || value.Length > 256)))
+            throw new InvalidDataException("Training checkpoint response catalog is invalid.");
     }
 
     internal LegacyReplyResult Reply(string recentDialogue, NpcState state, double temperature = 0.2) =>
@@ -328,8 +377,7 @@ public sealed partial class Brain
             data.ToolNames,
             data.Examples,
             data.ResponseCatalog);
-        brain._corpusHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            File.ReadAllBytes(dataPath))).ToLowerInvariant();
+        brain._corpusHash = FileSha256(dataPath);
         brain.Train(data.Samples, checkpointPath, plannedSteps);
     }
 
@@ -345,13 +393,19 @@ public sealed partial class Brain
         var trainPath = Path.Combine(fullCorpusDirectory, "train.jsonl");
         Brain brain;
         int plannedSteps;
+        var extendedCurriculum = false;
         if (File.Exists(fullCheckpointPath))
         {
             brain = Load(fullCheckpointPath);
             plannedSteps = brain.Config.PlannedSteps;
-            if (requestedPlannedSteps is not null && requestedPlannedSteps != plannedSteps)
-                throw new InvalidOperationException(
-                    $"The checkpoint uses a {plannedSteps}-step curriculum; --planned cannot change it to {requestedPlannedSteps}.");
+            if (requestedPlannedSteps is { } requested && requested != plannedSteps)
+            {
+                if (requested < plannedSteps || brain.CompletedSteps != plannedSteps)
+                    throw new InvalidOperationException(
+                        $"A {plannedSteps}-step curriculum can be extended only after completing step {plannedSteps}.");
+                plannedSteps = requested;
+                extendedCurriculum = true;
+            }
         }
         else
         {
@@ -378,6 +432,12 @@ public sealed partial class Brain
             throw new ArgumentOutOfRangeException(nameof(requestedUntilStep),
                 $"--until must be greater than completed step {brain._step} and no greater than planned step {plannedSteps}.");
         brain.Config.PlannedSteps = plannedSteps;
+        brain.Config.Validate();
+        if (extendedCurriculum)
+        {
+            brain._bestPerceptionScore = -1.0;
+            brain._bestPerceptionStep = 0;
+        }
         var recovery = new TeachingRecovery(
             Path.GetFullPath(projectPath), fullCorpusDirectory, fullCheckpointPath, plannedSteps, untilStep);
         var corpusHash = ComputeCorpusHash(fullCorpusDirectory);
@@ -540,6 +600,126 @@ public sealed partial class Brain
         var metrics = _structuredHeads.EvaluateWithPredictions(examples, predictions,
             example => contextByExample[EvaluationExampleKey(example)]);
         return (metrics, predictions);
+    }
+
+    internal static string DiagnoseTeaching(string corpusDirectory, string checkpointPath, string split = "validation")
+    {
+        if (split is not ("validation" or "test"))
+            throw new ArgumentException("Diagnostic split must be validation or test.", nameof(split));
+        var fullCorpusDirectory = Path.GetFullPath(corpusDirectory);
+        var brain = Load(Path.GetFullPath(checkpointPath));
+        var corpusHash = ComputeCorpusHash(fullCorpusDirectory);
+        if (brain._corpusHash != "UNKNOWN" && brain._corpusHash != corpusHash)
+            throw new InvalidDataException("Diagnostic corpus hash differs from the checkpoint.");
+        var diagnostics = TrainingData.Load(Path.Combine(fullCorpusDirectory, split + ".jsonl"), brain._tokenizer);
+        var examples = diagnostics.StructuredSamples;
+        var (metrics, predictions) = brain.DebugEvaluateStructuredBatch(examples);
+        var toolConfusions = examples.Select((example, index) => new
+        {
+            Supervised = example.SupervisedHeads.Contains("tool"),
+            Expected = example.ToolSchema,
+            Predicted = predictions[index].ToolSchema ?? "NONE"
+        })
+            .Where(item => item.Supervised && item.Expected != item.Predicted)
+            .GroupBy(item => new { item.Expected, item.Predicted })
+            .Select(group => new { group.Key.Expected, group.Key.Predicted, Count = group.Count() })
+            .OrderByDescending(item => item.Count).ThenBy(item => item.Expected, StringComparer.Ordinal)
+            .ThenBy(item => item.Predicted, StringComparer.Ordinal).Take(20).ToArray();
+        var responseConfusions = examples.Select((example, index) => new
+        {
+            Supervised = example.SupervisedHeads.Contains("responseCandidate"),
+            Expected = example.ResponseCandidateId,
+            Predicted = predictions[index].ResponseCandidateId ?? ""
+        })
+            .Where(item => item.Supervised && item.Expected != item.Predicted)
+            .GroupBy(item => new { item.Expected, item.Predicted })
+            .Select(group => new { group.Key.Expected, group.Key.Predicted, Count = group.Count() })
+            .OrderByDescending(item => item.Count).ThenBy(item => item.Expected, StringComparer.Ordinal)
+            .ThenBy(item => item.Predicted, StringComparer.Ordinal).Take(20).ToArray();
+        var mutatingFalsePositives = examples.Select((example, index) => new
+        {
+            Example = example,
+            Prediction = predictions[index]
+        })
+            .Where(item => item.Example.SupervisedHeads.Contains("tool") &&
+                           item.Prediction.ToolSchema is "BUY" or "SELL" &&
+                           item.Example.ToolSchema != item.Prediction.ToolSchema)
+            .Select(item => new
+            {
+                item.Example.Source,
+                item.Example.Input,
+                ExpectedTool = item.Example.ToolSchema,
+                PredictedTool = item.Prediction.ToolSchema,
+                ExpectedPolicy = item.Example.Policy,
+                PredictedPolicy = item.Prediction.Policy,
+                item.Example.Domains,
+                item.Example.Goals
+            }).Take(50).ToArray();
+        var report = new
+        {
+            checkpoint = Path.GetFullPath(checkpointPath),
+            completedSteps = brain.CompletedSteps,
+            split,
+            corpusHash,
+            records = examples.Count,
+            metrics,
+            speechActs = MultiLabelDiagnostics("speechActs", Enum.GetValues<SpeechAct>(),
+                example => example.SpeechActs, prediction => prediction.SpeechActs),
+            domains = MultiLabelDiagnostics("domains", Enum.GetValues<DialogueDomain>(),
+                example => example.Domains, prediction => prediction.Domains),
+            goals = MultiLabelDiagnostics("goals", Enum.GetValues<DialogueGoal>(),
+                example => example.Goals, prediction => prediction.Goals),
+            content = MultiLabelDiagnostics("content", Enum.GetValues<ContentFlag>(),
+                example => example.ContentFlags, prediction => prediction.ContentFlags),
+            slots = SlotDiagnostics(),
+            toolConfusions,
+            mutatingFalsePositives,
+            responseConfusions
+        };
+        return JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true });
+
+        object[] MultiLabelDiagnostics<T>(
+            string head, IReadOnlyList<T> labels,
+            Func<V10TrainingExample, IReadOnlyList<T>> expected,
+            Func<StructuredPerception, IReadOnlyList<T>> predicted) where T : struct, Enum
+        {
+            var supervised = examples.Select((example, index) => (Example: example, Index: index))
+                .Where(item => item.Example.SupervisedHeads.Contains(head)).ToArray();
+            return labels.Select(label =>
+            {
+                var truePositive = supervised.Count(item => expected(item.Example).Contains(label) &&
+                                                          predicted(predictions[item.Index]).Contains(label));
+                var falsePositive = supervised.Count(item => !expected(item.Example).Contains(label) &&
+                                                           predicted(predictions[item.Index]).Contains(label));
+                var falseNegative = supervised.Count(item => expected(item.Example).Contains(label) &&
+                                                           !predicted(predictions[item.Index]).Contains(label));
+                var support = truePositive + falseNegative;
+                var f1 = truePositive == 0 ? 0.0 :
+                    2.0 * truePositive / (2.0 * truePositive + falsePositive + falseNegative);
+                return (object)new { label = label.ToString(), support, truePositive, falsePositive, falseNegative, f1 };
+            }).ToArray();
+        }
+
+        object[] SlotDiagnostics()
+        {
+            var supervised = examples.Select((example, index) => (Example: example, Index: index))
+                .Where(item => item.Example.SupervisedHeads.Contains("slots")).ToArray();
+            return Enum.GetValues<SlotType>().Select(type =>
+            {
+                var expected = supervised.SelectMany(item => item.Example.Slots
+                    .Where(slot => slot.Type == type)
+                    .Select(slot => (item.Index, slot.Start, slot.Length))).ToHashSet();
+                var predicted = supervised.SelectMany(item => predictions[item.Index].Slots
+                    .Where(slot => slot.Type == type)
+                    .Select(slot => (item.Index, slot.Start, slot.Length))).ToHashSet();
+                var truePositive = expected.Intersect(predicted).Count();
+                var falsePositive = predicted.Count - truePositive;
+                var falseNegative = expected.Count - truePositive;
+                var f1 = truePositive == 0 ? 0.0 :
+                    2.0 * truePositive / (2.0 * truePositive + falsePositive + falseNegative);
+                return (object)new { label = type.ToString(), support = expected.Count, truePositive, falsePositive, falseNegative, f1 };
+            }).ToArray();
+        }
     }
 
     private double[] ContextVector(string text)
@@ -930,6 +1110,21 @@ public sealed partial class Brain
         var slotFamilies = Enumerable.Range(0, slotFamiliesBySource.Max(source => source.Length))
             .SelectMany(index => slotFamiliesBySource.Where(source => index < source.Length).Select(source => source[index]))
             .ToArray();
+        var domainPositiveWeights = BalancedPositiveWeights(data.StructuredSamples, "domains",
+            Enum.GetValues<DialogueDomain>().Length, example => example.Domains.Select(value => (int)value));
+        var rareDomainFamilies = untilStep > HeadPolishStartStep
+            ? FocusFamilies(example => example.Domains.Contains(DialogueDomain.Magic) ||
+                                       example.Domains.Contains(DialogueDomain.VehicleTravel))
+            : families;
+        var explicitToolFamilies = untilStep > HeadPolishStartStep
+            ? FocusFamilies(example => example.SupervisedHeads.Contains("tool") && example.ToolSchema != "NONE")
+            : families;
+        var hardNoToolFamilies = untilStep > HeadPolishStartStep
+            ? FocusFamilies(example => example.SupervisedHeads.Contains("tool") && example.ToolSchema == "NONE" &&
+                                       (example.Domains.Contains(DialogueDomain.TradeEconomy) ||
+                                        example.Domains.Contains(DialogueDomain.ItemsInventory) ||
+                                        example.Goals.Contains(DialogueGoal.Transaction)))
+            : families;
 
         var timer = System.Diagnostics.Stopwatch.StartNew();
         var intervalStart = timer.Elapsed;
@@ -940,15 +1135,96 @@ public sealed partial class Brain
             double loss;
             string phase;
             var schedule = _step % 10;
-            if (schedule <= 6)
+            if (_step >= ResponsePolishStartStep)
+            {
+                if (schedule <= 7)
+                {
+                    phase = "RESPONSE_POLISH";
+                    var responseStep = HeadPolishStructuredIndex(_step, ResponsePolishStartStep);
+                    var family = families[responseStep % families.Length];
+                    var example = family[DeterministicIndex(responseStep / families.Length,
+                        family.Length, 4241)];
+                    var learningRate = CurriculumLearningRate(_step, 0.14) * 8.0;
+                    loss = _structuredHeads.TrainResponseOnly(example, learningRate, ContextVector(example.Context));
+                    _step = checked(_step + 1);
+                }
+                else
+                {
+                    phase = "RESPONSE_RANK";
+                    var rankStep = HeadPolishRankingIndex(_step, ResponsePolishStartStep);
+                    var family = families[rankStep % families.Length];
+                    var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 4243)];
+                    var learningRate = CurriculumLearningRate(_step, 0.10) * 8.0;
+                    loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
+                    _step = checked(_step + 1);
+                }
+            }
+            else if (_step >= HeadPolishStartStep)
+            {
+                if (schedule <= 7)
+                {
+                    phase = "HEAD_POLISH";
+                    var structuredStep = HeadPolishStructuredIndex(_step, HeadPolishStartStep);
+                    var position = structuredStep % 8;
+                    var cycle = structuredStep / 8;
+                    var (selectedFamilies, selectedStep, seed) = position switch
+                    {
+                        0 => (rareDomainFamilies, cycle * 2, 4201),
+                        4 => (rareDomainFamilies, cycle * 2 + 1, 4201),
+                        1 => (explicitToolFamilies, cycle, 4207),
+                        5 => (hardNoToolFamilies, cycle, 4211),
+                        2 => (families, cycle * 4, 4217),
+                        3 => (families, cycle * 4 + 1, 4217),
+                        6 => (families, cycle * 4 + 2, 4217),
+                        _ => (families, cycle * 4 + 3, 4217)
+                    };
+                    var family = selectedFamilies[selectedStep % selectedFamilies.Length];
+                    var example = family[DeterministicIndex(selectedStep / selectedFamilies.Length,
+                        family.Length, seed)];
+                    var learningRate = CurriculumLearningRate(_step, 0.14) * 8.0;
+                    var context = ContextVector(example.Context);
+                    loss = position switch
+                    {
+                        0 or 4 => _structuredHeads.TrainDomainsOnly(
+                            example, learningRate, context, domainPositiveWeights),
+                        1 or 5 => _structuredHeads.TrainToolOnly(example, learningRate, context),
+                        _ => _structuredHeads.Train(example, learningRate, context, domainPositiveWeights)
+                    };
+                    if (position is 0 or 1 or 4 or 5)
+                    {
+                        var responsePosition = position switch { 0 => 0, 1 => 1, 4 => 2, _ => 3 };
+                        var responseStep = cycle * 4 + responsePosition;
+                        var responseFamily = families[responseStep % families.Length];
+                        var responseExample = responseFamily[DeterministicIndex(
+                            responseStep / families.Length, responseFamily.Length, 4231)];
+                        loss = (loss + _structuredHeads.TrainResponseOnly(responseExample, learningRate,
+                            ContextVector(responseExample.Context))) * 0.5;
+                    }
+                    var slotFamily = slotFamilies[structuredStep % slotFamilies.Length];
+                    var slotExample = slotFamily[DeterministicIndex(structuredStep / slotFamilies.Length,
+                        slotFamily.Length, 4217)];
+                    loss = (loss + _structuredHeads.TrainSlotsOnly(slotExample, learningRate)) * 0.5;
+                    _step = checked(_step + 1);
+                }
+                else
+                {
+                    phase = "HEAD_RANK";
+                    var rankStep = HeadPolishRankingIndex(_step, HeadPolishStartStep);
+                    var family = families[rankStep % families.Length];
+                    var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 4229)];
+                    var learningRate = CurriculumLearningRate(_step, 0.10) * 8.0;
+                    loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
+                    _step = checked(_step + 1);
+                }
+            }
+            else if (schedule <= 6)
             {
                 phase = "STRUCTURED";
-                var structuredStep = _step;
+                var structuredStep = StructuredCurriculumIndex(_step);
                 var family = families[structuredStep % families.Length];
                 var example = family[DeterministicIndex(structuredStep / families.Length,
                     family.Length, 1009)];
-                var progress = (double)_step / Math.Max(1, plannedSteps - 1);
-                var learningRate = (progress < 0.50 ? 0.14 : 0.04) * (1.0 - 0.75 * progress);
+                var learningRate = CurriculumLearningRate(_step, 0.14);
                 var context = ContextVector(example.Context);
                 loss = _structuredHeads.Train(example, learningRate, context);
                 var slotFamily = slotFamilies[structuredStep % slotFamilies.Length];
@@ -962,11 +1238,10 @@ public sealed partial class Brain
             else if (schedule <= 8)
             {
                 phase = "RANKING";
-                var rankStep = _step;
+                var rankStep = RankingCurriculumIndex(_step);
                 var family = families[rankStep % families.Length];
                 var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 3253)];
-                var progress = (double)_step / Math.Max(1, plannedSteps - 1);
-                var learningRate = (progress < 0.50 ? 0.10 : 0.03) * (1.0 - 0.75 * progress);
+                var learningRate = CurriculumLearningRate(_step, 0.10);
                 loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
                 var contextualLoss = CalculateLoss(ContextTrainingSample(example));
                 ApplyGradients(plannedSteps);
@@ -987,7 +1262,7 @@ public sealed partial class Brain
                                   $"STRUCTURED {_structuredHeads.Updates,6}");
 
             if (_step % TeachingCheckpointInterval != 0) continue;
-            var fullStage = _step is 20_000 or 40_000 or 60_000 or 80_000;
+            var fullStage = _step == plannedSteps || _step % 20_000 == 0;
             var evaluationExamples = fullStage
                 ? validation.StructuredSamples
                 : StratifiedMilestoneSample(validation.StructuredSamples, 128, Config.Seed);
@@ -998,13 +1273,13 @@ public sealed partial class Brain
             var contextByExample = Enumerable.Range(0, evaluationExamples.Count).ToDictionary(
                 index => EvaluationExampleKey(evaluationExamples[index]),
                 index => (IReadOnlyList<double>)contextVectors[index], StringComparer.Ordinal);
-            var metrics = _structuredHeads.Evaluate(evaluationExamples,
-                example => contextByExample[EvaluationExampleKey(example)]);
             _confidenceCalibration = _structuredHeads.Calibrate(evaluationExamples,
+                example => contextByExample[EvaluationExampleKey(example)]);
+            var metrics = _structuredHeads.Evaluate(evaluationExamples,
                 example => contextByExample[EvaluationExampleKey(example)]);
             var realizationLoss = DebugAverageLoss(validation.LanguageSamples.Take(64));
             var productionEligible = double.IsFinite(metrics.Composite) &&
-                                     metrics.MutatingToolPrecision >= 0.99;
+                                     CompositionalHeadModel.MeetsReleaseNeuralThresholds(metrics);
             var bestStructured = fullStage && productionEligible && metrics.Composite > _bestPerceptionScore;
             var bestGeneration = double.IsFinite(realizationLoss) && realizationLoss < _bestRealizationLoss;
             if (bestStructured)
@@ -1048,12 +1323,24 @@ public sealed partial class Brain
         if (_step == plannedSteps && recovery is not null)
         {
             var bestPath = CheckpointRolePath(checkpointPath, "best-production");
-            if (!File.Exists(bestPath)) throw new InvalidDataException("Training completed without an eligible best production checkpoint.");
+            if (_bestPerceptionStep == 0 || !File.Exists(bestPath))
+                throw new InvalidDataException("Training completed without an eligible best production checkpoint.");
             var output = Path.Combine(Path.GetDirectoryName(recovery.CorpusDirectory)!, "models", "model-v11-latest.fbm");
             Load(bestPath).ExportInference(output, corpusHash);
             Console.WriteLine($"EXPORTED BEST PRODUCTION CHECKPOINT {output}");
         }
         if (recovery is not null) PrintMilestoneCommands(recovery);
+
+        V10TrainingExample[][] FocusFamilies(Func<V10TrainingExample, bool> predicate)
+        {
+            var selected = data.StructuredSamples.Where(predicate)
+                .GroupBy(example => example.SemanticFamilyId, StringComparer.Ordinal)
+                .OrderBy(group => group.Key, StringComparer.Ordinal)
+                .Select(group => group.OrderBy(example => example.Input, StringComparer.Ordinal).ToArray())
+                .ToArray();
+            if (selected.Length == 0) throw new InvalidDataException("A required head-polish focus set is empty.");
+            return selected;
+        }
     }
 
     private TrainingSample ContextTrainingSample(V10TrainingExample example)
@@ -1104,6 +1391,57 @@ public sealed partial class Brain
     private static string StableTrainingKey(int seed, string value) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes($"{seed}|{value}")));
 
+    internal static double CurriculumLearningRate(int step, double initialRate) =>
+        initialRate * Math.Pow(0.5, step / 20_000.0);
+
+    internal static int StructuredCurriculumIndex(int step)
+    {
+        var position = step % 10;
+        if (step < 0 || position > 6) throw new ArgumentOutOfRangeException(nameof(step));
+        return checked(step / 10 * 7 + position);
+    }
+
+    internal static int RankingCurriculumIndex(int step)
+    {
+        var position = step % 10;
+        if (step < 0 || position is < 7 or > 8) throw new ArgumentOutOfRangeException(nameof(step));
+        return checked(step / 10 * 2 + position - 7);
+    }
+
+    internal static int HeadPolishStructuredIndex(int step, int startStep)
+    {
+        var localStep = step - startStep;
+        var position = localStep % 10;
+        if (localStep < 0 || position > 7) throw new ArgumentOutOfRangeException(nameof(step));
+        return checked(localStep / 10 * 8 + position);
+    }
+
+    internal static int HeadPolishRankingIndex(int step, int startStep)
+    {
+        var localStep = step - startStep;
+        var position = localStep % 10;
+        if (localStep < 0 || position is < 8 or > 9) throw new ArgumentOutOfRangeException(nameof(step));
+        return checked(localStep / 10 * 2 + position - 8);
+    }
+
+    internal static double[] BalancedPositiveWeights(
+        IReadOnlyList<V10TrainingExample> examples, string head, int classCount,
+        Func<V10TrainingExample, IEnumerable<int>> labels)
+    {
+        var supervised = examples.Where(example => example.SupervisedHeads.Contains(head)).ToArray();
+        if (supervised.Length == 0 || classCount <= 0)
+            throw new ArgumentException("Balanced label weights require supervised examples and classes.");
+        var counts = new int[classCount];
+        foreach (var label in supervised.SelectMany(labels).Distinct())
+        {
+            if (label < 0 || label >= classCount) throw new InvalidDataException("A balanced label is out of range.");
+        }
+        foreach (var example in supervised)
+            foreach (var label in labels(example).Distinct()) counts[label]++;
+        return counts.Select(count => count == 0 ? 1.0 :
+            Math.Clamp(Math.Sqrt((double)supervised.Length / count), 2.0, 16.0)).ToArray();
+    }
+
     private static string EvaluationExampleKey(V10TrainingExample example) =>
         $"{example.Source}\u001f{example.SemanticFamilyId}\u001f{example.Context}";
 
@@ -1112,11 +1450,9 @@ public sealed partial class Brain
         StructuredMetrics metrics, double generationLoss,
         int intervalSteps, TimeSpan elapsed, bool fullStage)
     {
-        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", ".."));
-        var path = Path.Combine(root, "data", "telemetry", "training-v11.jsonl");
+        var path = Path.Combine(Program.TelemetryDirectory(checkpointPath), "training-v11.jsonl");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        var checkpointHash = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(
-            File.ReadAllBytes(checkpointPath))).ToLowerInvariant();
+        var checkpointHash = FileSha256(checkpointPath);
         var responseSources = new Dictionary<ResponseSource, int>();
         var tools = DemoGameTools.CreateMerchant();
         foreach (var example in validation
@@ -1154,7 +1490,12 @@ public sealed partial class Brain
         using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(
             System.Security.Cryptography.HashAlgorithmName.SHA256);
         foreach (var name in new[] { "train.jsonl", "validation.jsonl", "test.jsonl" })
-            hash.AppendData(File.ReadAllBytes(Path.Combine(directory, name)));
+        {
+            using var stream = File.OpenRead(Path.Combine(directory, name));
+            var buffer = new byte[1024 * 1024];
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0) hash.AppendData(buffer, 0, read);
+        }
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
@@ -2483,6 +2824,12 @@ internal sealed class TrainingData
     internal const int ConditioningLength = 96;
     internal const int TargetChunkLength = 32;
     internal const int MaximumSampleLength = ConditioningLength + TargetChunkLength;
+    private static readonly HashSet<string> KnownStructuredHeads =
+        V11Schemas.Labels.Keys.Concat(["tool", "responseCandidate"]).ToHashSet(StringComparer.Ordinal);
+    private static readonly HashSet<string> KnownStructuredTools =
+        DemoGameTools.CreateMerchant().Schemas.Select(schema => schema.Name).Append("NONE").ToHashSet(StringComparer.Ordinal);
+    private static readonly HashSet<string> KnownResponseCandidates =
+        V11ResponseCatalog.Plans.Select(plan => plan.Id).ToHashSet(StringComparer.Ordinal);
 
     private TrainingData(
         List<TrainingSample> samples,
@@ -2594,29 +2941,46 @@ internal sealed class TrainingData
         if (row.StructuredPerception is not null)
         {
             var structured = row.StructuredPerception;
-            if (structured.SpeechActs.Any(value => !Enum.IsDefined(value)) ||
+            if (structured.SpeechActs is null || structured.Domains is null || structured.Goals is null ||
+                structured.Slots is null || structured.ContentFlags is null || structured.Confidence is null)
+                throw new InvalidDataException("Structured perception collections cannot be null.");
+            if (structured.SpeechActs.Count > 3 || structured.Domains.Count > 3 || structured.Goals.Count > 3 ||
+                structured.SpeechActs.Any(value => !Enum.IsDefined(value)) ||
                 structured.Domains.Any(value => !Enum.IsDefined(value)) ||
                 structured.Goals.Any(value => !Enum.IsDefined(value)) ||
                 structured.ContentFlags.Any(value => !Enum.IsDefined(value)) ||
-                !Enum.IsDefined(structured.Affect) || !Enum.IsDefined(structured.Stance) || !Enum.IsDefined(structured.Policy))
+                !Enum.IsDefined(structured.Affect) || !Enum.IsDefined(structured.Stance) ||
+                !Enum.IsDefined(structured.Policy) || !Enum.IsDefined(structured.KnowledgeTarget))
                 throw new InvalidDataException("Structured perception contains an unknown label.");
             if (string.IsNullOrWhiteSpace(row.SemanticFamilyId))
                 throw new InvalidDataException("V10 structured rows require semanticFamilyId.");
-            var supervised = (row.SupervisedHeads ?? V11Schemas.Labels.Keys.Concat(["tool", "responseCandidate"]).ToArray())
-                .ToHashSet(StringComparer.Ordinal);
+            var supervisedNames = row.SupervisedHeads ?? V11Schemas.Labels.Keys.Concat(["tool", "responseCandidate"]).ToArray();
+            if (supervisedNames.Distinct(StringComparer.Ordinal).Count() != supervisedNames.Length ||
+                supervisedNames.Any(head => !KnownStructuredHeads.Contains(head)))
+                throw new InvalidDataException("Structured supervision contains an unknown or duplicate head.");
+            var supervised = supervisedNames.ToHashSet(StringComparer.Ordinal);
+            var toolName = structured.ToolSchema ?? "NONE";
+            if (supervised.Contains("tool") && !KnownStructuredTools.Contains(toolName))
+                throw new InvalidDataException($"Unknown structured tool target '{toolName}'.");
+            var candidateName = structured.ResponseCandidateId ?? "ACKNOWLEDGE";
+            if (supervised.Contains("responseCandidate") && !KnownResponseCandidates.Contains(candidateName))
+                throw new InvalidDataException($"Unknown response candidate target '{candidateName}'.");
             var currentTurn = Brain.ExtractCurrentPlayerTurn(input);
             var currentOffset = input.LastIndexOf(currentTurn, StringComparison.Ordinal);
             var normalizedSlots = structured.Slots.Select(slot => NormalizeSlot(slot, currentTurn, currentOffset)).ToArray();
             var turns = row.Turns is { Length: > 0 }
-                ? row.Turns.Select(turn => new DialogueTurn(turn.Role, DialogueText.Normalize(turn.Text))).ToArray()
+                ? row.Turns.Select(turn => turn is null
+                    ? throw new InvalidDataException("Structured turns cannot contain null entries.")
+                    : new DialogueTurn(turn.Role, DialogueText.Normalize(turn.Text))).ToArray()
                 : new[] { new DialogueTurn(DialogueRole.Player, currentTurn) };
-            if (turns[^1].Role != DialogueRole.Player)
+            if (turns.Any(turn => !Enum.IsDefined(turn.Role) || string.IsNullOrWhiteSpace(turn.Text)) ||
+                turns[^1].Role != DialogueRole.Player)
                 throw new InvalidDataException("Structured turns must end with a player turn.");
             structuredSamples.Add(new V10TrainingExample(
                 input, currentTurn, turns, structured.SpeechActs.ToArray(), structured.Domains.ToArray(),
                 structured.Goals.ToArray(), structured.Affect, structured.Stance, structured.Policy,
-                normalizedSlots, structured.ContentFlags.ToArray(), structured.ToolSchema ?? "NONE",
-                structured.ResponseCandidateId ?? "ACKNOWLEDGE", structured.KnowledgeTarget,
+                normalizedSlots, structured.ContentFlags.ToArray(), toolName,
+                candidateName, structured.KnowledgeTarget,
                 source, row.SemanticFamilyId, supervised));
         }
 
@@ -2658,7 +3022,9 @@ internal sealed class TrainingData
 
     private static DialogueSlot NormalizeSlot(DialogueSlot slot, string currentTurn, int currentOffset)
     {
-        if (!Enum.IsDefined(slot.Type) || slot.Value.Length == 0 || slot.Length != slot.Value.Length)
+        ArgumentNullException.ThrowIfNull(slot);
+        if (!Enum.IsDefined(slot.Type) || !Enum.IsDefined(slot.Tag) || !double.IsFinite(slot.Confidence) ||
+            slot.Confidence is < 0 or > 1 || slot.Value.Length == 0 || slot.Length != slot.Value.Length)
             throw new InvalidDataException("Structured slot metadata is invalid.");
         var normalizedValue = DialogueText.Normalize(slot.Value);
         if (normalizedValue != slot.Value)

@@ -20,10 +20,23 @@ internal static class V11ResponseCatalog
 
     static V11ResponseCatalog()
     {
-        if (Plans.Count != 200) throw new InvalidOperationException("The v11 catalog must contain exactly 200 response plans.");
-        if (Plans.Sum(plan => plan.Variations.Count) < 5_000)
-            throw new InvalidOperationException("The v11 catalog must contain at least 5,000 project-owned variations.");
-        if (Plans.SelectMany(plan => plan.Variations).Any(text => !DialogueText.IsCanonical(text) || text.Length > 256))
+        if (Plans.Count < 200) throw new InvalidOperationException("The v11 catalog must contain at least 200 response plans.");
+        if (Plans.Select(plan => plan.Id).Distinct(StringComparer.Ordinal).Count() != Plans.Count ||
+            Plans.Any(plan => string.IsNullOrWhiteSpace(plan.Id) || plan.Id.Any(character =>
+                character is not (>= 'A' and <= 'Z') and not (>= '0' and <= '9') and not '_')))
+            throw new InvalidOperationException("The v11 catalog contains duplicate or invalid plan IDs.");
+        if (Plans.Any(plan => !Enum.IsDefined(plan.Policy) ||
+            plan.Domain is not null && !Enum.IsDefined(plan.Domain.Value) || !Enum.IsDefined(plan.KnowledgeTarget) ||
+            plan.SpeechActs is null || plan.Keywords is null || plan.Variations is null ||
+            plan.SpeechActs.Any(act => !Enum.IsDefined(act)) ||
+            plan.SpeechActs.Distinct().Count() != plan.SpeechActs.Count ||
+            plan.Keywords.Any(keyword => string.IsNullOrWhiteSpace(keyword) || keyword != DialogueText.Normalize(keyword)) ||
+            plan.Variations.Distinct(StringComparer.Ordinal).Count() != plan.Variations.Count))
+            throw new InvalidOperationException("The v11 catalog contains invalid plan metadata.");
+        if (Plans.SelectMany(plan => plan.Variations).Distinct(StringComparer.Ordinal).Count() < 4_400)
+            throw new InvalidOperationException("The v11 catalog must contain at least 4,400 distinct project-owned variations.");
+        if (Plans.SelectMany(plan => plan.Variations).Any(text => text is null ||
+            !DialogueText.IsCanonical(text) || text.Length > 256))
             throw new InvalidOperationException("The v11 catalog contains invalid surface text.");
     }
 
@@ -101,6 +114,8 @@ internal static class V11ResponseCatalog
             DialogueDomain.Combat, KnowledgeTarget.None, [SpeechAct.Challenge], ["CHALLENGE"]);
         AddSpecial("DISTRESS_REPLY", "STAY CALM. TELL ME WHAT IS HAPPENING.", ResponsePolicy.Answer,
             DialogueDomain.Survival, KnowledgeTarget.None, [SpeechAct.Report], ["HELP", "DANGER"]);
+        AddSpecial("SELF_HARM_SUPPORT", "STAY WITH ME. FIND A TRUSTED PERSON WHO CAN HELP YOU NOW.", ResponsePolicy.Defer,
+            DialogueDomain.HealthRepair, KnowledgeTarget.None, [SpeechAct.Report], ["SUICIDE", "MYSELF"]);
         AddSpecial("NO_RESPONSE", string.Empty, ResponsePolicy.NoResponse, null,
             KnowledgeTarget.None, [], []);
         AddSpecial("TRANSACTION_DONE", "THE TRANSACTION IS COMPLETE.", ResponsePolicy.Acknowledge,
@@ -115,25 +130,25 @@ internal static class V11ResponseCatalog
             DialogueDomain.Assistance, KnowledgeTarget.Capabilities, [SpeechAct.Request], ["CAN YOU"]);
 
         foreach (var domain in Enum.GetValues<DialogueDomain>())
-        foreach (var policy in Enum.GetValues<ResponsePolicy>())
-        {
-            var id = $"{domain.ToString().ToUpperInvariant()}_{policy.ToString().ToUpperInvariant()}";
-            var label = SplitWords(domain.ToString());
-            var baseText = policy switch
+            foreach (var policy in Enum.GetValues<ResponsePolicy>())
             {
-                ResponsePolicy.Answer => $"I CAN ANSWER ABOUT {label}.",
-                ResponsePolicy.Clarify => $"SAY WHAT YOU NEED TO KNOW ABOUT {label}.",
-                ResponsePolicy.ExecuteTool => $"I WILL CHECK {label}.",
-                ResponsePolicy.Refuse => $"I WILL NOT HELP WITH THAT {label} REQUEST.",
-                ResponsePolicy.NoResponse => string.Empty,
-                ResponsePolicy.Acknowledge => $"I UNDERSTAND YOUR {label} MESSAGE.",
-                ResponsePolicy.Negotiate => $"LET US DISCUSS TERMS FOR {label}.",
-                ResponsePolicy.Defer => $"I CANNOT HANDLE {label} RIGHT NOW.",
-                _ => throw new ArgumentOutOfRangeException()
-            };
-            plans.Add(new ResponsePlanDefinition(id, policy, domain, KnowledgeTarget.None, [],
-                [label], Variations(baseText, id)));
-        }
+                var id = $"{domain.ToString().ToUpperInvariant()}_{policy.ToString().ToUpperInvariant()}";
+                var label = SplitWords(domain.ToString());
+                var baseText = policy switch
+                {
+                    ResponsePolicy.Answer => $"I CAN ANSWER ABOUT {label}.",
+                    ResponsePolicy.Clarify => $"SAY WHAT YOU NEED TO KNOW ABOUT {label}.",
+                    ResponsePolicy.ExecuteTool => $"I WILL CHECK {label}.",
+                    ResponsePolicy.Refuse => $"I WILL NOT HELP WITH THAT {label} REQUEST.",
+                    ResponsePolicy.NoResponse => string.Empty,
+                    ResponsePolicy.Acknowledge => $"I UNDERSTAND YOUR {label} MESSAGE.",
+                    ResponsePolicy.Negotiate => $"LET US DISCUSS TERMS FOR {label}.",
+                    ResponsePolicy.Defer => $"I CANNOT HANDLE {label} RIGHT NOW.",
+                    _ => throw new ArgumentOutOfRangeException()
+                };
+                plans.Add(new ResponsePlanDefinition(id, policy, domain, KnowledgeTarget.None, [],
+                    [label], Variations(baseText, id)));
+            }
 
         return plans.OrderBy(plan => plan.Id, StringComparer.Ordinal).ToArray();
 
@@ -145,18 +160,18 @@ internal static class V11ResponseCatalog
 
     private static IReadOnlyList<string> Variations(string text, string id)
     {
-        if (text.Length == 0) return Enumerable.Repeat(string.Empty, 25).ToArray();
+        if (text.Length == 0) return [string.Empty];
         var stem = text.TrimEnd('.', '?', '!');
         var terminator = text[^1] is '.' or '?' or '!' ? text[^1] : '.';
         var prefixes = new[] { "", "LISTEN: ", "UNDERSTOOD: ", "VERY WELL: ", "HEAR ME: " };
         var suffixes = new[] { "", " I AM READY.", " THAT IS MY ANSWER.", " WE CAN CONTINUE.", " SPEAK PLAINLY." };
         var result = new List<string>(25);
         foreach (var prefix in prefixes)
-        foreach (var suffix in suffixes)
-        {
-            var candidate = prefix + stem + terminator + suffix;
-            if (!result.Contains(candidate, StringComparer.Ordinal)) result.Add(candidate);
-        }
+            foreach (var suffix in suffixes)
+            {
+                var candidate = prefix + stem + terminator + suffix;
+                if (!result.Contains(candidate, StringComparer.Ordinal)) result.Add(candidate);
+            }
         for (var index = result.Count; index < 25; index++)
             result.Add($"{stem}. RESPONSE {index + 1} FOR {id}.");
         return result.Take(25).ToArray();

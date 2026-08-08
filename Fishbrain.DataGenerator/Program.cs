@@ -46,7 +46,7 @@ internal static class Program
         Console.WriteLine("FISHBRAIN TEACHING DATA");
         Console.WriteLine("  fetch [--manifest data/sources.json] [--raw data/raw]");
         Console.WriteLine("  compile [--count 60000] [--seed 42] [--raw data/raw] [--output data/compiled-v11]");
-        Console.WriteLine("  audit [--input data/compiled] [--manifest data/sources.json]");
+        Console.WriteLine("  audit [--input data/compiled-v11] [--manifest data/sources.json]");
         Console.WriteLine("  selftest");
     }
 }

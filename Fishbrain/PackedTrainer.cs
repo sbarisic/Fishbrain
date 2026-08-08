@@ -50,8 +50,8 @@ internal sealed class PackedTrainer
         var start = Math.Max(0, finalLayer.Length - Math.Max(1, poolTokenCount));
         var result = new double[config.EmbeddingSize];
         for (var position = start; position < finalLayer.Length; position++)
-        for (var dimension = 0; dimension < result.Length; dimension++)
-            result[dimension] += finalLayer[position].Final[dimension];
+            for (var dimension = 0; dimension < result.Length; dimension++)
+                result[dimension] += finalLayer[position].Final[dimension];
         var scale = 1.0 / (finalLayer.Length - start);
         for (var dimension = 0; dimension < result.Length; dimension++) result[dimension] *= scale;
         return result;

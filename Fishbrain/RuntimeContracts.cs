@@ -180,17 +180,20 @@ public sealed record NpcDialogueState(
             throw new ArgumentOutOfRangeException(nameof(NpcDialogueState), "Threat and calm values must be between 0 and 3.");
         if (!Enum.IsDefined(Mood) || !Enum.IsDefined(LastAffect))
             throw new ArgumentOutOfRangeException(nameof(NpcDialogueState), "State contains an unknown enum value.");
-        if (ActiveDomains is null || ActiveDomains.Count > 4 || ActiveDomains.Any(value => !Enum.IsDefined(value)))
+        if (ActiveDomains is null || ActiveDomains.Count > 4 || ActiveDomains.Any(value => !Enum.IsDefined(value)) ||
+            ActiveDomains.Distinct().Count() != ActiveDomains.Count)
             throw new ArgumentException("State supports at most four valid active domains.", nameof(ActiveDomains));
-        if (ActiveGoals is null || ActiveGoals.Count > 4 || ActiveGoals.Any(value => !Enum.IsDefined(value)))
+        if (ActiveGoals is null || ActiveGoals.Count > 4 || ActiveGoals.Any(value => !Enum.IsDefined(value)) ||
+            ActiveGoals.Distinct().Count() != ActiveGoals.Count)
             throw new ArgumentException("State supports at most four valid active goals.", nameof(ActiveGoals));
-        if (PendingActions is null || PendingActions.Count > 3)
+        if (PendingActions is null || PendingActions.Count > 3 || PendingActions.Any(action => action is null))
             throw new ArgumentException("State supports at most three pending actions.", nameof(PendingActions));
         ArgumentNullException.ThrowIfNull(References);
         foreach (var value in new[] { References.Person, References.Place, References.Item, References.Vehicle, References.System })
             if (value is not null && (value.Length is < 1 or > 32 || value != DialogueText.Normalize(value)))
                 throw new ArgumentException("Reference identifiers must be 1-32 normalized characters.", nameof(References));
-        if (LastBehaviorId?.Length > 64) throw new ArgumentException("Last behavior ID is too long.", nameof(LastBehaviorId));
+        if (LastBehaviorId is not null && (LastBehaviorId.Length > 64 || !IsIdentifier(LastBehaviorId)))
+            throw new ArgumentException("Last behavior ID must be a normalized identifier.", nameof(LastBehaviorId));
         if (PendingTopic is not null && !Enum.IsDefined(PendingTopic.Value))
             throw new ArgumentOutOfRangeException(nameof(PendingTopic));
         if (!Enum.IsDefined(PendingKnowledgeTarget))
@@ -200,8 +203,45 @@ public sealed record NpcDialogueState(
         if (LastToolOutcome is not null && (LastToolOutcome.Length > 64 || !IsIdentifier(LastToolOutcome)))
             throw new ArgumentException("LastToolOutcome must be normalized uppercase text.", nameof(LastToolOutcome));
 
+        if (PendingClarification is not null)
+        {
+            ValidateText(PendingClarification.Question, 256, nameof(PendingClarification));
+            if (PendingClarification.ToolSchema is not null &&
+                (PendingClarification.ToolSchema.Length > 48 || !IsIdentifier(PendingClarification.ToolSchema)))
+                throw new ArgumentException("Pending clarification tool must be a normalized identifier.", nameof(PendingClarification));
+            if (PendingClarification.MissingSlots is null || PendingClarification.MissingSlots.Count > 8 ||
+                PendingClarification.ToolSchema is not null && PendingClarification.MissingSlots.Count == 0 ||
+                PendingClarification.MissingSlots.Distinct(StringComparer.Ordinal).Count() != PendingClarification.MissingSlots.Count ||
+                PendingClarification.MissingSlots.Any(slot => slot.Length > 48 || !IsIdentifier(slot)))
+                throw new ArgumentException("Pending clarification slots are invalid.", nameof(PendingClarification));
+        }
+        if (CurrentTransaction is not null)
+        {
+            if (!IsIdentifier(CurrentTransaction.Kind) || !IsIdentifier(CurrentTransaction.Status) ||
+                CurrentTransaction.Quantity < 0)
+                throw new ArgumentException("Current transaction metadata is invalid.", nameof(CurrentTransaction));
+            ValidateText(CurrentTransaction.Item, 128, nameof(CurrentTransaction));
+        }
+        foreach (var action in PendingActions)
+        {
+            if (!IsIdentifier(action.Action) || action.ToolSchema is not null && !IsIdentifier(action.ToolSchema) ||
+                action.Arguments is null || action.Arguments.Count > 8)
+                throw new ArgumentException("Pending action metadata is invalid.", nameof(PendingActions));
+            foreach (var argument in action.Arguments)
+            {
+                if (!IsIdentifier(argument.Key))
+                    throw new ArgumentException("Pending action argument names must be identifiers.", nameof(PendingActions));
+                ValidateText(argument.Value, 128, nameof(PendingActions));
+            }
+        }
+
         static bool IsIdentifier(string value) => value.Length > 0 && value.All(character =>
             character is >= 'A' and <= 'Z' or >= '0' and <= '9' or '_');
+        static void ValidateText(string value, int maximum, string name)
+        {
+            if (string.IsNullOrWhiteSpace(value) || value.Length > maximum || value != DialogueText.Normalize(value))
+                throw new ArgumentException($"{name} must contain normalized uppercase text.", name);
+        }
     }
 }
 
@@ -220,7 +260,8 @@ public sealed record TurnPlan(
     string? ResponseCandidateId,
     KnowledgeTarget KnowledgeTarget,
     IReadOnlyList<PendingDialogueAction> PendingActions,
-    string? Clarification);
+    string? Clarification,
+    IReadOnlyList<string>? MissingSlots = null);
 
 public sealed record ReplyDiagnostics(
     IReadOnlyDictionary<string, double> Confidence,

@@ -1,370 +1,129 @@
-# Fishbrain v9 Audit
-
-Audit date: 2026-08-07
-
-Audited revision: `78f842a` (`main`)
-
-Scope: runtime, training, evaluation, data generation, checkpoints, CLI, and tests
-
-This is a defect and risk list, not a claim that every item must be fixed before
-the next experiment. `P0` can invalidate results or corrupt behavior, `P1` is a
-major correctness problem, `P2` is a meaningful limitation, and `P3` is cleanup
-or future hardening.
-
-## Summary
-
-| Priority | Count | Main themes |
-|---|---:|---|
-| P0 | 4 | shared tokenizer state, split leakage, misleading evaluation |
-| P1 | 12 | unavailable tools, hidden generalization, release automation, path/checkpoint failures |
-| P2 | 14 | taxonomy scaling, content policy, parser and training weaknesses |
-| P3 | 5 | dead code, stale names, diagnostics, storage efficiency |
-
-The first v10 work should fix B001-B008 before adding a much larger intent
-catalog. Otherwise a larger corpus can produce better-looking metrics without a
-more reliable model.
-
-## P0: result-invalidating defects
-
-### B001 - Tokenizer vocabulary is process-global
-
-- **Evidence:** `Tokenizer.Configure` stores the active vocabulary in static
-  state. Every `Brain` construction or load replaces it.
-- **Impact:** loading two checkpoints with different vocabularies changes how
-  the first `Brain` tokenizes. Token IDs, unknown-word behavior, and model sizes
-  can silently stop matching its weights.
-- **Reproduction:** load v4, load v9, then ask v4 for the same reply before and
-  after the v9 load.
-- **Fix:** make tokenization an immutable instance owned by `Brain`; pass it to
-  normalization/encoding methods. Add a two-model interleaving test.
-
-### B002 - Normalized utterances leak across corpus splits
-
-- **Evidence:** the current 10,000-row compiled corpus contains 346 normalized
-  inputs in more than one split, covering 1,039 rows. Examples include
-  `PLAYER HI`, `PLAYER THANKS`, and `PLAYER THANK YOU`.
-- **Impact:** validation and test scores partly measure utterances already seen
-  in training under another state or source group.
-- **Cause:** splitting protects source group IDs and duplicate `(state, input)`
-  pairs, but not normalized input or semantic contrast families globally.
-- **Fix:** assign a stable `utterance_family_id`, split by family before
-  expansion, and make `audit` reject any normalized input crossing splits.
-
-### B003 - Transcript regressions can use exact training memory
-
-- **Evidence:** transcript cases call the normal `Brain.Reply` path, which
-  permits `_trainedExamples` lookup. The checkpoint contains 6,092 remembered
-  examples.
-- **Impact:** a regression can pass through lookup even when the neural model
-  does not generalize.
-- **Fix:** expose an evaluation reply option that disables exact memory. Report
-  transcript results twice: model-only and production-with-memory.
-
-### B004 - Perception metrics include deterministic correction rules
-
-- **Evidence:** the evaluation prediction path applies `Cognition.Constrain` to
-  the neural heads before scoring.
-- **Impact:** reported intent, affect, and expectation scores combine model
-  quality with hand-written rules. A weak head can appear stronger than it is.
-- **Fix:** report raw-head and constrained-production metrics side by side. Gate
-  raw generalization and production behavior separately.
-
-## P1: major correctness and release defects
-
-### B005 - Evaluation exits successfully when gates fail
-
-- **Evidence:** evaluation prints `V9_STAGE_GATE` and `RELEASE_GATE`, but the CLI
-  returns success unless an exception occurs.
-- **Impact:** scripts and CI cannot reliably stop a bad checkpoint.
-- **Fix:** return a structured result and a non-zero process exit code for a
-  requested failed gate; add `--gate stage|release|none`.
-
-### B006 - Release gate permits unexpected empty replies
-
-- **Evidence:** the release condition checks invalid and overlength outputs but
-  omits the unexpected-empty count. The v9 stage gate does check it.
-- **Impact:** a checkpoint can satisfy the release gate while returning no text
-  where a response is required.
-- **Fix:** use one shared gate definition and require zero unexpected empty,
-  invalid, and overlength outputs.
-
-### B007 - Default chat checkpoint is absent from a clean clone
-
-- **Evidence:** the CLI and README default to
-  `data/models/model-v9-latest.json`; Git tracks only v4 checkpoints and ignores
-  v9 artifacts.
-- **Impact:** the documented no-argument chat command fails after cloning.
-- **Fix:** either publish a versioned release artifact with verified hash and an
-  install command, track a compact current checkpoint, or make the CLI explain
-  exactly how to train/download it.
-
-### B008 - The current checkpoint cannot call any tool
-
-- **Evidence:** the v9 checkpoint has zero trained tool names, and the current
-  corpus generator emits no tool examples.
-- **Impact:** the reflected tool framework exists but cannot provide game facts
-  in the shipped experiment.
-- **Fix:** add schema-validated tool rows for multiple tools, reserve tool names
-  independently of response vocabulary, and add end-to-end tool tests.
-
-### B009 - Location inquiry creates a goal it cannot resolve
-
-- **Evidence:** location questions use a deterministic `I DO NOT KNOW WHERE THAT
-  IS.` response while the reducer selects `RESOLVE_GAME_FACT`; only a successful
-  tool call clears that goal.
-- **Impact:** the NPC can retain a stale resolution goal after an ordinary
-  location reply.
-- **Fix:** route unknown locations to a game-fact tool, or use a separate
-  `REQUEST_LOCATION_DETAIL`/`DECLINE_LOCATION` goal with explicit completion.
-
-### B010 - Trade behavior is hard-coded to a non-merchant persona
-
-- **Evidence:** `TRADE_REQUEST` resolves to `I HAVE NO WARES TO SELL.` without
-  checking NPC role, inventory, shop state, price, currency, or faction.
-- **Impact:** merchants, quest vendors, and hostile traders behave alike.
-- **Fix:** make trade a policy decision backed by caller-owned shop state and
-  tools. Include accept, reject, barter, quote, sell, buy, and out-of-stock data.
-
-### B011 - `Brain` is not safe for concurrent replies
-
-- **Evidence:** reply generation mutates a shared random generator and scalar
-  synchronization state. The tool registry is mutable.
-- **Impact:** parallel NPC conversations can race, become nondeterministic, or
-  corrupt sampling state.
-- **Fix:** document single-thread ownership immediately; then isolate per-call
-  RNG/scratch state and freeze or synchronize the tool registry.
-
-### B012 - CLI paths depend on the caller's working directory
-
-- **Evidence:** default model and data paths are relative paths.
-- **Impact:** `dotnet run --project E:\Projects\Fishbrain\Fishbrain -- chat`
-  from another directory searches for a different `data/models` tree.
-- **Fix:** resolve repository defaults from `AppContext.BaseDirectory` plus a
-  discovered project root, while preserving explicit paths verbatim.
-
-### B013 - Evaluation samples the beginning of deterministic files
-
-- **Evidence:** realization and generation checks use the first 100 eligible
-  records. Compiled records have deterministic ordering.
-- **Impact:** metrics can overrepresent early sources, labels, or easy examples.
-- **Fix:** use a seeded stratified sample by source, intent, history form, and
-  response policy; print the sampled IDs.
-
-### B014 - Exact-memory lookup masks the runtime model's generalization
-
-- **Evidence:** an exact normalized input/state/decision/tone key is checked
-  before free realization for ordinary dialogue.
-- **Impact:** demos can appear strong for trained phrases while small wording
-  changes fail. Runtime quality and realization loss describe different systems.
-- **Fix:** expose memory hit/miss telemetry and a CLI switch; evaluate exact,
-  paraphrase, and out-of-vocabulary variants as separate buckets.
-
-### B015 - Safe-response replacement makes the trained realizer mostly advisory
-
-- **Evidence:** generated output not exactly present in the project-owned safe
-  catalog is replaced with a deterministic catalog response.
-- **Impact:** costly word-generation training often does not control visible
-  replies; generation metrics do not predict chat quality.
-- **Fix:** choose deliberately between retrieval/ranking and generation. If
-  generation remains, validate structural constraints and semantic relevance
-  without requiring exact catalog membership.
-
-### B016 - Tool output is not authoritative
-
-- **Evidence:** a successful tool result is fed back through text realization.
-- **Impact:** names, quantities, and other facts can be altered by generation.
-- **Fix:** return tool-owned text or fill a deterministic, typed response
-  template. Never regenerate authoritative values token by token.
-
-## P2: product and scaling risks
-
-### B017 - Flat intent enums do not scale to game-wide behavior
-
-- **Evidence:** intent count determines fixed control-token positions and output
-  head size. Adding v9 intents required a new incompatible checkpoint.
-- **Impact:** hundreds of sparse intents would bloat the head, shift token IDs,
-  and require full retraining for every taxonomy edit.
-- **Fix:** use compositional labels (`speech_act`, `domain`, `goal`, `target`,
-  `policy`) plus a small stable operational intent layer. See
-  [INTENT_CATALOG.md](INTENT_CATALOG.md).
-
-### B018 - Current annotation rules are brittle substring heuristics
-
-- **Evidence:** source annotation relies on keyword lists and precedence.
-- **Impact:** polysemy, negation, quoted text, and multi-intent turns receive
-  confident but wrong labels.
-- **Fix:** preserve source-native labels, add explicit reviewed mapping tables,
-  support multi-label rows, and quarantine ambiguous examples.
-
-### B019 - Mature game content is filtered as if it were generic assistant data
-
-- **Evidence:** compilation blanket-rejects common profanity and words such as
-  `weapon` and `murder`.
-- **Impact:** the model cannot learn ordinary combat, crime, intimidation, or
-  coarse-language interactions expected in mature games.
-- **Fix:** replace the blacklist with versioned content bands: ordinary, mature
-  game violence/profanity, safety-sensitive, and hate evaluation-only.
-
-### B020 - Hate and profanity are conflated
-
-- **Evidence:** identity attacks, generic swear words, and descriptions of
-  violence are handled by one unsafe-text decision.
-- **Impact:** harmless fantasy combat is discarded while the system gains no
-  precise policy for targeted hate.
-- **Fix:** annotate `profanity`, `threat`, `graphic_violence`, `self_harm`,
-  `sexual_violence`, and `identity_attack` independently. Train recognition and
-  response policy; do not blindly train the NPC to imitate every input.
-
-### B021 - Role-marker text can be interpreted as dialogue structure
-
-- **Evidence:** current-turn extraction recognizes `PLAYER` and `NPC` after
-  sentence punctuation in normalized text.
-- **Impact:** a player can say `HELLO. NPC ... PLAYER ...` and alter which text is
-  classified or trigger a malformed-history error.
-- **Fix:** pass structured turns through the public API. Keep legacy flat text
-  parsing behind an explicit compatibility option with escaped role tokens.
-
-### B022 - CLI conversation history grows without a bound
-
-- **Evidence:** every turn is retained and joined on every reply. The model later
-  truncates its token context, but the CLI still stores and normalizes all text.
-- **Impact:** long sessions waste memory and CPU, and exact-memory keys grow.
-- **Fix:** retain only turns that can fit the context window plus state-relevant
-  summaries; cap by tokens, not turn count.
-
-### B023 - State enumeration hard-codes some enum sizes
-
-- **Evidence:** state fixture generation derives intent/goal counts dynamically
-  but uses numeric moduli for affect, topic, and mood.
-- **Impact:** new enum values can be silently absent from generated states and
-  tests.
-- **Fix:** enumerate actual values with `Enum.GetValues<T>()` everywhere.
-
-### B024 - Global uniqueness repair can make history and state disagree
-
-- **Evidence:** collision resolution changes only the compiled row state.
-- **Impact:** a history row can claim a pre-turn state that the preceding
-  dialogue would not produce.
-- **Fix:** regenerate the complete dialogue/state trace or reject the collision;
-  never mutate one half of a paired invariant.
-
-### B025 - Corpus audit misses semantic contamination
-
-- **Evidence:** audit checks exact pair and group leakage but not normalized
-  utterance families, contradictory labels, near duplicates, or source overlap.
-- **Impact:** near-identical records can cross splits or carry incompatible
-  targets.
-- **Fix:** add normalized-input leakage, token-shingle similarity, contradiction,
-  source-overlap, and vocabulary coverage reports.
-
-### B026 - Best perception checkpoint uses only intent macro-F1
-
-- **Evidence:** best-role selection does not combine affect, expectation,
-  action, or stage-gate health.
-- **Impact:** the chosen checkpoint can improve intent while regressing another
-  required behavior.
-- **Fix:** select with a declared composite score and hard minima, or retain a
-  Pareto set with a deterministic release choice.
-
-### B027 - Tool selection and arguments are unconstrained generation
-
-- **Evidence:** tool names and arguments are decoded from the response
-  vocabulary without a calibrated confidence threshold or typed decoder.
-- **Impact:** a syntactically valid but wrong tool or entity can run.
-- **Fix:** use separate schema-constrained classification/span heads, confidence
-  thresholds, caller authorization, and an explicit clarification fallback.
-
-### B028 - External source score is below the release target
-
-- **Evidence:** v9 external intent macro-F1 is `0.6695`, below the `0.70`
-  release threshold.
-- **Impact:** the model remains sensitive to synthetic wording and source style.
-- **Fix:** repair leakage first, then add licensed game-grounded paraphrases and
-  hard contrast sets. Do not tune only against the current external test split.
-
-### B029 - No broad mature-content behavior benchmark exists
-
-- **Evidence:** a few direct insults and unsafe directives are golden cases, but
-  there is no stratified benchmark for threats, combat orders, crime, profanity,
-  coercion, or quoted hostile speech.
-- **Impact:** allowing mature content can cause arbitrary mappings or make the
-  NPC echo abuse instead of applying game policy.
-- **Fix:** turn the interactions in
-  [GAME_DIALOGUE_SCENARIOS.md](GAME_DIALOGUE_SCENARIOS.md) into a held-out,
-  versioned benchmark.
-
-### B030 - Test coverage is embedded and mostly example-based
-
-- **Evidence:** self-tests live in executable projects; there is no dedicated
-  test project with fuzz, property, concurrency, and corrupt-checkpoint suites.
-- **Impact:** parser, normalization, checkpoint, and multi-model defects can
-  survive happy-path checks.
-- **Fix:** add `Fishbrain.Tests` and `Fishbrain.DataGenerator.Tests`, still with
-  no required third-party package if that constraint is important. Add seeded
-  property loops and process-level CLI tests.
-
-## P3: hardening and cleanup
-
-### B031 - External normalization failures are swallowed
-
-- **Evidence:** an external-row conversion path catches all normalization
-  exceptions and returns `false` without a reason.
-- **Impact:** dropped-data regressions are hard to detect or diagnose.
-- **Fix:** return a typed rejection reason and count it in the audit report.
-
-### B032 - Checkpoints are large uncompressed JSON without integrity metadata
-
-- **Evidence:** weights and optimizer arrays are serialized as JSON doubles on
-  every save. Atomic replacement helps, but there is no stored checksum or
-  recovery copy.
-- **Impact:** saves are slow and large; one damaged current file blocks resume.
-- **Fix:** add a versioned binary payload or compressed JSON, SHA-256 metadata,
-  and last-known-good rotation while retaining a readable metadata header.
-
-### B033 - `MarkovChain.cs` appears unused
-
-- **Evidence:** repository search finds no call site outside the file.
-- **Impact:** dead experimental code increases the apparent supported surface.
-- **Fix:** remove it or add the intended generation path and tests.
-
-### B034 - Self-test temporary names still say v7
-
-- **Evidence:** v9 self-test paths in `Program.cs` use `fishbrain-v7-*` names.
-- **Impact:** logs and temporary artifacts are confusing during diagnosis.
-- **Fix:** use revision-neutral names or the current checkpoint version.
-
-### B035 - Training saves do not expose enough operational telemetry
-
-- **Evidence:** checkpoints contain training state, but logs do not provide a
-  compact machine-readable record of wall time, throughput, vector width,
-  memory, sample mix, and gate deltas for every milestone.
-- **Impact:** numerical optimizations and regressions are harder to compare
-  across machines and runs.
-- **Fix:** write one JSONL milestone record with environment, corpus hash,
-  timings, metrics, checkpoint hash, and selected role.
-
-## Recommended fix order
-
-1. Isolate tokenizer and inference state (B001, B011).
-2. Repair split isolation and evaluation honesty (B002-B006, B013-B014, B025).
-3. Make clean-clone execution and gate exit codes reliable (B005-B008, B012).
-4. Introduce compositional intent/content schemas before expanding data
-   (B017-B020).
-5. Add structured turns, typed tool decisions, and dynamic trade/location facts
-   (B008-B010, B016, B021, B027).
-6. Build the mature game-dialogue benchmark, then retrain (B028-B030).
-7. Complete storage, telemetry, diagnostics, and cleanup (B031-B035).
-
-## Audit commands to automate
+# Fishbrain v11 full-source audit
+
+Audit date: 2026-08-08
+
+Scope: every tracked C# project, runtime and tool contracts, training and evaluation,
+corpus generation, checkpoints, command-line workflows, tests, scripts, documentation,
+and the checked-in v11 model.
+
+This file records confirmed defects and architectural limitations found during the
+audit. `FIXED` means the source correction and a focused regression test or corpus
+audit are present in this revision. `PARTIAL` means the risk was reduced but a stated
+acceptance target is still missed. `REJECTED` records an experiment that was measured,
+discarded, and did not replace the shipped source path or model. `OPEN` identifies a
+known product or engineering limit, not a hidden release claim.
+
+## Correctness and safety defects
+
+| ID | Priority | Status | Finding and resolution |
+|---|---|---|---|
+| F001 | P0 | FIXED | A learned `EXECUTE_TOOL` or persona target could override a deterministic refusal. Hostile name queries disclosed persona data and hostile purchases mutated the world. Refusal, no-response, and defer policies now veto tool selection; persona rendering is eligible only for answer/acknowledge policies. |
+| F002 | P0 | FIXED | Tool choice trusted the learned tool label without making deterministic schema/slot validation authoritative. Learned tool labels are now diagnostic only; only the validated selector can create an invocation. |
+| F003 | P0 | FIXED | A clarification was written to state but a fragment such as `TWO` could not complete `BUY ROPE`. Missing slot names and references are persisted, fragment slots are recovered, and the pending operation resumes. |
+| F004 | P1 | FIXED | Secondary actions from multi-intent input were queued but never consumed and were overwritten by unrelated turns. Explicit continuation now executes the first queued action and preserves the remainder. |
+| F005 | P0 | FIXED | Keyword checks used substring matching. `FIREWOOD`, `FIREWALL`, `KILLER FEATURE`, `PASSAGE COSTS`, and `KILLING TIME` produced combat/crime false positives. Matching now observes lexical boundaries and has regression data/tests. |
+| F006 | P0 | FIXED | Quoted insults in apologies were treated as direct attacks. Reviewed apology forms now veto the hostility interpretation, and corpus examples supervise the distinction. |
+| F007 | P0 | FIXED | Self-harm text was mapped to hostile refusal while the intended data policy was supportive deferral. Self-harm now has a distinct support candidate, distressed/cautious perception, and a defer boundary. Crime, threats, identity attacks, graphic violence, sexual violence, and sexual content have explicit separate policies. |
+| F008 | P0 | FIXED | The demo world's `ConcurrentDictionary.GetOrAdd` factory could perform the same mutation more than once under contention. Execution is protected by an `ExecutionAndPublication` lazy value and a 32-way regression test. |
+| F009 | P0 | FIXED | Idempotency caching used only the caller key, so two different tools could alias. The cache key now includes the tool name. |
+| F010 | P1 | FIXED | Buy/sell overflow checks could occur after part of the state was changed. Every derived balance, stock, and inventory value is checked before the atomic commit. |
+| F011 | P1 | FIXED | The documented thread-safe world exposed an unsynchronized location property. Location reads/writes now use the same state lock as trade data. |
+| F012 | P1 | FIXED | Tool results accepted null fields, undeclared fields, invalid values, and inconsistent success/error metadata. Schema and result validation is now deep; failed tools without an eligible error template return a safe failure message. |
+| F013 | P1 | FIXED | State validation was shallow. Invalid nested references, clarifications, transactions, pending actions, duplicate labels, and identifiers are now rejected at the boundary. |
+| F014 | P1 | FIXED | Request validation allowed invalid enum values, null turns/state, control characters in idempotency identifiers, and overlength turns. These inputs now fail before inference; long histories remain accepted and are packed to complete recent turns. |
+| F015 | P1 | FIXED | `LastTool` changed even when no tool executed, and clarification state used a generic placeholder instead of the actual missing fields. Reduction now records only executed tools and exact missing slots. |
+| F016 | P2 | FIXED | Turn termination could create doubled punctuation after trimming a quote or delimiter. It now rechecks terminal punctuation after trimming. |
+
+## Model, training, and evaluation defects
+
+| ID | Priority | Status | Finding and resolution |
+|---|---|---|---|
+| F017 | P0 | PARTIAL | The checked-in 80K model failed the release gate. The 210K replacement passes every exact validation minimum and improves the independent test split, but the strict test release gate remains closed on domain F1 0.8324, slot F1 0.8296, and tool accuracy 0.9489. No threshold was weakened. |
+| F018 | P1 | FIXED | Only 512 lexical hash buckets served all structured heads, creating avoidable collisions. The v11 schema now uses 4,096 lexical buckets; this deliberately requires a new checkpoint. |
+| F019 | P1 | FIXED | Unknown structured tools/candidates silently became class zero, and unknown or duplicate supervised heads were accepted. Training-data loading now rejects unknown targets and malformed supervision while permitting explicit language-only rows. |
+| F020 | P1 | FIXED | Structured rows accepted null collections, invalid enum values, malformed slot spans, and non-finite confidence. Both compilation and training load validate the complete schema. |
+| F021 | P1 | FIXED | A nonstandard planned step count could finish without running full validation or producing a best-production checkpoint. The configured final step is always a full stage. |
+| F022 | P1 | FIXED | The held-out benchmark labeled `HELLO?` as profanity, causing a guaranteed false failure. Both v10 and v11 benchmark sources now label it ordinary. |
+| F023 | P1 | FIXED | Corpus turns and serialized contextual input could disagree, especially on final punctuation. External rows now derive input from the same structured turns; audit rejects disagreement. |
+| F024 | P1 | FIXED | Corpus audit did not prove that compiled provenance matched the pinned source manifest. It now checks every source, revision, license, attribution, path, URL, and checksum. |
+| F025 | P1 | FIXED | Source paths could escape the declared raw directory during fetch/verification. Paths are resolved and rejected if their relative form leaves the raw root. |
+| F026 | P2 | FIXED | State fixtures used `Math.Abs(int.MinValue)` and hard-coded enum cardinalities. Unsigned decomposition and `Enum.GetValues<T>()` cover every current enum safely. |
+| F027 | P2 | FIXED | Response catalog startup required exactly 200 plans, making a valid catalog extension fail. The contract is now a minimum, and the self-harm support plan is the 201st entry. |
+| F028 | P2 | FIXED | Corpus/checkpoint hashing allocated whole files, adding large temporary memory pressure. Hashing now streams fixed-size buffers. |
+| F029 | P2 | FIXED | Telemetry paths depended on build-output depth and could write outside the repository from an isolated build. The repository is now discovered from the checkpoint, working directory, or executable ancestry. |
+
+## Checkpoint and operational defects
+
+| ID | Priority | Status | Finding and resolution |
+|---|---|---|---|
+| F030 | P0 | FIXED | Inference checkpoints checked bytes but did not validate format text, progress, corpus hash, vocabulary ordering, complete candidate/tool schemas, trained tools, finite weights, or bounded parameter counts. All are validated before model construction. |
+| F031 | P0 | FIXED | Training checkpoints could restore non-finite model/optimizer values and invalid progress metadata. Full numerical, schema, vocabulary, corpus, catalog, and progress checks now precede restoration. |
+| F032 | P1 | FIXED | Confidence calibration accepted `NaN` and unexpected schema keys. Calibration dictionaries must exactly match v11 and contain finite bounded values. |
+| F033 | P1 | FIXED | Unbounded configuration values could request extreme allocations, and `NaN` optimizer settings bypassed range comparisons. Configuration dimensions, steps, and all floating-point settings are bounded and finite. |
+| F034 | P2 | FIXED | CLI history grew forever even though only a bounded context is usable. The interactive client retains the latest 64 alternating turns; durable context remains in `NpcDialogueState`. |
+| F035 | P3 | FIXED | The unused second-order `MarkovChain` experiment implied a supported generation path that had no caller. It has been removed. |
+| F036 | P2 | FIXED | Runtime tests omitted policy precedence, clarification/action continuation, lexical hard negatives, and concurrent world idempotency. Focused tests now cover each invariant. Generator tests now cover v11 state bounds and CLI validation. |
+| F037 | P0 | FIXED | Training called a checkpoint production-eligible using only the looser stage gate, so it could export a model that the release evaluator rejected. Best-production selection and release evaluation now share the complete neural-quality threshold set; runtime fidelity and benchmark checks remain additional release requirements. |
+| F038 | P1 | FIXED | A stage measured structured metrics before applying its newly computed calibration, then saved and exported the calibrated state. Calibration now updates multi-label thresholds first, recomputes predictions for confidence calibration, and runs stage evaluation last so checkpoint selection measures the exact saved model. |
+| F039 | P2 | FIXED | Full validation milestones were hard-coded only through 80K even though completed curricula can be extended beyond that point. Every 20,000-step boundary and the configured final step now receive full validation. |
+| F040 | P1 | FIXED | Extending a completed curriculum recomputed schedule progress against the larger endpoint and raised the learning rate, causing a visible quality regression after resume. Learning rates now decay monotonically from the absolute completed-step count, independent of later plan extensions. |
+| F041 | P1 | FIXED | Several malformed training-checkpoint fields could still escape as null-reference errors or carry impossible progress: a null integrity hash, null vocabulary/schema values, out-of-range best scores, future sampler positions, invalid exact examples, and negative structured updates. Deep validation now rejects them as checkpoint-data errors. |
+| F042 | P0 | FIXED | Reusing one idempotency key for the same tool with different arguments returned the first successful result as though it belonged to the second payload. Demo-world executions now bind each key to an argument fingerprint, reject conflicts explicitly, and never perform the second mutation. |
+| F043 | P1 | FIXED | `IGameTool.Schema` was validated during registry construction but read again during execution; a custom tool could replace or mutate its lists after validation. Registration now deep-copies the schema and executes through that immutable validated snapshot. |
+| F044 | P2 | FIXED | Response diversity counted duplicate empty strings for every no-response plan, making the 5,000-surface claim misleading, and startup did not deeply validate plan IDs or metadata. Each no-response plan now stores one intentional empty surface; the catalog requires valid unique plans and an honest floor of 4,400 distinct visible variations. |
+| F045 | P0 | FIXED | Structured and ranking examples were selected with the global step even though those phases occupy only seven and two positions in each ten-step cycle. Depending on family-count factors, whole residue classes could remain unvisited. Phase-local ordinals now traverse every family consecutively and deterministically. |
+| F046 | P3 | FIXED | Two pre-existing whitespace violations in `PackedTrainer.cs` prevented the solution-wide formatting verifier from passing. The file is normalized without behavioral changes. |
+| F047 | P1 | FIXED | Full corrected-sampler validation showed non-`NONE` tool supervision and BIO slots still learning too slowly under the shared late-stage rate: tool accuracy was 0.8711 and slot F1 0.8309 at 100K. Explicit tool targets and both slot passes now use bounded auxiliary weights instead of the undifferentiated shared rate. |
+| F048 | P1 | FIXED | A 3x tool fine-tuning experiment improved 120K tool accuracy to 0.9365 and slot F1 to 0.8591, but mutating precision slipped to 0.9882 while speech, domain, and goal remained low. The continuation uses a balanced 2x tool weight, a 0.20 slot scale, and modest 2.5x/4x/3x positive weights for speech/domain/goal rather than weakening any gate. |
+| F049 | P1 | FIXED | Continued shared-encoder updates moved the contextual feature space after the small structured heads had nearly converged: response top-1 fell from 0.8873 at 120K to 0.7931 at 160K while several structured heads remained just below release minima. A bounded late head-polish phase freezes the shared encoder and uses consecutive phase-local structured/ranking samples so the production heads can converge against stable features. |
+| F050 | P1 | FIXED | Tool recall and mutation precision pulled in opposite directions under a single target weight. Head polishing now weights explicit tools and `NONE` targets separately, restores the validated slot scale, and gives policy and response-candidate targets bounded auxiliary weight without weakening any release threshold. |
+| F051 | P1 | FIXED | Multi-label calibration preferred 0.90 precision and then maximum recall instead of maximizing F1. At 170K this created 554 false `VehicleTravel` domain predictions and missed every rare `Magic` example. Calibration now selects the best per-label F1 over thresholds from 0.05 through 0.95 with deterministic precision, recall, and threshold tie-breakers. |
+| F052 | P1 | FIXED | BIO slot supervision used a 4x positive weight that overpredicted rare `Other` and `Time` spans during head polishing. Diagnostics now report exact per-label TP/FP/FN values, and the bounded positive weight is 3x to recover precision without discarding rare labels. |
+| F053 | P1 | FIXED | Uniform head-polish sampling left rare `Magic` and `VehicleTravel` domains undertrained and explicit tools collapsed toward `NONE`. The final phase derives bounded positive weights from training support and deterministically mixes rare-domain, explicit-tool, hard no-tool, and general semantic families; response-candidate supervision receives a small bounded increase. |
+| F054 | P1 | FIXED | Focused rare-domain/tool examples initially updated every supervised head, skewing the response candidate distribution toward `ACKNOWLEDGE`, while one shared tool weight traded recall for unsafe mutation precision. Focus examples now update only their intended head, response supervision uses an independent general-family stream, and `NONE`, mutating, and read-only tool targets have separate bounded weights. |
+| F055 | P1 | FIXED | At 200K every release head passed except response top-1 (0.8456 versus 0.85), while domain, slot, tool, and mutating precision had narrow passing margins. A final response-only phase freezes the encoder and all passing heads, then trains only balanced response-candidate and ranking updates so finishing one head cannot regress the others. |
+| F056 | P1 | FIXED | Benchmark and default-model discovery assumed a fixed number of parent directories above `AppContext.BaseDirectory`; isolated output builds resolved to `E:\Projects\data` instead of the repository. Repository files are now located by walking ancestors of both the working directory and application directory, with an isolated-build regression test. |
+| F057 | P1 | REJECTED | A post-210K external-slot/focused-domain continuation reduced validation slot F1 to 0.7945. It was rejected and did not replace the 210K artifact. |
+| F058 | P1 | REJECTED | A current-turn-only lexical representation for domain/tool heads improved some contextual errors but destabilized validation and mutating-tool precision. The source and artifact retain the validated full-context representation. |
+| F059 | P2 | REJECTED | Experimental suffix, affix, length, and numeric slot-shape features did not close the independent slot gap without validation regression. They are not shipped. |
+| F060 | P1 | REJECTED | A high-rate head-only adaptation through 260K recovered tool accuracy but left domain and slot below their prior values and mutating precision below its gate. The experiment was discarded. |
+| F061 | P1 | FIXED | Short teaching/self-test curricula initialized focus families used only after 160K and failed when their tiny fixture lacked rare domains. Focus sets are now required only if the requested run can enter head polishing; the eight built-in tests pass. |
+| F062 | P0 | FIXED | A stale learned knowledge target could render `MY NAME IS ARIN.` for unrelated turns such as `GOODBYE`, an apology, or `BALANCE`. Authoritative persona templates now require an explicit current-turn or resolved state reference, and a checked-in-model regression exercises the real artifact. |
+| F063 | P1 | FIXED | The short command `BALANCE` did not enter the authoritative `GET_BALANCE` path. It is now explicit validated evidence and returns the demo world's current amount. |
+| F064 | P1 | FIXED | Low-confidence fallback could turn an explicit apology or informative hard-negative statement into a clarification. Explicit apologies now enforce acknowledgment, validated statements retain acknowledgment, current domain evidence takes precedence over stale context for response selection, and self-harm support removes the spurious combat domain. |
+| F065 | P2 | FIXED | A contextual `WHAT SHOULD WE DO?` retained the active domain but returned a non-actionable generic sentence. The bounded runtime now returns safe domain-aware first-step guidance while richer situation summarization remains A008. |
+| F066 | P2 | FIXED | Loading an archived v10 binary checkpoint fell through to the JSON parser and reported a misleading `JsonException`. Fishbrain binary prefixes are now recognized before JSON parsing and return the documented compatibility error. |
+
+## Open architectural and product limits
+
+| ID | Priority | Status | Limitation and recommended direction |
+|---|---|---|---|
+| A001 | P1 | OPEN | Training checkpoints are roughly half a gigabyte of JSON and fresh training held about 14 GB of private memory in this audit. Move optimizer/model tensors to a streamed binary training format and profile retained corpus objects. |
+| A002 | P1 | OPEN | Safety and domain constraints still use reviewed phrase rules around a learned classifier. They prevent high-cost false actions but cannot cover every paraphrase. Expand adversarial held-out data and keep caller policy above model output. |
+| A003 | P1 | OPEN | Tool routing is intentionally deterministic and demo-specific. Production games need caller-supplied routing/authorization policy, richer entity resolution, and tool-specific clarification contracts. |
+| A004 | P2 | OPEN | Ranked responses are safe but often mechanical because 4,400-plus distinct visible variations are programmatically expanded. Add authored dialogue packs and human preference review; keep experimental free generation opt-in. |
+| A005 | P2 | OPEN | The corpus compiler uses static mutable compilation state. The CLI is single-shot, but an embeddable/concurrent compiler should move held-out and external-input sets into a compilation context object. |
+| A006 | P2 | OPEN | External normalization rejection still reports only success/failure at several source adapters. Add typed rejection reasons and per-source rejection counts to the audit output. |
+| A007 | P3 | OPEN | `V10CorpusPipeline` is the v11 compiler and `Brain.cs` retains a disabled pre-v11 training block. Rename/split by responsibility and remove archived code after a separate compatibility-history decision. |
+| A008 | P2 | OPEN | Follow-up reasoning is structured but shallow. `WHAT SHOULD WE DO?` now receives safe domain-aware first-step guidance, but the runtime cannot reconstruct detailed entities, hazards, dependencies, or objectives from a summarized situation. Add an explicit caller-owned situation/task state rather than relying on lexical turn history. |
+| A009 | P2 | OPEN | This compact model is not a general-purpose language model. It supports bounded game-dialogue schemas, authored response plans, and approved tools; unsupported knowledge must continue to clarify or defer. |
+| A010 | P2 | OPEN | `Brain.Tools` exposes the mutable pre-v11 reflection registry even though the public structured reply path uses immutable `GameToolRegistry`. Keep it only for checkpoint-era compatibility, then remove it at the next deliberate API break. |
+| A011 | P2 | OPEN | The final 210K artifact measured 2.7463/4.1461 ms median/p95. Its p95 is within 4x the historical v10 baseline, but median is 4.0819x. Build a controlled dual-version harness and profile the larger vocabulary/structured path before claiming the latency gate. |
+
+## Verification contract
+
+The audited revision is verified with these commands. The final command intentionally
+returns exit code 2 while the three independent neural misses remain:
 
 ```powershell
-dotnet build Fishbrain.slnx -c Release
+dotnet build Fishbrain.slnx -c Release --artifacts-path data/logs/final-solution-artifacts -p:UseAppHost=false
 dotnet run -c Release --project Fishbrain -- selftest
-dotnet run -c Release --project Fishbrain.DataGenerator -- selftest
-dotnet run -c Release --project Fishbrain.DataGenerator -- audit
-dotnet run -c Release --project Fishbrain -- evaluate `
-  data/compiled/test.jsonl data/models/model-v9-latest.json --gate stage
+dotnet run -c Release --project Fishbrain.Tests
+dotnet run -c Release --project Fishbrain.DataGenerator.Tests
+dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled-v11 --raw data/raw --manifest data/sources.json
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled-v11/test.jsonl data/models/model-v11-latest.fbm --gate release
 ```
 
-The final command shows the proposed `--gate` interface; v9 does not implement it
-yet.
+The audit intentionally keeps the partial, rejected, and open items visible. They are
+accepted boundaries for this revision; they must not be described as implemented
+capabilities or as a passing strict release.

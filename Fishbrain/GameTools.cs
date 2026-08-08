@@ -54,9 +54,10 @@ public sealed class GameToolRegistry
         foreach (var tool in tools)
         {
             ArgumentNullException.ThrowIfNull(tool);
-            ValidateSchema(tool.Schema);
-            if (!result.TryAdd(tool.Schema.Name, tool))
-                throw new ArgumentException($"Duplicate game tool '{tool.Schema.Name}'.", nameof(tools));
+            var schema = SnapshotSchema(tool.Schema);
+            ValidateSchema(schema);
+            if (!result.TryAdd(schema.Name, new RegisteredTool(tool, schema)))
+                throw new ArgumentException($"Duplicate game tool '{schema.Name}'.", nameof(tools));
         }
         _tools = new ReadOnlyDictionary<string, IGameTool>(result);
     }
@@ -76,14 +77,14 @@ public sealed class GameToolRegistry
         ValidateArguments(tool.Schema, invocation.Arguments);
         GameToolResult result;
         try { result = tool.Execute(invocation); }
-        catch (Exception exception)
+        catch (Exception exception) when (exception is not OutOfMemoryException)
         {
             var recoverableFields = tool.Schema.ResultFields
                 .Where(field => invocation.Arguments.ContainsKey(field.Name))
                 .ToDictionary(field => field.Name, field => invocation.Arguments[field.Name], StringComparer.Ordinal);
             return new GameToolResult(false,
                 new ReadOnlyDictionary<string, string>(recoverableFields),
-                "TOOL_EXCEPTION_" + exception.GetType().Name.ToUpperInvariant());
+                ExceptionCode(exception));
         }
         ArgumentNullException.ThrowIfNull(result);
         ValidateResult(tool.Schema, result);
@@ -99,7 +100,11 @@ public sealed class GameToolRegistry
     {
         var template = schema.PermittedResponseTemplates.FirstOrDefault(item => item.ForSuccess == result.Success &&
             item.RequiredFields.All(result.Fields.ContainsKey));
-        if (template is null) throw new InvalidDataException($"Tool '{schema.Name}' has no eligible response template.");
+        if (template is null)
+        {
+            if (!result.Success) return "THE GAME TOOL FAILED.";
+            throw new InvalidDataException($"Tool '{schema.Name}' has no eligible success response template.");
+        }
         var text = template.Text;
         foreach (var field in template.RequiredFields)
             text = text.Replace("{" + field + "}", result.Fields[field], StringComparison.Ordinal);
@@ -115,6 +120,11 @@ public sealed class GameToolRegistry
         if (schema.Parameters is null || schema.ResultFields is null || schema.PermittedResponseTemplates is null ||
             schema.PermittedResponseTemplates.Count == 0)
             throw new ArgumentException($"Tool '{schema.Name}' has an incomplete schema.");
+        if (schema.Parameters.Any(parameter => parameter is null || !Enum.IsDefined(parameter.Type)) ||
+            schema.ResultFields.Any(field => field is null || !Enum.IsDefined(field.Type)) ||
+            schema.PermittedResponseTemplates.Any(template => template is null || template.RequiredFields is null ||
+                string.IsNullOrWhiteSpace(template.Text)))
+            throw new ArgumentException($"Tool '{schema.Name}' contains invalid schema members.");
         Unique(schema.Parameters.Select(parameter => CanonicalName(parameter.Name, "parameter")), schema.Name, "parameter");
         Unique(schema.ResultFields.Select(field => CanonicalName(field.Name, "result field")), schema.Name, "result field");
         Unique(schema.PermittedResponseTemplates.Select(template => CanonicalName(template.Id, "template")), schema.Name, "template");
@@ -130,6 +140,30 @@ public sealed class GameToolRegistry
             if (!placeholders.SetEquals(template.RequiredFields))
                 throw new ArgumentException($"Tool template '{template.Id}' fields do not match its placeholders.");
         }
+    }
+
+    private static ToolSchema SnapshotSchema(ToolSchema schema)
+    {
+        ArgumentNullException.ThrowIfNull(schema);
+        ArgumentNullException.ThrowIfNull(schema.Parameters);
+        ArgumentNullException.ThrowIfNull(schema.ResultFields);
+        ArgumentNullException.ThrowIfNull(schema.PermittedResponseTemplates);
+        return new ToolSchema(schema.Name,
+            Array.AsReadOnly(schema.Parameters.Select(parameter => parameter is null
+                ? null! : new ToolParameter(parameter.Name, parameter.Type, parameter.Required)).ToArray()),
+            Array.AsReadOnly(schema.ResultFields.Select(field => field is null
+                ? null! : new ToolResultField(field.Name, field.Type, field.Required)).ToArray()),
+            schema.MutatesWorldState,
+            Array.AsReadOnly(schema.PermittedResponseTemplates.Select(template => template is null
+                ? null! : new ToolResponseTemplate(template.Id, template.Text,
+                    template.RequiredFields is null ? null! : Array.AsReadOnly(template.RequiredFields.ToArray()),
+                    template.ForSuccess)).ToArray()));
+    }
+
+    private sealed class RegisteredTool(IGameTool implementation, ToolSchema schema) : IGameTool
+    {
+        public ToolSchema Schema { get; } = schema;
+        public GameToolResult Execute(GameToolInvocation invocation) => implementation.Execute(invocation);
     }
 
     private static void ValidateArguments(ToolSchema schema, IReadOnlyDictionary<string, string> arguments)
@@ -152,6 +186,9 @@ public sealed class GameToolRegistry
     private static void ValidateResult(ToolSchema schema, GameToolResult result)
     {
         ArgumentNullException.ThrowIfNull(result.Fields);
+        if (result.Success && result.ErrorCode is not null || !result.Success &&
+            (result.ErrorCode is null || result.ErrorCode.Length > 64 || !NamePattern.IsMatch(result.ErrorCode)))
+            throw new InvalidDataException($"Tool '{schema.Name}' returned invalid success/error metadata.");
         var declared = schema.ResultFields.ToDictionary(field => field.Name, StringComparer.Ordinal);
         if (result.Fields.Keys.Any(key => !declared.ContainsKey(key)))
             throw new InvalidDataException($"Tool '{schema.Name}' returned an undeclared field.");
@@ -182,7 +219,8 @@ public sealed class GameToolRegistry
 
     private static string CanonicalName(string name, string kind)
     {
-        if (!NamePattern.IsMatch(name)) throw new ArgumentException($"Invalid {kind} name '{name}'.");
+        if (string.IsNullOrWhiteSpace(name) || !NamePattern.IsMatch(name))
+            throw new ArgumentException($"Invalid {kind} name '{name}'.");
         return name;
     }
 
@@ -191,24 +229,38 @@ public sealed class GameToolRegistry
         var seen = new HashSet<string>(StringComparer.Ordinal);
         if (names.Any(name => !seen.Add(name))) throw new ArgumentException($"Tool '{tool}' has duplicate {kind} names.");
     }
+
+    private static string ExceptionCode(Exception exception)
+    {
+        var type = new string(exception.GetType().Name.ToUpperInvariant()
+            .Where(character => character is >= 'A' and <= 'Z' or >= '0' and <= '9' or '_').ToArray());
+        if (type.Length == 0) type = "UNKNOWN";
+        var code = "TOOL_EXCEPTION_" + type;
+        return code.Length <= 64 ? code : code[..64];
+    }
 }
 
 /// <summary>Authoritative, thread-safe demo world shared by every registered demo tool.</summary>
 public sealed class DemoWorldState
 {
     private readonly object _gate = new();
-    private readonly ConcurrentDictionary<string, GameToolResult> _completed = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, CachedExecution> _completed = new(StringComparer.Ordinal);
     private readonly Dictionary<string, int> _merchantStock = new(StringComparer.Ordinal)
     {
-        ["IRON SWORD"] = 20, ["HEALTH POTION"] = 50, ["ROPE"] = 30
+        ["IRON SWORD"] = 20,
+        ["HEALTH POTION"] = 50,
+        ["ROPE"] = 30
     };
     private readonly Dictionary<string, int> _playerInventory = new(StringComparer.Ordinal)
     {
-        ["HEALTH POTION"] = 1, ["ROPE"] = 2
+        ["HEALTH POTION"] = 1,
+        ["ROPE"] = 2
     };
     private readonly Dictionary<string, int> _prices = new(StringComparer.Ordinal)
     {
-        ["IRON SWORD"] = 25, ["HEALTH POTION"] = 8, ["ROPE"] = 3
+        ["IRON SWORD"] = 25,
+        ["HEALTH POTION"] = 8,
+        ["ROPE"] = 3
     };
     private readonly Dictionary<string, string> _locations = new(StringComparer.Ordinal)
     {
@@ -228,8 +280,19 @@ public sealed class DemoWorldState
         ["REACTOR"] = "THE REACTOR POWERS THE STATION"
     };
     private int _balance = 100;
+    private string _currentLocation = "VILLAGE MARKET";
 
-    public string CurrentLocation { get; set; } = "VILLAGE MARKET";
+    public string CurrentLocation
+    {
+        get { lock (_gate) return _currentLocation; }
+        set
+        {
+            var normalized = DialogueText.Normalize(value);
+            if (normalized.Length is < 1 or > 128)
+                throw new ArgumentException("Current location must contain 1-128 canonical characters.", nameof(value));
+            lock (_gate) _currentLocation = normalized;
+        }
+    }
 
     public int Balance { get { lock (_gate) return _balance; } }
     public IReadOnlyDictionary<string, int> Inventory
@@ -237,8 +300,27 @@ public sealed class DemoWorldState
         get { lock (_gate) return new ReadOnlyDictionary<string, int>(new Dictionary<string, int>(_playerInventory)); }
     }
 
-    internal GameToolResult Once(GameToolInvocation invocation, Func<GameToolResult> action) =>
-        _completed.GetOrAdd(invocation.IdempotencyKey, _ => action());
+    internal GameToolResult Once(GameToolInvocation invocation, Func<GameToolResult> action)
+    {
+        var key = invocation.ToolName + "\u001f" + invocation.IdempotencyKey;
+        var fingerprint = InvocationFingerprint(invocation);
+        var candidate = new CachedExecution(fingerprint, new Lazy<GameToolResult>(action,
+            LazyThreadSafetyMode.ExecutionAndPublication));
+        var cached = _completed.GetOrAdd(key, candidate);
+        if (cached.Fingerprint == fingerprint) return cached.Result.Value;
+        var fields = invocation.Arguments.ToDictionary(item => item.Key, item => item.Value, StringComparer.Ordinal);
+        if (fields.Count > 0) fields["REASON"] = "IDEMPOTENCY KEY REUSED WITH DIFFERENT ARGUMENTS";
+        return new GameToolResult(false, new ReadOnlyDictionary<string, string>(fields), "IDEMPOTENCY_CONFLICT");
+    }
+
+    private static string InvocationFingerprint(GameToolInvocation invocation)
+    {
+        var canonical = string.Join("\u001e", invocation.Arguments.OrderBy(item => item.Key, StringComparer.Ordinal)
+            .Select(item => $"{item.Key.Length}:{item.Key}{item.Value.Length}:{item.Value}"));
+        return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(canonical))).ToLowerInvariant();
+    }
+
+    private sealed record CachedExecution(string Fingerprint, Lazy<GameToolResult> Result);
 
     internal GameToolResult Locate(string place) => _locations.TryGetValue(place, out var direction)
         ? Success(("PLACE", place), ("DIRECTION", direction))
@@ -289,9 +371,14 @@ public sealed class DemoWorldState
             try { total = checked(price * quantity); }
             catch (OverflowException) { return TradeFailure("AMOUNT_OVERFLOW", item, quantity, "AMOUNT TOO LARGE"); }
             if (_balance < total) return TradeFailure("INSUFFICIENT_FUNDS", item, quantity, "INSUFFICIENT FUNDS");
-            _merchantStock[item] -= quantity;
-            _playerInventory[item] = checked(_playerInventory.GetValueOrDefault(item) + quantity);
-            _balance -= total;
+            int inventory;
+            try { inventory = checked(_playerInventory.GetValueOrDefault(item) + quantity); }
+            catch (OverflowException) { return TradeFailure("INVENTORY_OVERFLOW", item, quantity, "INVENTORY TOO LARGE"); }
+            var newStock = stock - quantity;
+            var newBalance = _balance - total;
+            _merchantStock[item] = newStock;
+            _playerInventory[item] = inventory;
+            _balance = newBalance;
             return Success(("ITEM", item), ("QUANTITY", Number(quantity)), ("PRICE", Number(total)),
                 ("CURRENCY", "GOLD"), ("BALANCE", Number(_balance)));
         }
@@ -309,11 +396,18 @@ public sealed class DemoWorldState
             int total;
             try { total = checked(Math.Max(1, price / 2) * quantity); }
             catch (OverflowException) { return TradeFailure("AMOUNT_OVERFLOW", item, quantity, "AMOUNT TOO LARGE"); }
-            try { _balance = checked(_balance + total); }
+            int balance;
+            int stock;
+            try
+            {
+                balance = checked(_balance + total);
+                stock = checked(_merchantStock.GetValueOrDefault(item) + quantity);
+            }
             catch (OverflowException) { return TradeFailure("BALANCE_OVERFLOW", item, quantity, "BALANCE TOO LARGE"); }
             _playerInventory[item] -= quantity;
             if (_playerInventory[item] == 0) _playerInventory.Remove(item);
-            _merchantStock[item] = checked(_merchantStock.GetValueOrDefault(item) + quantity);
+            _merchantStock[item] = stock;
+            _balance = balance;
             return Success(("ITEM", item), ("QUANTITY", Number(quantity)), ("PRICE", Number(total)),
                 ("CURRENCY", "GOLD"), ("BALANCE", Number(_balance)));
         }

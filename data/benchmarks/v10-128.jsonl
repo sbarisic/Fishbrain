@@ -58,7 +58,7 @@
 {"id":"F29-T2","text":"NOW READ THEM BACK.","semanticFamilyId":"BENCHMARK:F29:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
 {"id":"F30-T1","text":"WHERE IS ZYRAX?","semanticFamilyId":"BENCHMARK:F30:T1","requiredPolicy":"ANSWER_OR_TOOL","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
 {"id":"F30-T2","text":"IS ZYRAX A PERSON OR A PLACE?","semanticFamilyId":"BENCHMARK:F30:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
-{"id":"F31-T1","text":"HELLO?","semanticFamilyId":"BENCHMARK:F31:T1","requiredPolicy":"RESPOND","contentBand":"PROFANITY","source":"PROJECT-OWNED-BENCHMARK"}
+{"id":"F31-T1","text":"HELLO?","semanticFamilyId":"BENCHMARK:F31:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
 {"id":"F31-T2","text":"NOD IF YOU UNDERSTAND ME.","semanticFamilyId":"BENCHMARK:F31:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
 {"id":"F32-T1","text":"I NEED A ROOM, A HOT MEAL, AND SOMEONE TO LOOK AT THIS WOUND.","semanticFamilyId":"BENCHMARK:F32:T1","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}
 {"id":"F32-T2","text":"ROOM FIRST. I'M EXHAUSTED.","semanticFamilyId":"BENCHMARK:F32:T2","requiredPolicy":"RESPOND","contentBand":"ORDINARY","source":"PROJECT-OWNED-BENCHMARK"}

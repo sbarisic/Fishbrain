@@ -75,6 +75,8 @@ internal static class V10CorpusPipeline
     };
     private static HashSet<string> _heldOutInputs = new(StringComparer.Ordinal);
     private static readonly HashSet<string> ExternalNluInputs = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> KnownToolTargets = DemoGameTools.CreateMerchant().Schemas
+        .Select(schema => schema.Name).Append("NONE").ToHashSet(StringComparer.Ordinal);
 
     public static void Compile(CliOptions options)
     {
@@ -143,6 +145,7 @@ internal static class V10CorpusPipeline
         AuditProjectDiversity(rows);
         AuditLeakage(rows);
         AuditBenchmark(rows, options.InputPath);
+        AuditProvenance(manifest, options.InputPath);
         Console.WriteLine("V11 AUDIT OK 60000 RECORDS");
         Console.WriteLine($"CORPUS_SHA256 {CorpusHash(options.InputPath)}");
         Report(rows);
@@ -168,7 +171,8 @@ internal static class V10CorpusPipeline
             var slots = SlotsFor(normalized, scenario);
             var structured = Structured(scenario.SpeechActs, scenario.Domains, scenario.Goals,
                 scenario.Affect, scenario.Stance, scenario.Policy, slots, scenario.Content,
-                scenario.Tool, scenario.Candidate) with { KnowledgeTarget = scenario.KnowledgeTarget };
+                scenario.Tool, scenario.Candidate) with
+            { KnowledgeTarget = scenario.KnowledgeTarget };
             var family = $"{source}:{scenario.Id}:{index / 2:D5}";
             var row = new V10CorpusRow(normalized, StateFor(index + seed), oldPerception, oldAction,
                 response, source, "UNASSIGNED", family, scenario.Id, family,
@@ -256,7 +260,7 @@ internal static class V10CorpusPipeline
             var log = conversation.Value.GetProperty("log").EnumerateArray().ToArray();
             var userPositions = Enumerable.Range(0, log.Length).Where(index => index % 2 == 0).ToArray();
             if (userPositions.Length == 0) continue;
-            var position = userPositions[Math.Abs(StableNumber(conversation.Name)) % userPositions.Length];
+            var position = userPositions[StableNumber(conversation.Name) % userPositions.Length];
             if (!TryNormalizeExternal(log[position].GetProperty("text").GetString(), out var current) || IsHeldOut(current)) continue;
             if (!used.Add(NormalizeKey(current)) || !ExternalNluInputs.Add(NormalizeKey(current))) continue;
             var turns = new List<DialogueTurn>();
@@ -309,7 +313,7 @@ internal static class V10CorpusPipeline
                 var customerPositions = Enumerable.Range(0, original.Length)
                     .Where(index => original[index][0].GetString() == "customer").ToArray();
                 if (customerPositions.Length == 0) continue;
-                var position = customerPositions[Math.Abs(StableNumber(conversationId)) % customerPositions.Length];
+                var position = customerPositions[StableNumber(conversationId) % customerPositions.Length];
                 if (!TryNormalizeExternal(original[position][1].GetString(), out var current) || IsHeldOut(current)) continue;
                 if (!used.Add(NormalizeKey(current)) || !ExternalNluInputs.Add(NormalizeKey(current))) continue;
                 var turns = new List<DialogueTurn>();
@@ -381,13 +385,13 @@ internal static class V10CorpusPipeline
                 if (intents.Length == 0) continue;
                 var slots = new List<DialogueSlot>();
                 if (example.TryGetProperty("slots", out var slotObject))
-                foreach (var slot in slotObject.EnumerateObject())
-                {
-                    if (!slot.Value.TryGetProperty("text", out var slotText) ||
-                        !TryNormalizeExternal(slotText.GetString(), out var value)) continue;
-                    var start = text.IndexOf(value, StringComparison.Ordinal);
-                    if (start >= 0) slots.Add(new DialogueSlot(ExternalSlot(slot.Name), BioTag.B, value, start, value.Length, 1.0));
-                }
+                    foreach (var slot in slotObject.EnumerateObject())
+                    {
+                        if (!slot.Value.TryGetProperty("text", out var slotText) ||
+                            !TryNormalizeExternal(slotText.GetString(), out var value)) continue;
+                        var start = text.IndexOf(value, StringComparison.Ordinal);
+                        if (start >= 0) slots.Add(new DialogueSlot(ExternalSlot(slot.Name), BioTag.B, value, start, value.Length, 1.0));
+                    }
                 var domain = entry.FullName.Contains("/banking/", StringComparison.Ordinal)
                     ? DialogueDomain.TradeEconomy : DialogueDomain.Assistance;
                 var structured = Structured([ExternalSpeech(text)], [domain],
@@ -439,23 +443,23 @@ internal static class V10CorpusPipeline
         var rows = new List<V10CorpusRow>(count);
         var usedInputs = new HashSet<string>(StringComparer.Ordinal);
         foreach (var split in new[] { "train", "val", "test" })
-        foreach (var item in document.RootElement.GetProperty(split).EnumerateArray())
-        {
-            if (rows.Count == count) break;
-            if (!TryNormalizeExternal(item[0].GetString(), out var text)) continue;
-            if (IsHeldOut(text)) continue;
-            var inputKey = NormalizeKey(text);
-            if (!usedInputs.Add(inputKey) || !ExternalNluInputs.Add(inputKey)) continue;
-            var label = item[1].GetString()!.ToUpperInvariant();
-            var speech = text.EndsWith('?') || text.StartsWith("WHAT ") || text.StartsWith("HOW ") || text.StartsWith("WHERE ")
-                ? SpeechAct.Ask : SpeechAct.Request;
-            var domain = label.Contains("TRANSFER") || label.Contains("CARD") || label.Contains("CASH")
-                ? DialogueDomain.TradeEconomy : DialogueDomain.MetaSystem;
-            var structured = Structured([speech], [domain], [DialogueGoal.InformationExchange],
-                UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Answer, [], [], null, "ACKNOWLEDGE");
-            rows.Add(ExternalRow("PLAYER " + text, null, "CLINC150", $"{split}-{rows.Count:D6}",
-                "CLINC_" + label, definition, structured, ["speechActs", "domains", "goals"]));
-        }
+            foreach (var item in document.RootElement.GetProperty(split).EnumerateArray())
+            {
+                if (rows.Count == count) break;
+                if (!TryNormalizeExternal(item[0].GetString(), out var text)) continue;
+                if (IsHeldOut(text)) continue;
+                var inputKey = NormalizeKey(text);
+                if (!usedInputs.Add(inputKey) || !ExternalNluInputs.Add(inputKey)) continue;
+                var label = item[1].GetString()!.ToUpperInvariant();
+                var speech = text.EndsWith('?') || text.StartsWith("WHAT ") || text.StartsWith("HOW ") || text.StartsWith("WHERE ")
+                    ? SpeechAct.Ask : SpeechAct.Request;
+                var domain = label.Contains("TRANSFER") || label.Contains("CARD") || label.Contains("CASH")
+                    ? DialogueDomain.TradeEconomy : DialogueDomain.MetaSystem;
+                var structured = Structured([speech], [domain], [DialogueGoal.InformationExchange],
+                    UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Answer, [], [], null, "ACKNOWLEDGE");
+                rows.Add(ExternalRow("PLAYER " + text, null, "CLINC150", $"{split}-{rows.Count:D6}",
+                    "CLINC_" + label, definition, structured, ["speechActs", "domains", "goals"]));
+            }
         if (rows.Count != count) throw new InvalidDataException($"CLINC150 supplied {rows.Count} of {count} rows.");
         return rows;
     }
@@ -627,22 +631,22 @@ internal static class V10CorpusPipeline
         var rows = new List<V10CorpusRow>(count);
         var usedInputs = new HashSet<string>(StringComparer.Ordinal);
         foreach (var name in new[] { "go-train.tsv", "go-dev.tsv", "go-test.tsv" })
-        foreach (var line in File.ReadLines(Path.Combine(rawPath, name), Utf8))
-        {
-            if (rows.Count == count) break;
-            var parts = line.Split('\t');
-            if (parts.Length < 3 || !TryNormalizeExternal(parts[0], out var text)) continue;
-            if (IsHeldOut(text)) continue;
-            var inputKey = NormalizeKey(text);
-            if (!usedInputs.Add(inputKey) || !ExternalNluInputs.Add(inputKey)) continue;
-            var labels = parts[1].Split(',').Select(int.Parse).ToArray();
-            var affect = GoAffect(labels);
-            var structured = Structured([SpeechAct.Inform], [DialogueDomain.Social], [DialogueGoal.EmotionalExpression],
-                affect, affect == UserAffect.Hostile ? DialogueStance.Hostile : affect == UserAffect.Friendly ? DialogueStance.Friendly : DialogueStance.Neutral,
-                ResponsePolicy.Acknowledge, [], [], null, "ACKNOWLEDGE");
-            rows.Add(ExternalRow("PLAYER " + text, null, "GOEMOTIONS", parts[2],
-                "GO_" + affect, definition, structured, ["affect"]));
-        }
+            foreach (var line in File.ReadLines(Path.Combine(rawPath, name), Utf8))
+            {
+                if (rows.Count == count) break;
+                var parts = line.Split('\t');
+                if (parts.Length < 3 || !TryNormalizeExternal(parts[0], out var text)) continue;
+                if (IsHeldOut(text)) continue;
+                var inputKey = NormalizeKey(text);
+                if (!usedInputs.Add(inputKey) || !ExternalNluInputs.Add(inputKey)) continue;
+                var labels = parts[1].Split(',').Select(int.Parse).ToArray();
+                var affect = GoAffect(labels);
+                var structured = Structured([SpeechAct.Inform], [DialogueDomain.Social], [DialogueGoal.EmotionalExpression],
+                    affect, affect == UserAffect.Hostile ? DialogueStance.Hostile : affect == UserAffect.Friendly ? DialogueStance.Friendly : DialogueStance.Neutral,
+                    ResponsePolicy.Acknowledge, [], [], null, "ACKNOWLEDGE");
+                rows.Add(ExternalRow("PLAYER " + text, null, "GOEMOTIONS", parts[2],
+                    "GO_" + affect, definition, structured, ["affect"]));
+            }
         if (rows.Count != count) throw new InvalidDataException($"GoEmotions supplied {rows.Count} of {count} rows.");
         return rows;
     }
@@ -705,7 +709,7 @@ internal static class V10CorpusPipeline
             SourceChecksum(definition), structured, supervised);
         turns ??= [new DialogueTurn(DialogueRole.Player,
             normalizedInput[(normalizedInput.LastIndexOf("PLAYER ", StringComparison.Ordinal) + 7)..])];
-        return EnrichRow(row, turns, definition);
+        return EnrichRow(WithTurns(row, turns), turns, definition);
     }
 
     private static StructuredPerception Structured(
@@ -737,18 +741,26 @@ internal static class V10CorpusPipeline
             new ProjectScenario("BUY", "BUY 2 {ITEM}, {SERIAL}.", [SpeechAct.Order, SpeechAct.Negotiate], [DialogueDomain.TradeEconomy, DialogueDomain.ItemsInventory], [DialogueGoal.ItemAcquisition, DialogueGoal.Transaction], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.ExecuteTool, [], "BUY", "NEGOTIATE", "LET US AGREE ON FAIR TERMS.", SlotType.Item, true),
             new ProjectScenario("SELL", "SELL 3 {ITEM}, {SERIAL}.", [SpeechAct.Order, SpeechAct.Negotiate], [DialogueDomain.TradeEconomy, DialogueDomain.ItemsInventory], [DialogueGoal.ItemDisposal, DialogueGoal.Transaction], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.ExecuteTool, [], "SELL", "NEGOTIATE", "LET US AGREE ON FAIR TERMS.", SlotType.Item, true),
             new ProjectScenario("CLARIFY", "THAT IS NOT WHAT I ASKED, {SERIAL}.", [SpeechAct.Correct], [DialogueDomain.Assistance], [DialogueGoal.Clarification], UserAffect.Frustrated, DialogueStance.Cautious, ResponsePolicy.Clarify, [], null, "CLARIFY", "PLEASE EXPLAIN WHAT YOU NEED."),
-            new ProjectScenario("REFUSE", "I WILL NOT HELP YOU, IDIOT, {SERIAL}.", [SpeechAct.Refuse], [DialogueDomain.Social], [DialogueGoal.EmotionalExpression], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Answer, [ContentFlag.Profanity], null, "ACKNOWLEDGE", "I UNDERSTAND."),
+            new ProjectScenario("REFUSE", "I WILL NOT HELP YOU, IDIOT, {SERIAL}.", [SpeechAct.Refuse], [DialogueDomain.Social], [DialogueGoal.EmotionalExpression], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Answer, [ContentFlag.Profanity], null, "SOCIAL_ANSWER", "I UNDERSTAND."),
             new ProjectScenario("THREAT", "GIVE ME {ITEM} OR ELSE I WILL KILL YOU, {SERIAL}.", [SpeechAct.Order, SpeechAct.Threaten], [DialogueDomain.Combat, DialogueDomain.ItemsInventory], [DialogueGoal.ItemAcquisition, DialogueGoal.Influence], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.Threat, ContentFlag.FictionalViolence], null, "HOSTILE_BOUNDARY", "I WILL NOT ARGUE WITH YOU.", SlotType.Item),
             new ProjectScenario("SILENCE", "I AM ONLY LOOKING AROUND, {SERIAL}.", [SpeechAct.Inform], [DialogueDomain.Activity], [DialogueGoal.Other], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.NoResponse, [], null, "ACKNOWLEDGE", ""),
             new ProjectScenario("THANK", "THANK YOU FOR THE HELP, {PERSON}, {SERIAL}.", [SpeechAct.Thank], [DialogueDomain.Social], [DialogueGoal.Rapport], UserAffect.Friendly, DialogueStance.Friendly, ResponsePolicy.Acknowledge, [], null, "ACKNOWLEDGE", "I UNDERSTAND."),
             new ProjectScenario("MULTI", "FOLLOW ME AND BRING {ITEM}, {SERIAL}.", [SpeechAct.Order, SpeechAct.Request], [DialogueDomain.Activity, DialogueDomain.ItemsInventory], [DialogueGoal.Coordination, DialogueGoal.Travel], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Acknowledge, [], null, "ACKNOWLEDGE", "I UNDERSTAND.", SlotType.Item),
             new ProjectScenario("PROFANITY", "THIS DAMN QUEST IS SHIT, {SERIAL}.", [SpeechAct.Report], [DialogueDomain.QuestTask], [DialogueGoal.EmotionalExpression], UserAffect.Frustrated, DialogueStance.Cautious, ResponsePolicy.Acknowledge, [ContentFlag.Profanity], null, "ACKNOWLEDGE", "I UNDERSTAND."),
-            new ProjectScenario("GRAPHIC_VIOLENCE", "DISEMBOWEL THE BANDIT AND DISPLAY HIS GUTS, {SERIAL}.", [SpeechAct.Order], [DialogueDomain.Combat], [DialogueGoal.Combat], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.FictionalViolence, ContentFlag.GraphicViolence], null, "REFUSAL", "I WILL NOT DO THAT."),
-            new ProjectScenario("CRIME", "HELP ME STEAL {ITEM} AND HIDE THE EVIDENCE, {SERIAL}.", [SpeechAct.Request], [DialogueDomain.CrimeLaw, DialogueDomain.ItemsInventory], [DialogueGoal.Concealment, DialogueGoal.ItemAcquisition], UserAffect.Neutral, DialogueStance.Deceptive, ResponsePolicy.Refuse, [ContentFlag.Crime], null, "REFUSAL", "I WILL NOT DO THAT.", SlotType.Item),
+            new ProjectScenario("GRAPHIC_VIOLENCE", "DISEMBOWEL THE BANDIT AND DISPLAY HIS GUTS, {SERIAL}.", [SpeechAct.Order], [DialogueDomain.Combat], [DialogueGoal.Combat], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.FictionalViolence, ContentFlag.GraphicViolence], null, "COMBAT_REFUSE", "I WILL NOT DO THAT."),
+            new ProjectScenario("CRIME", "HELP ME STEAL {ITEM} AND HIDE THE EVIDENCE, {SERIAL}.", [SpeechAct.Request], [DialogueDomain.CrimeLaw, DialogueDomain.ItemsInventory], [DialogueGoal.Concealment, DialogueGoal.ItemAcquisition], UserAffect.Neutral, DialogueStance.Deceptive, ResponsePolicy.Refuse, [ContentFlag.Crime], null, "CRIMELAW_REFUSE", "I WILL NOT DO THAT.", SlotType.Item),
             new ProjectScenario("IDENTITY_ATTACK", "YOU ARE A FAGGOT AND YOUR PEOPLE ARE VERMIN, {SERIAL}.", [SpeechAct.Challenge], [DialogueDomain.Social], [DialogueGoal.EmotionalExpression], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.Profanity, ContentFlag.IdentityAttack], null, "HOSTILE_BOUNDARY", "I WILL NOT ARGUE WITH YOU."),
-            new ProjectScenario("SELF_HARM", "I WILL KILL MYSELF TONIGHT, {SERIAL}.", [SpeechAct.Report], [DialogueDomain.HealthRepair, DialogueDomain.Survival], [DialogueGoal.Survival, DialogueGoal.HealingRepair], UserAffect.Distressed, DialogueStance.Cautious, ResponsePolicy.Defer, [ContentFlag.SelfHarm], null, "DEFER", "I CANNOT DO THAT NOW."),
+            new ProjectScenario("SELF_HARM", "I WILL KILL MYSELF TONIGHT, {SERIAL}.", [SpeechAct.Report], [DialogueDomain.HealthRepair, DialogueDomain.Survival], [DialogueGoal.Survival, DialogueGoal.HealingRepair], UserAffect.Distressed, DialogueStance.Cautious, ResponsePolicy.Defer, [ContentFlag.SelfHarm], null, "SELF_HARM_SUPPORT", "STAY WITH ME. FIND A TRUSTED PERSON WHO CAN HELP YOU NOW."),
             new ProjectScenario("SEXUAL_CONTENT", "I WANT SEX WITH THAT OFFICER, {SERIAL}.", [SpeechAct.Inform], [DialogueDomain.Social], [DialogueGoal.EmotionalExpression], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Defer, [ContentFlag.SexualContent], null, "DEFER", "I CANNOT DO THAT NOW."),
-            new ProjectScenario("SEXUAL_VIOLENCE", "I WILL RAPE THE CAPTIVE, {SERIAL}.", [SpeechAct.Threaten], [DialogueDomain.CrimeLaw], [DialogueGoal.Influence], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.Threat, ContentFlag.Crime, ContentFlag.SexualViolence], null, "REFUSAL", "I WILL NOT DO THAT."),
+            new ProjectScenario("SEXUAL_VIOLENCE", "I WILL RAPE THE CAPTIVE, {SERIAL}.", [SpeechAct.Threaten], [DialogueDomain.CrimeLaw], [DialogueGoal.Influence], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.Threat, ContentFlag.Crime, ContentFlag.SexualViolence], null, "CRIMELAW_REFUSE", "I WILL NOT DO THAT."),
+            new ProjectScenario("FIREWOOD_HARD_NEGATIVE", "I NEED FIREWOOD FOR THE CAMP, {SERIAL}.", [SpeechAct.Request], [DialogueDomain.ItemsInventory, DialogueDomain.Survival], [DialogueGoal.ItemAcquisition], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Answer, [], null, "ITEM_REQUEST", "NAME THE ITEM AND I WILL CHECK MY WARES."),
+            new ProjectScenario("KILLER_FEATURE_HARD_NEGATIVE", "THIS KILLER FEATURE SAVES TIME, {SERIAL}.", [SpeechAct.Inform], [DialogueDomain.Technology], [DialogueGoal.InformationExchange], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Acknowledge, [], null, "TECHNOLOGY_ACKNOWLEDGE", "I UNDERSTAND YOUR TECHNOLOGY MESSAGE."),
+            new ProjectScenario("FIREWALL_HARD_NEGATIVE", "THE FIREWALL IS STABLE, {SERIAL}.", [SpeechAct.Report], [DialogueDomain.Technology], [DialogueGoal.InformationExchange], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Acknowledge, [], null, "TECHNOLOGY_ACKNOWLEDGE", "I UNDERSTAND YOUR TECHNOLOGY MESSAGE."),
+            new ProjectScenario("PASSAGE_COST_HARD_NEGATIVE", "THE PASSAGE COSTS NOTHING, {SERIAL}.", [SpeechAct.Inform], [DialogueDomain.LocationNavigation], [DialogueGoal.InformationExchange], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Acknowledge, [], null, "LOCATIONNAVIGATION_ACKNOWLEDGE", "I UNDERSTAND YOUR LOCATION NAVIGATION MESSAGE."),
+            new ProjectScenario("KILLING_TIME_HARD_NEGATIVE", "WE ARE KILLING TIME AT {PLACE}, {SERIAL}.", [SpeechAct.Inform], [DialogueDomain.Activity, DialogueDomain.LocationNavigation], [DialogueGoal.EmotionalExpression], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Acknowledge, [], null, "ACTIVITY_ACKNOWLEDGE", "I UNDERSTAND YOUR ACTIVITY MESSAGE.", SlotType.Place),
+            new ProjectScenario("APOLOGY_QUOTE", "I AM SORRY I CALLED YOU AN IDIOT, {SERIAL}.", [SpeechAct.Apologize], [DialogueDomain.Social], [DialogueGoal.Rapport], UserAffect.Friendly, DialogueStance.Friendly, ResponsePolicy.Acknowledge, [ContentFlag.Profanity], null, "APOLOGY_ACCEPT", "I ACCEPT YOUR APOLOGY."),
+            new ProjectScenario("HOSTILE_PERSONA_QUERY", "WHAT IS YOUR NAME, IDIOT, {SERIAL}?", [SpeechAct.Ask, SpeechAct.Challenge], [DialogueDomain.Identity, DialogueDomain.Social], [DialogueGoal.InformationExchange], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.Profanity], null, "IDENTITY_REFUSE", "I WILL NOT HELP WITH THAT IDENTITY REQUEST.", null, false, KnowledgeTarget.Name),
+            new ProjectScenario("HOSTILE_TRANSACTION", "BUY 2 {ITEM}, IDIOT, {SERIAL}.", [SpeechAct.Order, SpeechAct.Challenge], [DialogueDomain.TradeEconomy, DialogueDomain.ItemsInventory], [DialogueGoal.ItemAcquisition], UserAffect.Hostile, DialogueStance.Hostile, ResponsePolicy.Refuse, [ContentFlag.Profanity], null, "TRADEECONOMY_REFUSE", "I WILL NOT HELP WITH THAT TRADE ECONOMY REQUEST.", SlotType.Item, true),
             new ProjectScenario("OFFER", "I OFFER YOU {ITEM} FOR THE JOURNEY, {SERIAL}.", [SpeechAct.Offer], [DialogueDomain.ItemsInventory, DialogueDomain.Social], [DialogueGoal.Rapport], UserAffect.Friendly, DialogueStance.Friendly, ResponsePolicy.Negotiate, [], null, "NEGOTIATE", "LET US AGREE ON FAIR TERMS.", SlotType.Item),
             new ProjectScenario("CONFIRM", "YES, THE NORTH ROAD IS SAFE, {SERIAL}.", [SpeechAct.Confirm], [DialogueDomain.Environment, DialogueDomain.LocationNavigation], [DialogueGoal.InformationExchange], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Acknowledge, [], null, "ACKNOWLEDGE", "I UNDERSTAND."),
             new ProjectScenario("ACCEPT", "I ACCEPT YOUR TERMS, {PERSON}, {SERIAL}.", [SpeechAct.Accept], [DialogueDomain.Social, DialogueDomain.TradeEconomy], [DialogueGoal.Negotiation], UserAffect.Friendly, DialogueStance.Friendly, ResponsePolicy.Acknowledge, [], null, "ACKNOWLEDGE", "I UNDERSTAND."),
@@ -987,32 +999,116 @@ internal static class V10CorpusPipeline
     {
         if (row.Input != DialogueText.Normalize(row.Input) || !row.Input.StartsWith("PLAYER ", StringComparison.Ordinal))
             throw new InvalidDataException($"Noncanonical input in {row.GroupId}.");
-        if (row.Input.Length > 1024 || row.Response?.Length > 256) throw new InvalidDataException($"Overlength row {row.GroupId}.");
+        if (row.Input.Length > 1024 || row.Response?.Length > 256 ||
+            row.Response is not null && row.Response != DialogueText.Normalize(row.Response))
+            throw new InvalidDataException($"Invalid response length or normalization in {row.GroupId}.");
         row.State.Validate();
         if (Cognition.ActionFor(row.Perception) != row.Action) throw new InvalidDataException($"Invalid legacy action in {row.GroupId}.");
         if (string.IsNullOrWhiteSpace(row.SemanticFamilyId) || string.IsNullOrWhiteSpace(row.GroupId) ||
-            string.IsNullOrWhiteSpace(row.SourceRevision) || row.SourceChecksum.Length != 64)
+            string.IsNullOrWhiteSpace(row.SourceRevision) || row.SourceChecksum is null || row.SourceChecksum.Length != 64 ||
+            row.SourceChecksum.Any(character => !Uri.IsHexDigit(character)))
             throw new InvalidDataException($"Missing provenance in {row.GroupId}.");
         if (!CommercialLicenses.Contains(row.SourceLicense)) throw new InvalidDataException($"Noncommercial source {row.Source}.");
         if (row.Turns is null || row.Turns.Length == 0 || row.Turns[^1].Role != DialogueRole.Player ||
             row.InitialDialogueState is null || row.Persona is null || string.IsNullOrWhiteSpace(row.SourceUrl) ||
-            string.IsNullOrWhiteSpace(row.Attribution) || row.TransformationVersion != "V11.1")
+            string.IsNullOrWhiteSpace(row.Attribution) || row.TransformationVersion != "V11.1" ||
+            row.StructuredPerception is null || row.SupervisedHeads is null)
             throw new InvalidDataException($"Missing v11 contextual schema fields in {row.GroupId}.");
         row.InitialDialogueState.Validate();
         row.Persona.Validate();
-        if (row.SupervisedHeads.Any(head => !AllHeads.Contains(head, StringComparer.Ordinal)))
-            throw new InvalidDataException($"Unknown supervised head in {row.GroupId}.");
-        foreach (var slot in row.StructuredPerception.Slots)
+        var contextualInput = ContextInput(row.Turns);
+        if (row.Turns.Any(turn => turn is null || !Enum.IsDefined(turn.Role) || string.IsNullOrWhiteSpace(turn.Text) ||
+            turn.Text != DialogueText.Normalize(turn.Text)) || contextualInput != row.Input)
+            throw new InvalidDataException($"Structured turns disagree with input in {row.Source}/{row.GroupId}: " +
+                $"expected '{row.Input}', reconstructed '{contextualInput}'.");
+        var perception = row.StructuredPerception;
+        if (perception.SpeechActs is null || perception.Domains is null || perception.Goals is null ||
+            perception.Slots is null || perception.ContentFlags is null || perception.Confidence is null ||
+            perception.SpeechActs.Count > 3 || perception.Domains.Count > 3 || perception.Goals.Count > 3 ||
+            perception.SpeechActs.Any(value => !Enum.IsDefined(value)) ||
+            perception.Domains.Any(value => !Enum.IsDefined(value)) ||
+            perception.Goals.Any(value => !Enum.IsDefined(value)) ||
+            perception.ContentFlags.Any(value => !Enum.IsDefined(value)) ||
+            !Enum.IsDefined(perception.Affect) || !Enum.IsDefined(perception.Stance) ||
+            !Enum.IsDefined(perception.Policy) || !Enum.IsDefined(perception.KnowledgeTarget))
+            throw new InvalidDataException($"Invalid structured perception in {row.GroupId}.");
+        if (row.SupervisedHeads.Distinct(StringComparer.Ordinal).Count() != row.SupervisedHeads.Length ||
+            row.SupervisedHeads.Any(head => !AllHeads.Contains(head, StringComparer.Ordinal)))
+            throw new InvalidDataException($"Unknown or duplicate supervised head in {row.Source}/{row.GroupId}: " +
+                string.Join(", ", row.SupervisedHeads));
+        var tool = perception.ToolSchema ?? "NONE";
+        if (row.SupervisedHeads.Contains("tool", StringComparer.Ordinal) && !KnownToolTargets.Contains(tool) ||
+            row.ToolTarget != perception.ToolSchema)
+            throw new InvalidDataException($"Invalid tool target in {row.GroupId}.");
+        if (row.SupervisedHeads.Contains("responseCandidate", StringComparer.Ordinal) &&
+            V11ResponseCatalog.Find(perception.ResponseCandidateId) is null)
+            throw new InvalidDataException($"Invalid response candidate in {row.GroupId}.");
+        foreach (var slot in perception.Slots)
         {
-            if (slot.Start < 0 || slot.Length <= 0 || slot.Start + slot.Length > row.Input.Length ||
+            if (!Enum.IsDefined(slot.Type) || !Enum.IsDefined(slot.Tag) || !double.IsFinite(slot.Confidence) ||
+                slot.Confidence is < 0 or > 1 || slot.Start < 0 || slot.Length <= 0 ||
+                slot.Start + slot.Length > row.Input.Length ||
                 !row.Input.AsSpan(slot.Start, slot.Length).SequenceEqual(slot.Value))
                 throw new InvalidDataException($"Invalid {slot.Type} slot span in {row.Source}/{row.GroupId}.");
         }
     }
 
-    private static SourceManifest ReadManifest(string path) =>
-        JsonSerializer.Deserialize<SourceManifest>(File.ReadAllText(path, Utf8), Json)
-        ?? throw new InvalidDataException("Invalid source manifest.");
+    private static void AuditProvenance(SourceManifest manifest, string compiledPath)
+    {
+        var path = Path.Combine(compiledPath, "provenance.jsonl");
+        if (!File.Exists(path)) throw new FileNotFoundException("Missing compiled provenance manifest.", path);
+        var rows = File.ReadLines(path, Utf8).Where(line => !string.IsNullOrWhiteSpace(line))
+            .Select(line => JsonDocument.Parse(line)).ToArray();
+        try
+        {
+            if (rows.Length != manifest.Sources.Length)
+                throw new InvalidDataException("Compiled provenance source count does not match the manifest.");
+            var actual = rows.ToDictionary(document => document.RootElement.GetProperty("name").GetString()!,
+                StringComparer.Ordinal);
+            foreach (var source in manifest.Sources)
+            {
+                if (!actual.TryGetValue(source.Name, out var document))
+                    throw new InvalidDataException($"Compiled provenance is missing {source.Name}.");
+                var root = document.RootElement;
+                if (root.GetProperty("revision").GetString() != source.Revision ||
+                    root.GetProperty("license").GetString() != source.License ||
+                    root.GetProperty("attribution").GetString() != source.Attribution)
+                    throw new InvalidDataException($"Compiled provenance metadata changed for {source.Name}.");
+                var files = root.GetProperty("files").EnumerateArray().ToArray();
+                if (files.Length != source.Files.Length || source.Files.Any(expected => !files.Any(file =>
+                    file.GetProperty("path").GetString() == expected.Path &&
+                    file.GetProperty("url").GetString() == expected.Url &&
+                    file.GetProperty("sha256").GetString() == expected.Sha256)))
+                    throw new InvalidDataException($"Compiled provenance files changed for {source.Name}.");
+            }
+        }
+        finally
+        {
+            foreach (var row in rows) row.Dispose();
+        }
+    }
+
+    private static SourceManifest ReadManifest(string path)
+    {
+        var manifest = JsonSerializer.Deserialize<SourceManifest>(File.ReadAllText(path, Utf8), Json)
+            ?? throw new InvalidDataException("Invalid source manifest.");
+        if (manifest.Version <= 0 || manifest.Sources is null || manifest.Sources.Length == 0 ||
+            manifest.Sources.Any(source => source is null || string.IsNullOrWhiteSpace(source.Name) ||
+                string.IsNullOrWhiteSpace(source.Revision) || string.IsNullOrWhiteSpace(source.License) ||
+                string.IsNullOrWhiteSpace(source.Attribution) || source.Quota < 0 || source.Files is null) ||
+            manifest.Sources.Select(source => source.Name).Distinct(StringComparer.Ordinal).Count() != manifest.Sources.Length)
+            throw new InvalidDataException("Source manifest metadata is incomplete or duplicated.");
+        foreach (var source in manifest.Sources)
+            foreach (var file in source.Files)
+                if (file is null || string.IsNullOrWhiteSpace(file.Path) || string.IsNullOrWhiteSpace(file.Url) ||
+                    !Uri.TryCreate(file.Url, UriKind.Absolute, out var uri) || uri.Scheme != Uri.UriSchemeHttps ||
+                    file.Sha256.Length != 64 || file.Sha256.Any(character => !Uri.IsHexDigit(character)))
+                    throw new InvalidDataException($"Source manifest file metadata is invalid for {source.Name}.");
+        var paths = manifest.Sources.SelectMany(source => source.Files).Select(file => file.Path).ToArray();
+        if (paths.Distinct(StringComparer.OrdinalIgnoreCase).Count() != paths.Length)
+            throw new InvalidDataException("Source manifest contains duplicate raw file paths.");
+        return manifest;
+    }
 
     private static void VerifyManifestAndRaw(SourceManifest manifest, string rawPath)
     {
@@ -1022,9 +1118,15 @@ internal static class V10CorpusPipeline
                 throw new InvalidDataException($"Source {source.Name} has noncommercial or ambiguous license {source.License}.");
             foreach (var file in source.Files)
             {
-                var path = Path.Combine(rawPath, file.Path);
+                var root = Path.GetFullPath(rawPath);
+                var path = Path.GetFullPath(Path.Combine(root, file.Path));
+                var relative = Path.GetRelativePath(root, path);
+                if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+                    Path.IsPathRooted(relative))
+                    throw new InvalidDataException($"Source path escapes the raw data directory: {file.Path}");
                 if (!File.Exists(path)) throw new FileNotFoundException($"Missing source file '{path}'.");
-                var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+                using var stream = File.OpenRead(path);
+                var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
                 if (!hash.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
                     throw new InvalidDataException($"Source checksum changed for {source.Name}/{file.Path}.");
             }
@@ -1038,7 +1140,10 @@ internal static class V10CorpusPipeline
 
     private static IEnumerable<object> BuildProvenance(SourceManifest manifest) => manifest.Sources.Select(source => new
     {
-        source.Name, source.Revision, source.License, source.Attribution,
+        source.Name,
+        source.Revision,
+        source.License,
+        source.Attribution,
         files = source.Files.Select(file => new { file.Path, file.Url, file.Sha256 }).ToArray()
     });
 
@@ -1098,7 +1203,12 @@ internal static class V10CorpusPipeline
     {
         using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         foreach (var name in new[] { "train.jsonl", "validation.jsonl", "test.jsonl" })
-            hash.AppendData(File.ReadAllBytes(Path.Combine(directory, name)));
+        {
+            using var stream = File.OpenRead(Path.Combine(directory, name));
+            var buffer = new byte[1024 * 1024];
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0) hash.AppendData(buffer, 0, read);
+        }
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
     }
 
@@ -1108,15 +1218,27 @@ internal static class V10CorpusPipeline
         Convert.ToHexString(SHA256.HashData(Utf8.GetBytes("FISHBRAIN-V10-" + source))).ToLowerInvariant();
     private static string StableKey(int seed, string value) =>
         Convert.ToHexString(SHA256.HashData(Utf8.GetBytes(seed + "|" + value)));
-    private static int StableNumber(string value) => Math.Abs(BitConverter.ToInt32(SHA256.HashData(Utf8.GetBytes(value)), 0));
+    private static int StableNumber(string value) =>
+        BitConverter.ToInt32(SHA256.HashData(Utf8.GetBytes(value)), 0) & int.MaxValue;
 
-    private static NpcState StateFor(int index)
+    internal static NpcState StateFor(int index)
     {
-        var value = Math.Abs(index);
-        return new NpcState((byte)(value % 4), (NpcMood)(value / 4 % 4),
-            (DialogueIntent)(value / 16 % Enum.GetValues<DialogueIntent>().Length),
-            (UserAffect)(value / 320 % 5), (DialogueTopic)(value / 1600 % 7),
-            (NpcGoal)(value / 11200 % Enum.GetValues<NpcGoal>().Length));
+        ulong value = unchecked((uint)index);
+        var rapport = (byte)(value % 4); value /= 4;
+        var mood = Take<NpcMood>(ref value);
+        var intent = Take<DialogueIntent>(ref value);
+        var affect = Take<UserAffect>(ref value);
+        var topic = Take<DialogueTopic>(ref value);
+        var goal = Take<NpcGoal>(ref value);
+        return new NpcState(rapport, mood, intent, affect, topic, goal);
+
+        static T Take<T>(ref ulong current) where T : struct, Enum
+        {
+            var values = Enum.GetValues<T>();
+            var selected = values[(int)(current % (uint)values.Length)];
+            current /= (uint)values.Length;
+            return selected;
+        }
     }
 
     private static UserAffect GoAffect(int[] labels)

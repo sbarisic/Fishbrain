@@ -65,7 +65,10 @@ public static class DialogueText
     public static string TerminateTurn(string canonicalText)
     {
         ArgumentException.ThrowIfNullOrEmpty(canonicalText);
-        return canonicalText[^1] is '.' or '?' or '!' ? canonicalText : canonicalText + ".";
+        if (canonicalText[^1] is '.' or '?' or '!') return canonicalText;
+        var trimmed = canonicalText.TrimEnd(',', ':', '\'', '-');
+        if (trimmed.Length == 0) throw new ArgumentException("A turn must contain visible dialogue text.", nameof(canonicalText));
+        return trimmed[^1] is '.' or '?' or '!' ? trimmed : trimmed + ".";
     }
 }
 

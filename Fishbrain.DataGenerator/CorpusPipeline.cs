@@ -47,37 +47,43 @@ internal static class CorpusPipeline
     public static async Task FetchAsync(CliOptions options)
     {
         var manifest = ReadManifest(options.ManifestPath);
-        Directory.CreateDirectory(options.RawPath);
+        var rawRoot = Path.GetFullPath(options.RawPath);
+        Directory.CreateDirectory(rawRoot);
         using var client = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
         client.DefaultRequestHeaders.UserAgent.ParseAdd("Fishbrain-DataGenerator/4");
 
         foreach (var source in manifest.Sources)
-        foreach (var file in source.Files)
-        {
-            var destination = Path.GetFullPath(Path.Combine(options.RawPath, file.Path));
-            if (File.Exists(destination) && Hash(destination).Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
+            foreach (var file in source.Files)
             {
-                Console.WriteLine($"VERIFIED {source.Name} {file.Path}");
-                continue;
-            }
+                var destination = Path.GetFullPath(Path.Combine(rawRoot, file.Path));
+                var relative = Path.GetRelativePath(rawRoot, destination);
+                if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+                    Path.IsPathRooted(relative))
+                    throw new InvalidDataException($"Source path escapes the raw data directory: {file.Path}");
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+                if (File.Exists(destination) && Hash(destination).Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"VERIFIED {source.Name} {file.Path}");
+                    continue;
+                }
 
-            var temporary = destination + $".{Guid.NewGuid():N}.tmp";
-            try
-            {
-                await using (var input = await client.GetStreamAsync(file.Url))
-                await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-                    await input.CopyToAsync(output);
-                var actual = Hash(temporary);
-                if (!actual.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
-                    throw new InvalidDataException($"SHA-256 mismatch for {source.Name}/{file.Path}: expected {file.Sha256}, got {actual}.");
-                File.Move(temporary, destination, true);
-                Console.WriteLine($"FETCHED {source.Name} {file.Path}");
+                var temporary = destination + $".{Guid.NewGuid():N}.tmp";
+                try
+                {
+                    await using (var input = await client.GetStreamAsync(file.Url))
+                    await using (var output = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+                        await input.CopyToAsync(output);
+                    var actual = Hash(temporary);
+                    if (!actual.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase))
+                        throw new InvalidDataException($"SHA-256 mismatch for {source.Name}/{file.Path}: expected {file.Sha256}, got {actual}.");
+                    File.Move(temporary, destination, true);
+                    Console.WriteLine($"FETCHED {source.Name} {file.Path}");
+                }
+                finally
+                {
+                    if (File.Exists(temporary)) File.Delete(temporary);
+                }
             }
-            finally
-            {
-                if (File.Exists(temporary)) File.Delete(temporary);
-            }
-        }
         Console.WriteLine($"RAW {Path.GetFullPath(options.RawPath)}");
     }
 
@@ -342,44 +348,48 @@ internal static class CorpusPipeline
     {
         var mapping = new Dictionary<string, DialogueIntent>(StringComparer.Ordinal)
         {
-            ["greeting"] = DialogueIntent.Greeting, ["goodbye"] = DialogueIntent.Farewell,
-            ["thank_you"] = DialogueIntent.Gratitude, ["are_you_a_bot"] = DialogueIntent.Identity,
-            ["what_can_i_ask_you"] = DialogueIntent.Assistance, ["how_old_are_you"] = DialogueIntent.Identity,
-            ["where_are_you_from"] = DialogueIntent.Identity, ["who_do_you_work_for"] = DialogueIntent.Identity,
+            ["greeting"] = DialogueIntent.Greeting,
+            ["goodbye"] = DialogueIntent.Farewell,
+            ["thank_you"] = DialogueIntent.Gratitude,
+            ["are_you_a_bot"] = DialogueIntent.Identity,
+            ["what_can_i_ask_you"] = DialogueIntent.Assistance,
+            ["how_old_are_you"] = DialogueIntent.Identity,
+            ["where_are_you_from"] = DialogueIntent.Identity,
+            ["who_do_you_work_for"] = DialogueIntent.Identity,
             ["user_name"] = DialogueIntent.Identity
         };
         using var document = JsonDocument.Parse(File.ReadAllText(path, Utf8));
         var index = 0;
         foreach (var split in new[] { "train", "val", "test" })
-        foreach (var item in document.RootElement.GetProperty(split).EnumerateArray())
-        {
-            var text = item[0].GetString();
-            var label = item[1].GetString();
-            if (text is null || label is null || !mapping.TryGetValue(label, out var intent) || !TryExternal(text, out var normalized)) continue;
-            var affect = Templates.Annotate(normalized, true).Affect;
-            var perception = new TurnPerception(intent, affect, true);
-            yield return new Candidate("PLAYER " + normalized, StateFor(index), perception, null, "CLINC150",
-                $"{split}-{index++:D6}", "CLINC150_" + label.ToUpperInvariant());
-        }
+            foreach (var item in document.RootElement.GetProperty(split).EnumerateArray())
+            {
+                var text = item[0].GetString();
+                var label = item[1].GetString();
+                if (text is null || label is null || !mapping.TryGetValue(label, out var intent) || !TryExternal(text, out var normalized)) continue;
+                var affect = Templates.Annotate(normalized, true).Affect;
+                var perception = new TurnPerception(intent, affect, true);
+                yield return new Candidate("PLAYER " + normalized, StateFor(index), perception, null, "CLINC150",
+                    $"{split}-{index++:D6}", "CLINC150_" + label.ToUpperInvariant());
+            }
     }
 
     private static IEnumerable<Candidate> LoadGoEmotions(string rawPath, List<object> review)
     {
         var index = 0;
         foreach (var name in new[] { "go-train.tsv", "go-dev.tsv", "go-test.tsv" })
-        foreach (var line in File.ReadLines(Path.Combine(rawPath, name), Utf8))
-        {
-            var parts = line.Split('\t');
-            if (parts.Length < 3 || !TryExternal(parts[0], out var normalized)) continue;
-            var labels = parts[1].Split(',').Select(int.Parse).ToArray();
-            var affect = GoAffect(labels);
-            var annotated = Templates.Annotate(normalized);
-            var expected = normalized.EndsWith('?') || annotated.Intent is DialogueIntent.Greeting or DialogueIntent.Farewell or DialogueIntent.Clarification;
-            var perception = new TurnPerception(annotated.Intent, affect, expected);
-            var id = parts[2].Length == 0 ? $"go-{index:D7}" : parts[2];
-            yield return new Candidate("PLAYER " + normalized, StateFor(index++), perception, null, "GOEMOTIONS", id,
-                "GOEMOTIONS_" + affect.ToString().ToUpperInvariant());
-        }
+            foreach (var line in File.ReadLines(Path.Combine(rawPath, name), Utf8))
+            {
+                var parts = line.Split('\t');
+                if (parts.Length < 3 || !TryExternal(parts[0], out var normalized)) continue;
+                var labels = parts[1].Split(',').Select(int.Parse).ToArray();
+                var affect = GoAffect(labels);
+                var annotated = Templates.Annotate(normalized);
+                var expected = normalized.EndsWith('?') || annotated.Intent is DialogueIntent.Greeting or DialogueIntent.Farewell or DialogueIntent.Clarification;
+                var perception = new TurnPerception(annotated.Intent, affect, expected);
+                var id = parts[2].Length == 0 ? $"go-{index:D7}" : parts[2];
+                yield return new Candidate("PLAYER " + normalized, StateFor(index++), perception, null, "GOEMOTIONS", id,
+                    "GOEMOTIONS_" + affect.ToString().ToUpperInvariant());
+            }
     }
 
     private static UserAffect GoAffect(int[] labels)
@@ -422,16 +432,22 @@ internal static class CorpusPipeline
 
     private static NpcState StateFor(int index)
     {
-        var value = Math.Abs(index);
+        ulong value = unchecked((uint)index);
         var rapport = (byte)(value % 4); value /= 4;
-        var mood = (NpcMood)(value % 4); value /= 4;
-        var intentCount = Enum.GetValues<DialogueIntent>().Length;
-        var intent = (DialogueIntent)(value % intentCount); value /= intentCount;
-        var affect = (UserAffect)(value % 5); value /= 5;
-        var topic = (DialogueTopic)(value % 7); value /= 7;
-        var goalCount = Enum.GetValues<NpcGoal>().Length;
-        var goal = (NpcGoal)(value % goalCount);
+        var mood = Take<NpcMood>(ref value);
+        var intent = Take<DialogueIntent>(ref value);
+        var affect = Take<UserAffect>(ref value);
+        var topic = Take<DialogueTopic>(ref value);
+        var goal = Take<NpcGoal>(ref value);
         return new NpcState(rapport, mood, intent, affect, topic, goal);
+
+        static T Take<T>(ref ulong current) where T : struct, Enum
+        {
+            var values = Enum.GetValues<T>();
+            var selected = values[(int)(current % (uint)values.Length)];
+            current /= (uint)values.Length;
+            return selected;
+        }
     }
 
     private static bool TryExternal(string raw, out string normalized)
@@ -636,10 +652,10 @@ internal static class CorpusPipeline
         {
             var values = bucket.ToArray();
             for (var left = 0; left < values.Length; left++)
-            for (var right = left + 1; right < values.Length; right++)
-                if (values[left].Split != values[right].Split &&
-                    NearDuplicate(SignificantWords(values[left].Input), SignificantWords(values[right].Input)))
-                    throw new InvalidDataException($"Near-duplicate leakage between {values[left].GroupId} and {values[right].GroupId}.");
+                for (var right = left + 1; right < values.Length; right++)
+                    if (values[left].Split != values[right].Split &&
+                        NearDuplicate(SignificantWords(values[left].Input), SignificantWords(values[right].Input)))
+                        throw new InvalidDataException($"Near-duplicate leakage between {values[left].GroupId} and {values[right].GroupId}.");
         }
     }
 
@@ -682,7 +698,7 @@ internal static class CorpusPipeline
         ];
         var suffix = text[^1] is '.' or '?' or '!' ? text[^1].ToString() : ".";
         var stem = text[^1] is '.' or '?' or '!' ? text[..^1] : text;
-        return $"{stem}, {addresses[Math.Abs(index) % addresses.Length]}{suffix}";
+        return $"{stem}, {addresses[(int)(unchecked((uint)index) % (uint)addresses.Length)]}{suffix}";
     }
 
     private static string ExpressAffect(string text, UserAffect affect) => affect switch
@@ -704,21 +720,31 @@ internal static class CorpusPipeline
             if (source.Quota <= 0 || source.Files.Length == 0 || string.IsNullOrWhiteSpace(source.License) || string.IsNullOrWhiteSpace(source.Attribution) || source.Revision.Length < 7)
                 throw new InvalidDataException($"Incomplete source metadata for {source.Name}.");
             foreach (var file in source.Files)
-                if (file.Sha256.Length != 64 || !Uri.TryCreate(file.Url, UriKind.Absolute, out _)) throw new InvalidDataException($"Invalid file metadata for {source.Name}.");
+                if (file.Sha256.Length != 64 || !Uri.TryCreate(file.Url, UriKind.Absolute, out var uri) ||
+                    uri.Scheme != Uri.UriSchemeHttps)
+                    throw new InvalidDataException($"Invalid file metadata for {source.Name}.");
         }
+        var paths = manifest.Sources.SelectMany(source => source.Files).Select(file => file.Path).ToArray();
+        if (paths.Distinct(StringComparer.OrdinalIgnoreCase).Count() != paths.Length)
+            throw new InvalidDataException("Source manifest contains duplicate raw file paths.");
         return manifest;
     }
 
     private static void VerifyRaw(SourceManifest manifest, string rawPath)
     {
+        var root = Path.GetFullPath(rawPath);
         foreach (var source in manifest.Sources)
-        foreach (var file in source.Files)
-        {
-            var path = Path.Combine(rawPath, file.Path);
-            if (!File.Exists(path)) throw new FileNotFoundException($"Missing {path}; run fetch first.");
-            var actual = Hash(path);
-            if (!actual.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException($"SHA-256 mismatch for {path}.");
-        }
+            foreach (var file in source.Files)
+            {
+                var path = Path.GetFullPath(Path.Combine(root, file.Path));
+                var relative = Path.GetRelativePath(root, path);
+                if (relative == ".." || relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal) ||
+                    Path.IsPathRooted(relative))
+                    throw new InvalidDataException($"Source path escapes the raw data directory: {file.Path}");
+                if (!File.Exists(path)) throw new FileNotFoundException($"Missing {path}; run fetch first.");
+                var actual = Hash(path);
+                if (!actual.Equals(file.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException($"SHA-256 mismatch for {path}.");
+            }
     }
 
     private static string Hash(string path)

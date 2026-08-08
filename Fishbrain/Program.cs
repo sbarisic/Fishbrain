@@ -38,6 +38,11 @@ internal static class Program
                     Count(args, 3, 5);
                     var gate = EvaluationGateParser.Parse(args[3..]);
                     return Evaluation.Run(args[1], args[2], gate);
+                case "diagnose-teaching":
+                    Count(args, 3, 4);
+                    Console.WriteLine(Brain.DiagnoseTeaching(args[1], args[2],
+                        args.Length == 4 ? args[3] : "validation"));
+                    break;
                 case "chat":
                     Count(args, 1, 2);
                     Chat(args.Length == 2 ? args[1] : ResolveDefaultModel());
@@ -97,6 +102,7 @@ internal static class Program
                 $"AFFECT={Upper(result.Perception.Affect)} POLICY={Upper(result.Perception.Policy)} " +
                 $"SOURCE={Upper(result.Diagnostics.ResponseSource)} TONE={Upper(result.Tone)}");
             if (result.Text.Length > 0) history.Add(new DialogueTurn(DialogueRole.Npc, result.Text));
+            while (history.Count > 64) history.RemoveRange(0, Math.Min(2, history.Count));
         }
     }
 
@@ -136,6 +142,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|stage|release]");
+        Console.WriteLine("  diagnose-teaching CORPUS_DIRECTORY TRAINING_CHECKPOINT.json [validation|test]");
         Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-v11-latest.fbm)");
         Console.WriteLine("  latency [CHECKPOINT] [ITERATIONS]");
         Console.WriteLine("  export TRAINING_CHECKPOINT.json OUTPUT.fbm [CORPUS_DIRECTORY]");
@@ -145,28 +152,31 @@ internal static class Program
 
     private static string FindProjectPath()
     {
-        var besideBuild = Path.GetFullPath(Path.Combine(
-            AppContext.BaseDirectory, "..", "..", "..", "Fishbrain.csproj"));
-        if (File.Exists(besideBuild)) return besideBuild;
-        var beneathWorkingDirectory = Path.GetFullPath(Path.Combine("Fishbrain", "Fishbrain.csproj"));
-        return beneathWorkingDirectory;
+        return ResolveRepositoryFile("Fishbrain", "Fishbrain.csproj");
     }
 
     private static string ResolveDefaultModel()
     {
-        var names = new[] { "model-v11-latest.fbm" };
-        var roots = new[]
+        return ResolveRepositoryFile("data", "models", "model-v11-latest.fbm");
+    }
+
+    internal static string ResolveRepositoryFile(params string[] segments) =>
+        ResolveRepositoryFileFrom([Environment.CurrentDirectory, AppContext.BaseDirectory], segments);
+
+    internal static string ResolveRepositoryFileFrom(IEnumerable<string> anchors, params string[] segments)
+    {
+        if (segments.Length == 0 || segments.Any(string.IsNullOrWhiteSpace))
+            throw new ArgumentException("Repository file segments cannot be empty.", nameof(segments));
+        foreach (var anchor in anchors.Where(value => !string.IsNullOrWhiteSpace(value))
+                     .Select(Path.GetFullPath).Distinct(StringComparer.OrdinalIgnoreCase))
         {
-            Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "models")),
-            Path.GetFullPath(Path.Combine(Environment.CurrentDirectory, "data", "models"))
-        };
-        foreach (var root in roots)
-        foreach (var name in names)
-        {
-            var candidate = Path.Combine(root, name);
-            if (File.Exists(candidate)) return candidate;
+            for (var directory = new DirectoryInfo(anchor); directory is not null; directory = directory.Parent)
+            {
+                var candidate = Path.Combine([directory.FullName, .. segments]);
+                if (File.Exists(candidate)) return candidate;
+            }
         }
-        throw new FileNotFoundException("No default v11 model was found. Run the documented training command first.");
+        throw new FileNotFoundException($"Repository file was not found: {Path.Combine(segments)}");
     }
 
     private static string CorpusHash(string directory)
@@ -176,9 +186,36 @@ internal static class Program
         {
             var path = Path.Combine(directory, name);
             if (!File.Exists(path)) throw new FileNotFoundException($"Missing corpus split '{path}'.");
-            hash.AppendData(File.ReadAllBytes(path));
+            using var stream = File.OpenRead(path);
+            var buffer = new byte[1024 * 1024];
+            int read;
+            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0) hash.AppendData(buffer, 0, read);
         }
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+    }
+
+    internal static string HashFile(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+    }
+
+    internal static string TelemetryDirectory(string anchorPath)
+    {
+        foreach (var start in new[]
+                 {
+                     Path.GetDirectoryName(Path.GetFullPath(anchorPath)),
+                     Environment.CurrentDirectory,
+                     AppContext.BaseDirectory
+                 })
+        {
+            for (var directory = start is null ? null : new DirectoryInfo(start);
+                 directory is not null;
+                 directory = directory.Parent)
+                if (File.Exists(Path.Combine(directory.FullName, "Fishbrain.slnx")))
+                    return Path.Combine(directory.FullName, "data", "telemetry");
+        }
+        throw new DirectoryNotFoundException("Could not locate the Fishbrain repository for telemetry output.");
     }
 }
 
@@ -378,11 +415,11 @@ internal static class Evaluation
             PrintSubset("FAMILY_" + family, rows, expectedIntent, predictedIntent,
                 row => row.Family == family && HasIntentTarget(row));
         foreach (var expected in Enum.GetValues<DialogueIntent>())
-        foreach (var predicted in Enum.GetValues<DialogueIntent>())
-        {
-            var count = scoredIntentExpected.Zip(scoredIntentPredicted).Count(pair => pair.First == expected && pair.Second == predicted);
-            if (count > 0) Console.WriteLine($"CONFUSION {expected} {predicted} {count}");
-        }
+            foreach (var predicted in Enum.GetValues<DialogueIntent>())
+            {
+                var count = scoredIntentExpected.Zip(scoredIntentPredicted).Count(pair => pair.First == expected && pair.Second == predicted);
+                if (count > 0) Console.WriteLine($"CONFUSION {expected} {predicted} {count}");
+            }
         foreach (var result in goldenResults)
             Console.WriteLine($"GOLDEN {result.Name} {(result.Pass ? "PASS" : "FAIL")} " +
                               $"EXPECTED {result.Expected} PREDICTED {result.Predicted}");
@@ -505,14 +542,8 @@ internal static class Evaluation
                              benchmark.StructuralSuccess == 1.0;
         var stagePass = raw.Composite >= 0.60 && raw.PolicyAccuracy >= 0.90 &&
                         raw.MutatingToolPrecision >= 0.99 && hardInvariants;
-        var releasePass = raw.SpeechActMacroF1 >= 0.85 && raw.DomainMacroF1 >= 0.85 &&
-                          raw.GoalMacroF1 >= 0.80 && raw.AffectAccuracy >= 0.85 &&
-                          raw.PolicyAccuracy >= 0.90 && raw.ContentMacroF1 >= 0.90 &&
-                          raw.SlotSpanF1 >= 0.85 && raw.ToolAccuracy >= 0.95 &&
-                          raw.MutatingToolPrecision >= 0.99 && toolArgumentExact >= 0.90 &&
-                          raw.KnowledgeTargetAccuracy >= 0.90 &&
-                          raw.ResponseTop1 >= 0.85 && raw.ResponseTop3 >= 0.95 &&
-                          raw.VariationRecallAt10 >= 0.95 && raw.VariationMrr >= 0.80 &&
+        var releasePass = CompositionalHeadModel.MeetsReleaseNeuralThresholds(raw) &&
+                          toolArgumentExact >= 0.90 &&
                           benchmark.SemanticSuccess >= 0.90 && hardInvariants;
 
         Console.WriteLine($"V11_RECORDS {examples.Count}");
@@ -616,9 +647,7 @@ internal static class Evaluation
 
     private static BenchmarkMetrics EvaluateBenchmark(Brain brain)
     {
-        var path = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..",
-            "data", "benchmarks", "v11-256.jsonl"));
-        if (!File.Exists(path)) throw new FileNotFoundException("Missing v11 benchmark.", path);
+        var path = Program.ResolveRepositoryFile("data", "benchmarks", "v11-256.jsonl");
         var rows = File.ReadLines(path).Where(line => !string.IsNullOrWhiteSpace(line))
             .Select(line => JsonSerializer.Deserialize<BenchmarkRow>(line, Options)
                 ?? throw new InvalidDataException("Invalid v11 benchmark row.")).ToArray();
@@ -685,7 +714,7 @@ internal static class Evaluation
         double toolArguments, double toolFidelity, BenchmarkMetrics benchmark,
         int recordCount, bool stagePass, bool releasePass)
     {
-        var directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "telemetry"));
+        var directory = Program.TelemetryDirectory(checkpointPath);
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "milestones.jsonl");
         var payload = new
@@ -693,7 +722,7 @@ internal static class Evaluation
             timestampUtc = DateTimeOffset.UtcNow,
             milestone = "V11_EVALUATION",
             corpusHash = brain.DebugCorpusHash,
-            checkpointHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(checkpointPath))).ToLowerInvariant(),
+            checkpointHash = Program.HashFile(checkpointPath),
             environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
             vectorWidth = Vector<double>.Count,
             embeddingSize = brain.Config.EmbeddingSize,
@@ -943,15 +972,15 @@ internal static class Evaluation
         double expectedF1, int generated, int invalid, int empty, int overlength,
         bool stagePass, bool releasePass)
     {
-        var directory = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "data", "telemetry"));
+        var directory = Program.TelemetryDirectory(checkpointPath);
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "milestones.jsonl");
         var payload = new
         {
             timestampUtc = DateTimeOffset.UtcNow,
             milestone = "A",
-            corpusHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(corpusPath))).ToLowerInvariant(),
-            checkpointHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(checkpointPath))).ToLowerInvariant(),
+            corpusHash = Program.HashFile(corpusPath),
+            checkpointHash = Program.HashFile(checkpointPath),
             environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
             vectorWidth = Vector<double>.Count,
             embeddingSize = brain.Config.EmbeddingSize,
@@ -1073,13 +1102,13 @@ internal static class SelfTests
     private static void CognitionChecks()
     {
         foreach (var intent in Enum.GetValues<DialogueIntent>())
-        foreach (var affect in Enum.GetValues<UserAffect>())
-        foreach (var expected in new[] { false, true })
-        {
-            var perception = new TurnPerception(intent, affect, expected);
-            var decision = new TurnDecision(Cognition.ActionFor(perception));
-            Cognition.Apply(NpcState.Initial, perception, decision, intent == DialogueIntent.GameFact && expected);
-        }
+            foreach (var affect in Enum.GetValues<UserAffect>())
+                foreach (var expected in new[] { false, true })
+                {
+                    var perception = new TurnPerception(intent, affect, expected);
+                    var decision = new TurnDecision(Cognition.ActionFor(perception));
+                    Cognition.Apply(NpcState.Initial, perception, decision, intent == DialogueIntent.GameFact && expected);
+                }
         var silent = new TurnPerception(DialogueIntent.Activity, UserAffect.Neutral, false);
         Assert(Cognition.ActionFor(silent) == ResponseAction.NoResponse, "no response precedence");
         var hostile = new TurnPerception(DialogueIntent.Gratitude, UserAffect.Hostile, true);
@@ -1244,6 +1273,15 @@ internal static class SelfTests
             var brain = Brain.CreateForTesting(TinyConfig()); brain.Save(path);
             var loaded = Brain.Load(path);
             Assert(loaded.Config.EmbeddingSize == 8 && loaded.DebugWeights().SequenceEqual(brain.DebugWeights()), "roundtrip");
+            var checkpointJson = File.ReadAllText(path);
+            using (var document = JsonDocument.Parse(checkpointJson))
+            {
+                var integrity = document.RootElement.GetProperty("IntegrityChecksum").GetString();
+                File.WriteAllText(path, checkpointJson.Replace(
+                    $"\"IntegrityChecksum\": \"{integrity}\"", "\"IntegrityChecksum\": null",
+                    StringComparison.Ordinal));
+            }
+            AssertThrows<InvalidDataException>(() => Brain.Load(path));
             File.WriteAllText(path, "{\"version\":3}");
             AssertThrows<InvalidDataException>(() => Brain.Load(path));
         }
@@ -1313,9 +1351,16 @@ internal static class SelfTests
 
     private static BrainConfig TinyConfig() => new()
     {
-        EmbeddingSize = 8, HeadCount = 2, MlpSize = 12, ContextLength = 24,
-        AttentionWindow = 8, PositionPeriod = 8, MaximumOutputLength = 16,
-        LearningRate = 0.01, PlannedSteps = 20, Seed = 42
+        EmbeddingSize = 8,
+        HeadCount = 2,
+        MlpSize = 12,
+        ContextLength = 24,
+        AttentionWindow = 8,
+        PositionPeriod = 8,
+        MaximumOutputLength = 16,
+        LearningRate = 0.01,
+        PlannedSteps = 20,
+        Seed = 42
     };
     private static double NumericCrossEntropy(IReadOnlyList<double> logits, int target)
     {

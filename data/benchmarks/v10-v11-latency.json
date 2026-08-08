@@ -1,5 +1,5 @@
 {
-  "measuredUtc": "2026-08-08T02:30:00Z",
+  "measuredUtc": "2026-08-08T09:23:13Z",
   "environment": {
     "os": "Microsoft Windows 10.0.26100",
     "architecture": "X64",
@@ -17,17 +17,19 @@
     "sourceCommit": "6f4a8b8fb59cedfe1453653a0f17663ef87afece",
     "checkpointSha256": "5b11f3db1759f3885e45151fa4d2ba76b8395ef3b0736db2fd34c7ae6cfea384",
     "medianMilliseconds": 0.6728,
-    "p95Milliseconds": 1.2559
+    "p95Milliseconds": 1.2559,
+    "note": "Historical same-machine baseline; the v11-only runtime intentionally rejects this archived checkpoint."
   },
   "v11": {
-    "checkpointSha256": "7c8b01dab1f9a8dbc9ab7d53f710e9219ca26d5cbbdfaf70297302eacc1a9449",
-    "medianMilliseconds": 0.9227,
-    "p95Milliseconds": 2.1951
+    "checkpointSha256": "231ed399fd57d762206ee7ef9a38213751eed13cae264d23ccf6585f2481badb",
+    "medianMilliseconds": 2.7463,
+    "p95Milliseconds": 4.1461
   },
   "ratios": {
-    "median": 1.3714,
-    "p95": 1.7478,
+    "median": 4.0819,
+    "p95": 3.3013,
     "maximumAllowed": 4.0,
-    "pass": true
+    "pass": false,
+    "note": "Median narrowly exceeds the historical ratio; rerun both versions in one controlled compatibility harness before a release claim."
   }
 }

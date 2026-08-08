@@ -22,7 +22,7 @@ The shared model has two distinct Transformer layers, 128-dimensional embeddings
 
 Packed training uses contiguous arrays and `System.Numerics.Vector<double>` where applicable. Reference and optimized forward/backward paths are checked for numerical parity. Tests also cover finite gradients, deterministic initialization, and bit-equivalent save/resume behavior.
 
-All structured, ranking, and generation curriculum phases update the shared contextual model. Structured heads fuse 512 hashed lexical features with the 128-dimensional contextual vector. The production response-plan reranker uses the same contextual representation and hard negatives.
+The shared contextual model is updated during the interleaved curriculum through 160K. Later head-polish phases freeze that representation while the structured and response heads converge. Structured heads fuse 4,096 hashed lexical features with the 128-dimensional contextual vector. The production response-plan reranker uses the same contextual representation and hard negatives.
 
 ## Perception heads
 
@@ -59,7 +59,7 @@ The reducer owns all `NpcDialogueState` changes:
 
 ## Response selection
 
-The response catalog contains exactly 200 plan IDs and at least 5,000 project-owned variations. Plans declare policy, domain, knowledge target, speech acts, keywords, and variations. Metadata masks ineligible plans before scoring. The runtime retrieves the top five eligible plans, applies contextual plan/ranking scores, and uses candidate ID as the deterministic final tie-breaker.
+The response catalog contains 201 plan IDs and at least 4,400 distinct visible project-owned variations. The intentional no-response plan has one empty surface. Plans declare policy, domain, knowledge target, speech acts, keywords, and variations. Metadata masks ineligible plans before scoring. The runtime retrieves the top five eligible plans, applies contextual plan/ranking scores, and uses candidate ID as the deterministic final tie-breaker.
 
 Production response-source telemetry distinguishes tool templates, persona templates, capability templates, ranked variations, clarifications, fallbacks, and experimental generation. A recognized domain must not emit generic `I DO NOT KNOW` text.
 
@@ -78,17 +78,17 @@ The audit requires:
 - no skeleton above 0.25% of the full corpus;
 - exactly 60,000 records and every declared source quota.
 
-The compiled v11 corpus hash for the current source manifest and seed 42 is `c240725fa1f316fa02b8a8968269056b72fa123f4bca1fad5b4534385c8834fd`.
+The compiled v11 corpus hash for the current source manifest and seed 42 is `ca795b444da4043be6bf5964d710246da40b3225d9dc70b91c2c8c05a308cf4d`.
 
 ## Curriculum and checkpoints
 
-The deterministic 80,000-step schedule is:
+The deterministic completed 210,000-step schedule has three phases:
 
-- 56,000 contextual structured/tool/knowledge/plan updates;
-- 16,000 pairwise response-ranking updates;
-- 8,000 experimental generation updates.
+- steps 0-160K interleave seven contextual structured updates, two pairwise response-ranking updates, and one experimental generation update per ten steps;
+- steps 160K-200K freeze the shared encoder and polish structured/ranking heads with phase-local sampling, rare-domain families, explicit and hard-negative tool families, independent response rows, and auxiliary slot passes;
+- steps 200K-210K freeze every passing structured head and train only response-plan classification and ranking.
 
-Rolling checkpoints and telemetry are written every 1,000 steps. Ordinary checkpoints use one fixed source-stratified validation sample. Full validation runs at 20K, 40K, 60K, and 80K. `best-production` is selected by the structured composite subject to finite metrics and mutating-tool precision. `best-generation` is retained separately. The full 80K schedule runs even if the best checkpoint occurs earlier.
+Rolling checkpoints and telemetry are written every 1,000 steps. Ordinary checkpoints use one fixed source-stratified validation sample. Full validation runs every 20K and at the configured final step. `best-production` is selected only when every raw neural release minimum passes; `best-generation` is retained separately. The full configured schedule runs even if the best checkpoint occurs earlier. A completed plan may be extended to a larger explicit endpoint; changing an in-progress plan remains forbidden.
 
 The inference format starts with `FISHBRN11`, uses format version 11, stores a readable JSON metadata header followed by float32 weights, and ends with an integrity checksum. It includes the label schema, per-label calibration, tool schemas, response catalog, corpus hash, and weights hash. Versions 2 through 10 are rejected rather than migrated.
 
@@ -119,10 +119,12 @@ Required thresholds are:
 
 Tool fidelity, mutation safety, persona fidelity, OOV preservation, parser/state invariants, and structural invariants require 100%. Unexpected empty, invalid, overlength, generic known-domain fallback, duplicate mutation, and altered authoritative-field counts must remain zero.
 
-The 2x128 release build's median and p95 reply latency must remain within four times the v10 baseline measured on the same machine. The tracked 2,048-reply measurement on the development machine records v10 at 0.6728/1.2559 ms median/p95 and v11 at 0.9227/2.1951 ms. The v11 ratios are 1.3714x/1.7478x, so the latency gate passes. The measurement environment and checkpoint hashes are stored in `data/benchmarks/v10-v11-latency.json`.
+The 2x128 release build's median and p95 reply latency should remain within four times a v10 baseline measured under the same conditions. The final 210K artifact measured 2.7463/4.1461 ms median/p95 over 2,048 replies on the development machine. Against the historical v10 values of 0.6728/1.2559 ms, the ratios are 4.0819x/3.3013x: p95 passes, but median narrowly misses. Because the v11-only runtime intentionally rejects the archived v10 binary, this was not a same-process A/B run. The latency claim remains open until a controlled compatibility harness measures both versions; the hashes and limitation are recorded in `data/benchmarks/v10-v11-latency.json`.
 
 ## Current trained artifact
 
-The completed 80,000-step run exported `data/models/model-v11-latest.fbm`. The artifact is 36,939,894 bytes and contains corpus hash `c240725fa1f316fa02b8a8968269056b72fa123f4bca1fad5b4534385c8834fd`.
+The completed 210,000-step run exported `data/models/model-v11-latest.fbm`. The artifact is 41,834,335 bytes, has SHA-256 `231ed399fd57d762206ee7ef9a38213751eed13cae264d23ccf6585f2481badb`, weights hash `1ebc66026560e813b992a57099f02a2784392e5645f9d2b3921125b72bc2040a`, and corpus hash `ca795b444da4043be6bf5964d710246da40b3225d9dc70b91c2c8c05a308cf4d`.
 
-The full 5,999-row held-out evaluation passes the stage gate and all hard runtime invariants. It records 99.61% semantic assertion success on the 256-turn benchmark, 100% tool fidelity, 100% tool-argument exact match, and zero invalid, unexpected-empty, overlength, or generic known-domain fallback outputs. The one preserved semantic-benchmark miss is the legacy `HELLO?` row whose expected content band is `PROFANITY`; the runtime correctly leaves it unflagged. The quality release gate remains closed because raw domain macro-F1 is 0.7966, slot span F1 is 0.8220, and tool selection accuracy is 0.9257. These misses are reported as failures; the evaluator does not weaken or bypass their thresholds.
+The full 6,001-row validation stage passes every exact raw neural minimum. Its composite is 0.9077; representative passing values are domain F1 0.8561, slot F1 0.8568, tool accuracy 0.9551, mutating-tool precision 0.9907, response top-1 0.8539, and response top-3 0.9669.
+
+The independent 5,999-row test evaluation passes the stage gate and every hard runtime invariant. It records 98.83% semantic assertion success on the 256-turn benchmark, 100% tool fidelity, 100% tool-argument exact match, 100% mutating-tool precision, and zero invalid, unexpected-empty, overlength, or generic known-domain fallback outputs. The quality release gate remains closed because raw domain macro-F1 is 0.8324, slot span F1 is 0.8296, and tool selection accuracy is 0.9489. The other raw neural thresholds pass, including response top-1/top-3 at 0.8596/0.9636 and variation Recall@10/MRR at 0.9818/0.9146. These misses are reported as failures; the evaluator returns exit code 2 for `--gate release` and does not weaken or bypass the thresholds.

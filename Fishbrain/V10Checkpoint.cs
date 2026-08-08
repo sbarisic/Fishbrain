@@ -42,7 +42,7 @@ public sealed partial class Brain
         }
         header.WeightsSha256 = Convert.ToHexString(SHA256.HashData(weightBytes)).ToLowerInvariant();
         var headerBytes = JsonSerializer.SerializeToUtf8Bytes(header, new JsonSerializerOptions { WriteIndented = true });
-        var integrity = SHA256.HashData(headerBytes.Concat(weightBytes).ToArray());
+        var integrity = CombinedSha256(headerBytes, weightBytes);
 
         var temporary = path + ".tmp";
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
@@ -67,6 +67,16 @@ public sealed partial class Brain
         return magic.SequenceEqual(V11Magic);
     }
 
+    internal static bool HasFishbrainBinaryPrefix(string path)
+    {
+        ReadOnlySpan<byte> prefix = "FISHBRN"u8;
+        using var stream = File.OpenRead(path);
+        if (stream.Length < prefix.Length) return false;
+        Span<byte> actual = stackalloc byte[prefix.Length];
+        stream.ReadExactly(actual);
+        return actual.SequenceEqual(prefix);
+    }
+
     private static Brain LoadInferenceCheckpoint(string path)
     {
         using var stream = File.OpenRead(path);
@@ -79,22 +89,45 @@ public sealed partial class Brain
         if (headerBytes.Length != headerLength) throw new EndOfStreamException("Checkpoint header is truncated.");
         var header = JsonSerializer.Deserialize<V11InferenceHeader>(headerBytes)
             ?? throw new InvalidDataException("Checkpoint header is empty.");
-        if (header.Version != 11 || header.WeightEncoding != "IEEE754_FLOAT32_LITTLE_ENDIAN")
+        if (header.Format != "FISHBRAIN INFERENCE MODEL" || header.Version != 11 ||
+            header.WeightEncoding != "IEEE754_FLOAT32_LITTLE_ENDIAN")
             throw new InvalidDataException("Unsupported Fishbrain inference checkpoint.");
+        if (header.Config is null || header.Words is null || header.OutputWords is null ||
+            header.TrainedTools is null || header.ResponseCatalog is null || header.LabelSchemas is null ||
+            header.ConfidenceCalibration is null || header.ToolSchemas is null || header.CandidateCatalog is null ||
+            header.StructuredLabelThresholds is null)
+            throw new InvalidDataException("Checkpoint header contains null schema data.");
         header.Config.Validate();
+        if (header.CompletedSteps < 0 || header.CompletedSteps > header.Config.PlannedSteps)
+            throw new InvalidDataException("Checkpoint completed-step count is invalid.");
+        ValidateCorpusHash(header.CorpusHash);
+        ValidateVocabularyArrays(header.Words, header.OutputWords);
+        ValidateTrainedTools(header.TrainedTools);
+        ValidateResponseCatalog(header.ResponseCatalog, V11ResponseCatalog.SurfaceCatalog);
         V11Schemas.Validate(header.LabelSchemas, header.ConfidenceCalibration);
-        if (!header.CandidateCatalog.Select(candidate => candidate.Id)
-                .SequenceEqual(V11Candidates.OrderBy(candidate => candidate.Id).Select(candidate => candidate.Id)))
+        if (header.CandidateCatalog.Any(candidate => candidate is null) ||
+            !SchemaEquals(header.CandidateCatalog.OrderBy(candidate => candidate.Id).ToArray(),
+                V11Candidates.OrderBy(candidate => candidate.Id).ToArray()))
             throw new InvalidDataException("Checkpoint response candidate schema does not match this runtime.");
-        var weightByteCount = checked((header.TransformerWeightCount + header.StructuredWeightCount) * sizeof(float));
+        var expectedTools = DemoGameTools.CreateMerchant().Schemas.OrderBy(schema => schema.Name).ToArray();
+        if (header.ToolSchemas.Any(schema => schema is null) ||
+            !SchemaEquals(header.ToolSchemas.OrderBy(schema => schema.Name).ToArray(), expectedTools))
+            throw new InvalidDataException("Checkpoint tool schemas do not match this runtime.");
+        var expectedTransformerWeights = ExpectedTransformerWeightCount(header.Config,
+            header.Words.Length, header.OutputWords.Length);
+        if (header.TransformerWeightCount != expectedTransformerWeights || header.StructuredWeightCount <= 0 ||
+            header.StructuredWeightCount > 10_000_000)
+            throw new InvalidDataException("Checkpoint parameter count is invalid.");
+        var weightByteCount = checked(checked(header.TransformerWeightCount + header.StructuredWeightCount) * sizeof(float));
         var weightBytes = reader.ReadBytes(weightByteCount);
         if (weightBytes.Length != weightByteCount) throw new EndOfStreamException("Checkpoint weights are truncated.");
         var integrity = reader.ReadBytes(32);
         if (integrity.Length != 32 || stream.Position != stream.Length)
             throw new InvalidDataException("Checkpoint has a missing checksum or trailing data.");
-        if (!SHA256.HashData(headerBytes.Concat(weightBytes).ToArray()).SequenceEqual(integrity))
+        if (!CombinedSha256(headerBytes, weightBytes).SequenceEqual(integrity))
             throw new InvalidDataException("Checkpoint integrity checksum failed.");
-        if (!Convert.ToHexString(SHA256.HashData(weightBytes)).Equals(header.WeightsSha256, StringComparison.OrdinalIgnoreCase))
+        if (header.WeightsSha256 is null || header.WeightsSha256.Length != 64 ||
+            !Convert.ToHexString(SHA256.HashData(weightBytes)).Equals(header.WeightsSha256, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException("Checkpoint weight checksum failed.");
 
         var vocabulary = new WordVocabulary(header.Words, header.OutputWords);
@@ -107,8 +140,18 @@ public sealed partial class Brain
         using (var weights = new MemoryStream(weightBytes, writable: false))
         using (var weightReader = new BinaryReader(weights, Encoding.UTF8, leaveOpen: false))
         {
-            for (var index = 0; index < brain._weights.Length; index++) brain._weights[index] = weightReader.ReadSingle();
-            for (var index = 0; index < structured.Length; index++) structured[index] = weightReader.ReadSingle();
+            for (var index = 0; index < brain._weights.Length; index++)
+            {
+                var value = weightReader.ReadSingle();
+                if (!float.IsFinite(value)) throw new InvalidDataException("Checkpoint contains a non-finite transformer weight.");
+                brain._weights[index] = value;
+            }
+            for (var index = 0; index < structured.Length; index++)
+            {
+                var value = weightReader.ReadSingle();
+                if (!float.IsFinite(value)) throw new InvalidDataException("Checkpoint contains a non-finite structured weight.");
+                structured[index] = value;
+            }
         }
         brain._structuredHeads.Restore(structured, header.StructuredUpdates, header.StructuredLabelThresholds);
         brain._confidenceCalibration = header.ConfidenceCalibration;
@@ -140,7 +183,7 @@ public sealed partial class Brain
             header.Version,
             header.CompletedSteps,
             header.CorpusHash,
-            CheckpointSha256 = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant(),
+            CheckpointSha256 = FileSha256(path),
             FileBytes = stream.Length,
             header.Config,
             VocabularyWords = header.Words.Length,
@@ -181,6 +224,78 @@ public sealed partial class Brain
         public string WeightEncoding { get; set; } = "";
         public string WeightsSha256 { get; set; } = "";
     }
+
+    private static byte[] CombinedSha256(ReadOnlySpan<byte> first, ReadOnlySpan<byte> second)
+    {
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+        hash.AppendData(first);
+        hash.AppendData(second);
+        return hash.GetHashAndReset();
+    }
+
+    private static string FileSha256(string path)
+    {
+        using var stream = File.OpenRead(path);
+        return Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+    }
+
+    private static bool SchemaEquals<T>(T left, T right) =>
+        JsonSerializer.Serialize(left) == JsonSerializer.Serialize(right);
+
+    private static void ValidateVocabularyArrays(string[] words, string[] outputWords)
+    {
+        if (words.Any(string.IsNullOrWhiteSpace) || outputWords.Any(string.IsNullOrWhiteSpace))
+            throw new InvalidDataException("Checkpoint vocabulary contains an empty word.");
+        var vocabulary = new WordVocabulary(words, outputWords);
+        if (!words.SequenceEqual(vocabulary.Words) || !outputWords.SequenceEqual(vocabulary.OutputWords))
+            throw new InvalidDataException("Checkpoint vocabulary must be canonical, distinct, and ordinally sorted.");
+    }
+
+    private static void ValidateTrainedTools(string[] tools)
+    {
+        var expected = DemoGameTools.CreateMerchant().Schemas.Select(schema => schema.Name).ToHashSet(StringComparer.Ordinal);
+        if (tools.Distinct(StringComparer.Ordinal).Count() != tools.Length ||
+            tools.Any(tool => string.IsNullOrWhiteSpace(tool) || !expected.Contains(tool)))
+            throw new InvalidDataException("Checkpoint trained-tool list is invalid.");
+    }
+
+    private static void ValidateResponseCatalog(
+        IReadOnlyDictionary<string, string[]> actual,
+        IReadOnlyDictionary<string, string[]> expected)
+    {
+        if (actual.Count != expected.Count || actual.Any(item => item.Key is null || item.Value is null) ||
+            !expected.All(item => actual.TryGetValue(item.Key, out var values) && values.SequenceEqual(item.Value)))
+            throw new InvalidDataException("Checkpoint response catalog does not match this runtime.");
+    }
+
+    private static void ValidateCorpusHash(string hash)
+    {
+        if (hash == "UNKNOWN") return;
+        if (hash is null || hash.Length != 64 || hash.Any(character => !Uri.IsHexDigit(character)))
+            throw new InvalidDataException("Checkpoint corpus hash is invalid.");
+    }
+
+    private static int ExpectedTransformerWeightCount(BrainConfig config, int wordCount, int outputWordCount)
+    {
+        try
+        {
+            var embedding = (long)config.EmbeddingSize;
+            var inputSize = checked((long)Tokenizer.WordStart + wordCount);
+            var outputSize = checked((long)Tokenizer.WordStart + outputWordCount);
+            var perLayer = checked(4L * embedding * embedding + 2L * config.MlpSize * embedding);
+            var total = checked(inputSize * embedding + outputSize * embedding +
+                (long)config.PositionPeriod * embedding + config.LayerCount * perLayer +
+                (long)Enum.GetValues<DialogueIntent>().Length * embedding +
+                (long)Enum.GetValues<UserAffect>().Length * embedding + 2L * embedding);
+            if (total is <= 0 or > 50_000_000)
+                throw new InvalidDataException("Checkpoint architecture exceeds the supported 50-million-parameter limit.");
+            return (int)total;
+        }
+        catch (OverflowException exception)
+        {
+            throw new InvalidDataException("Checkpoint architecture parameter count overflowed.", exception);
+        }
+    }
 }
 
 internal static class V11Schemas
@@ -196,32 +311,44 @@ internal static class V11Schemas
         ["stance"] = Enum.GetNames<DialogueStance>(),
         ["policy"] = Enum.GetNames<ResponsePolicy>(),
         ["slots"] = Enum.GetNames<SlotType>(),
-        ["content"] = Enum.GetNames<ContentFlag>()
-        , ["knowledgeTarget"] = Enum.GetNames<KnowledgeTarget>()
+        ["content"] = Enum.GetNames<ContentFlag>(),
+        ["knowledgeTarget"] = Enum.GetNames<KnowledgeTarget>()
     };
 
     public static Dictionary<string, ConfidenceThreshold> DefaultCalibration => new(StringComparer.Ordinal)
     {
-        ["speechActs"] = new(0.50, 0.10), ["domains"] = new(0.50, 0.10),
-        ["goals"] = new(0.50, 0.10), ["affect"] = new(0.65, 0.12),
-        ["stance"] = new(0.65, 0.12), ["policy"] = new(0.75, 0.15),
-        ["slots"] = new(0.80, 0.10), ["content"] = new(0.50, 0.10),
-        ["toolReadOnly"] = new(0.95, 0.05), ["toolMutating"] = new(0.99, 0.01),
-        ["responseCandidate"] = new(0.70, 0.10), ["knowledgeTarget"] = new(0.85, 0.10)
+        ["speechActs"] = new(0.50, 0.10),
+        ["domains"] = new(0.50, 0.10),
+        ["goals"] = new(0.50, 0.10),
+        ["affect"] = new(0.65, 0.12),
+        ["stance"] = new(0.65, 0.12),
+        ["policy"] = new(0.75, 0.15),
+        ["slots"] = new(0.80, 0.10),
+        ["content"] = new(0.50, 0.10),
+        ["toolReadOnly"] = new(0.95, 0.05),
+        ["toolMutating"] = new(0.99, 0.01),
+        ["responseCandidate"] = new(0.70, 0.10),
+        ["knowledgeTarget"] = new(0.85, 0.10)
     };
 
     public static void Validate(
         IReadOnlyDictionary<string, string[]> labels,
         IReadOnlyDictionary<string, ConfidenceThreshold> calibration)
     {
+        if (labels.Count != Labels.Count)
+            throw new InvalidDataException("Checkpoint label schemas contain unexpected entries.");
         foreach (var expected in Labels)
-            if (!labels.TryGetValue(expected.Key, out var actual) || !actual.SequenceEqual(expected.Value))
+            if (!labels.TryGetValue(expected.Key, out var actual) || actual is null ||
+                !actual.SequenceEqual(expected.Value))
                 throw new InvalidDataException($"Checkpoint label schema '{expected.Key}' does not match this runtime.");
+        if (calibration.Count != DefaultCalibration.Count)
+            throw new InvalidDataException("Checkpoint confidence calibration contains unexpected entries.");
         foreach (var expected in DefaultCalibration.Keys)
             if (!calibration.ContainsKey(expected))
                 throw new InvalidDataException($"Checkpoint confidence calibration '{expected}' is missing.");
         foreach (var item in calibration)
-            if (item.Value.Threshold is < 0 or > 1 || item.Value.Margin is < 0 or > 1)
+            if (item.Value is null || !double.IsFinite(item.Value.Threshold) || !double.IsFinite(item.Value.Margin) ||
+                item.Value.Threshold is < 0 or > 1 || item.Value.Margin is < 0 or > 1)
                 throw new InvalidDataException($"Invalid confidence calibration for '{item.Key}'.");
     }
 }
