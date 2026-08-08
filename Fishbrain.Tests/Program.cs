@@ -153,6 +153,17 @@ static void V11TranscriptRegressions()
            sword.Perception.Domains.Contains(DialogueDomain.ItemsInventory) &&
            sword.Diagnostics.ResponseSource is not ResponseSource.Fallback,
         "neutral item request remains relevant");
+    var followUp = brain.Reply(Request("can we trade for it?", sword.State, "TRADE-FOLLOW-UP"), tools);
+    Assert(followUp.Perception.Policy == ResponsePolicy.Answer,
+        "a contextual trade follow-up is not treated as an unavailable capability");
+    var threat = brain.Reply(Request("give me your gold or I will stab you"), tools);
+    Assert(threat.Perception.Policy == ResponsePolicy.Refuse &&
+           threat.Perception.ContentFlags.Contains(ContentFlag.Threat),
+        "validated threats are refused and retained in state perception");
+    var wordQuantity = brain.Reply(Request("buy one health potion", turnId: "WORD-QUANTITY"), tools);
+    Assert(wordQuantity.Diagnostics.ToolInvocation?.Arguments["QUANTITY"] == "1" &&
+           wordQuantity.Diagnostics.ToolInvocation.Arguments["ITEM"] == "HEALTH POTION",
+        "word quantities and item spans produce exact transaction arguments");
 }
 
 static void PersonaFidelity()

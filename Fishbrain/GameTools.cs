@@ -253,7 +253,7 @@ public sealed class DemoWorldState
         lock (_gate)
         {
             var wares = string.Join(", ", _merchantStock.Where(item => item.Value > 0)
-                .OrderBy(item => item.Key, StringComparer.Ordinal).Select(item => $"{item.Key} ({item.Value})"));
+                .OrderBy(item => item.Key, StringComparer.Ordinal).Select(item => $"{item.Key}: {item.Value}"));
             return Success(("WARES", wares));
         }
     }

@@ -175,8 +175,18 @@ internal sealed class CompositionalHeadModel
         Func<V10TrainingExample, IReadOnlyList<double>>? context = null)
     {
         var predictions = examples.Select(example => Predict(example.Context, [], context?.Invoke(example), example.Input)).ToArray();
-        return EvaluatePredictions(examples, predictions, CandidateTopKAccuracy(examples, 3, context));
+        return EvaluatePredictions(examples, predictions,
+            CandidateTopKAccuracy(examples, 3, context),
+            CandidateTopKAccuracy(examples, 10, context), CandidateMeanReciprocalRank(examples, context));
     }
+
+    public StructuredMetrics EvaluateWithPredictions(
+        IReadOnlyList<V10TrainingExample> examples,
+        IReadOnlyList<StructuredPerception> predictions,
+        Func<V10TrainingExample, IReadOnlyList<double>>? context = null) =>
+        EvaluatePredictions(examples, predictions,
+            CandidateTopKAccuracy(examples, 3, context),
+            CandidateTopKAccuracy(examples, 10, context), CandidateMeanReciprocalRank(examples, context));
 
     public Dictionary<string, V11Schemas.ConfidenceThreshold> Calibrate(
         IReadOnlyList<V10TrainingExample> examples,
@@ -280,7 +290,9 @@ internal sealed class CompositionalHeadModel
     internal static StructuredMetrics EvaluatePredictions(
         IReadOnlyList<V10TrainingExample> examples,
         IReadOnlyList<StructuredPerception> predictions,
-        double? responseTop3 = null)
+        double? responseTop3 = null,
+        double? responseTop10 = null,
+        double? responseMrr = null)
     {
         if (examples.Count != predictions.Count)
             throw new ArgumentException("Prediction count does not match example count.", nameof(predictions));
@@ -304,10 +316,13 @@ internal sealed class CompositionalHeadModel
         var candidate = Accuracy(examples, predictions, "responseCandidate", example => example.ResponseCandidateId,
             prediction => prediction.ResponseCandidateId ?? "");
         var candidateTop3 = responseTop3 ?? candidate;
+        var candidateTop10 = responseTop10 ?? candidateTop3;
+        var candidateMrr = responseMrr ?? candidate;
         var composite = new[] { speech, domains, goals, affect, policy, content, slots, tool, knowledge, candidate }
             .Where(double.IsFinite).DefaultIfEmpty(0.0).Average();
         return new StructuredMetrics(speech, domains, goals, affect, stance, policy, content, slots,
-            tool, mutatingToolPrecision, knowledge, candidate, candidateTop3, composite);
+            tool, mutatingToolPrecision, knowledge, candidate, candidateTop3,
+            candidateTop10, candidateMrr, composite);
     }
 
     private double TrainSlots(V10TrainingExample example, double learningRate)
@@ -510,6 +525,23 @@ internal sealed class CompositionalHeadModel
         }) / scored.Length;
     }
 
+    private double CandidateMeanReciprocalRank(
+        IReadOnlyList<V10TrainingExample> examples,
+        Func<V10TrainingExample, IReadOnlyList<double>>? context)
+    {
+        var scored = examples.Where(example => example.SupervisedHeads.Contains("responseCandidate")).ToArray();
+        if (scored.Length == 0) return double.NaN;
+        return scored.Average(example =>
+        {
+            var probabilities = Softmax(_layout.Candidate, _candidates.Length,
+                Features(example.Context, context?.Invoke(example)));
+            var ranking = Enumerable.Range(0, probabilities.Length).OrderByDescending(index => probabilities[index])
+                .ThenBy(index => index).ToArray();
+            var rank = Array.FindIndex(ranking, index => _candidates[index] == example.ResponseCandidateId);
+            return rank < 0 ? 0.0 : 1.0 / (rank + 1);
+        });
+    }
+
     private static double ToolPrecision(
         IReadOnlyList<V10TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
         IReadOnlyCollection<string> positiveTools)
@@ -654,4 +686,6 @@ internal sealed record StructuredMetrics(
     double KnowledgeTargetAccuracy,
     double ResponseTop1,
     double ResponseTop3,
+    double VariationRecallAt10,
+    double VariationMrr,
     double Composite);

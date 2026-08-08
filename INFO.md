@@ -119,4 +119,10 @@ Required thresholds are:
 
 Tool fidelity, mutation safety, persona fidelity, OOV preservation, parser/state invariants, and structural invariants require 100%. Unexpected empty, invalid, overlength, generic known-domain fallback, duplicate mutation, and altered authoritative-field counts must remain zero.
 
-The 2x128 release build's median and p95 reply latency must remain within four times the v10 baseline measured on the same machine.
+The 2x128 release build's median and p95 reply latency must remain within four times the v10 baseline measured on the same machine. The tracked 2,048-reply measurement on the development machine records v10 at 0.6728/1.2559 ms median/p95 and v11 at 0.9227/2.1951 ms. The v11 ratios are 1.3714x/1.7478x, so the latency gate passes. The measurement environment and checkpoint hashes are stored in `data/benchmarks/v10-v11-latency.json`.
+
+## Current trained artifact
+
+The completed 80,000-step run exported `data/models/model-v11-latest.fbm`. The artifact is 36,939,894 bytes and contains corpus hash `c240725fa1f316fa02b8a8968269056b72fa123f4bca1fad5b4534385c8834fd`.
+
+The full 5,999-row held-out evaluation passes the stage gate and all hard runtime invariants. It records 99.61% semantic assertion success on the 256-turn benchmark, 100% tool fidelity, 100% tool-argument exact match, and zero invalid, unexpected-empty, overlength, or generic known-domain fallback outputs. The one preserved semantic-benchmark miss is the legacy `HELLO?` row whose expected content band is `PROFANITY`; the runtime correctly leaves it unflagged. The quality release gate remains closed because raw domain macro-F1 is 0.7966, slot span F1 is 0.8220, and tool selection accuracy is 0.9257. These misses are reported as failures; the evaluator does not weaken or bypass their thresholds.

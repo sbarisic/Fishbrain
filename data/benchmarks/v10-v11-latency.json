@@ -1,0 +1,33 @@
+{
+  "measuredUtc": "2026-08-08T02:30:00Z",
+  "environment": {
+    "os": "Microsoft Windows 10.0.26100",
+    "architecture": "X64",
+    "processor": "AMD Ryzen 5 3600XT 6-Core Processor",
+    "dotnetSdk": "10.0.400-preview.0.26322.102"
+  },
+  "method": {
+    "warmupReplies": 32,
+    "measuredReplies": 2048,
+    "execution": "SEQUENTIAL",
+    "responseMode": "RANKED",
+    "inputSetSize": 8
+  },
+  "v10": {
+    "sourceCommit": "6f4a8b8fb59cedfe1453653a0f17663ef87afece",
+    "checkpointSha256": "5b11f3db1759f3885e45151fa4d2ba76b8395ef3b0736db2fd34c7ae6cfea384",
+    "medianMilliseconds": 0.6728,
+    "p95Milliseconds": 1.2559
+  },
+  "v11": {
+    "checkpointSha256": "7c8b01dab1f9a8dbc9ab7d53f710e9219ca26d5cbbdfaf70297302eacc1a9449",
+    "medianMilliseconds": 0.9227,
+    "p95Milliseconds": 2.1951
+  },
+  "ratios": {
+    "median": 1.3714,
+    "p95": 1.7478,
+    "maximumAllowed": 4.0,
+    "pass": true
+  }
+}

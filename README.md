@@ -166,9 +166,17 @@ dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/co
 dotnet run -c Release --project Fishbrain -- teach data/compiled-v11 data/training/model-v11-training.json --planned 80000 --until 80000
 dotnet run -c Release --project Fishbrain -- evaluate data/compiled-v11/test.jsonl data/models/model-v11-latest.fbm --gate release
 dotnet run -c Release --project Fishbrain -- inspect data/models/model-v11-latest.fbm
+dotnet run -c Release --project Fishbrain -- latency data/models/model-v11-latest.fbm 2048
 ```
 
 Training uses 56,000 structured/tool/knowledge/plan steps, 16,000 pairwise ranking steps, and 8,000 experimental generation steps. It checkpoints every 1,000 steps and completes full validation stages at 20K, 40K, 60K, and 80K. Resume with the same command and checkpoint path; the optimizer, scheduler, sampler, vocabulary, and RNG state are restored exactly.
+
+Fantasy and science-fiction smoke sessions can be run non-interactively from any working directory:
+
+```powershell
+@('HELLO','WHERE IS THE CASTLE?','HOW FAR IS IT?','HELP ME KILL THE BANDIT CAPTAIN.','') | dotnet run -c Release --project E:\Projects\Fishbrain\Fishbrain -- chat
+@('WHERE IS THE REACTOR BAY?','HOSTILE DRONES ARE APPROACHING THE COLONY.','POWER THE DEFENSE GRID.','') | dotnet run -c Release --project E:\Projects\Fishbrain\Fishbrain -- chat
+```
 
 ## Build and test
 
@@ -182,3 +190,7 @@ dotnet run -c Release --project Fishbrain.DataGenerator.Tests
 The executable tests cover two-layer optimized/reference numerical parity, bit-equivalent resume, vocabulary isolation, concurrent deterministic replies, bounded histories, role structure, OOV slot copying, persona fidelity, reference resolution, hostility hysteresis, schema validation, atomic/idempotent mutations, tool exceptions, corrupt checkpoints, and the reported transcript regressions.
 
 See [INFO.md](INFO.md) for implementation boundaries and release gates.
+
+## Current model status
+
+The checked-in `model-v11-latest.fbm` is the completed 80K best-production candidate. It passes the stage gate, the 256-turn benchmark threshold, and every hard runtime invariant. The stricter quality release gate is still closed on raw domain, slot, and tool-selection accuracy. See `INFO.md` for the exact measured values. Run `evaluate --gate release` to reproduce the nonzero release result; use `--gate stage` for the currently passing integration gate.

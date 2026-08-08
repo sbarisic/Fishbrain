@@ -42,6 +42,10 @@ internal static class Program
                     Count(args, 1, 2);
                     Chat(args.Length == 2 ? args[1] : ResolveDefaultModel());
                     break;
+                case "latency":
+                    Count(args, 1, 3);
+                    Latency(args.Length >= 2 ? args[1] : ResolveDefaultModel(), args.Length == 3 ? Steps(args[2]) : 512);
+                    break;
                 case "export":
                     Count(args, 3, 4);
                     var exportBrain = Brain.Load(args[1]);
@@ -62,7 +66,7 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            Console.Error.WriteLine($"ERROR {exception.Message}");
+            Console.Error.WriteLine($"ERROR {exception}");
             return 1;
         }
     }
@@ -96,6 +100,28 @@ internal static class Program
         }
     }
 
+    private static void Latency(string checkpoint, int iterations)
+    {
+        var brain = Brain.Load(checkpoint);
+        var tools = DemoGameTools.CreateMerchant();
+        var inputs = new[] { "HELLO", "WHERE IS THE CASTLE?", "WHAT CAN YOU DO?", "I NEED A SWORD",
+            "SHOW ME YOUR WARES", "HOW MUCH GOLD DO I HAVE?", "THE ROAD IS QUIET", "WHERE IS THE INN?" };
+        ReplyResult Run(int index) => brain.Reply(new ReplyRequest("LATENCY", index.ToString(CultureInfo.InvariantCulture),
+            [new DialogueTurn(DialogueRole.Player, inputs[index % inputs.Length])], NpcDialogueState.Initial,
+            NpcPersona.Default, index), tools);
+        for (var index = 0; index < 32; index++) _ = Run(index);
+        var samples = new double[iterations];
+        for (var index = 0; index < iterations; index++)
+        {
+            var start = Stopwatch.GetTimestamp();
+            _ = Run(index + 32);
+            samples[index] = Stopwatch.GetElapsedTime(start).TotalMilliseconds;
+        }
+        Array.Sort(samples);
+        Console.WriteLine($"LATENCY N {iterations} MEDIAN_MS {Percentile(0.50):F4} P95_MS {Percentile(0.95):F4}");
+        double Percentile(double value) => samples[Math.Clamp((int)Math.Ceiling(value * samples.Length) - 1, 0, samples.Length - 1)];
+    }
+
     private static string Upper<T>(T value) where T : struct, Enum => value.ToString().ToUpperInvariant();
     private static int Steps(string text) =>
         int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out var value) && value > 0
@@ -111,6 +137,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|stage|release]");
         Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-v11-latest.fbm)");
+        Console.WriteLine("  latency [CHECKPOINT] [ITERATIONS]");
         Console.WriteLine("  export TRAINING_CHECKPOINT.json OUTPUT.fbm [CORPUS_DIRECTORY]");
         Console.WriteLine("  inspect MODEL.fbm");
         Console.WriteLine("  selftest");
@@ -388,8 +415,31 @@ internal static class Evaluation
         var data = TrainingData.Load(testPath, brain.DialogueTokenizer);
         var examples = data.StructuredSamples;
         if (examples.Count == 0) throw new InvalidDataException("V11 evaluation requires structured examples.");
-        var raw = brain.DebugEvaluateStructured(examples);
-        var rawPredictions = examples.Select(example => brain.DebugPredictStructuredRaw(example.Context)).ToArray();
+        var rawBatch = brain.DebugEvaluateStructuredBatch(examples);
+        var raw = rawBatch.Metrics;
+        var rawPredictions = rawBatch.Predictions;
+        var productionResults = new ReplyResult[examples.Count];
+        var experimentalResults = new ReplyResult[Math.Min(100, examples.Count)];
+        Parallel.For(0, examples.Count,
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Min(4, Environment.ProcessorCount) }, index =>
+            {
+                var example = examples[index];
+                try
+                {
+                    productionResults[index] = brain.Reply(new ReplyRequest("EVALUATION", $"ROW-{index}",
+                        example.Turns, NpcDialogueState.Initial, NpcPersona.Default, 42),
+                        DemoGameTools.CreateMerchant());
+                    if (index < experimentalResults.Length)
+                        experimentalResults[index] = brain.Reply(new ReplyRequest("EVALUATION-GENERATED", $"ROW-{index}",
+                            example.Turns, NpcDialogueState.Initial, NpcPersona.Default, 42,
+                            ResponseMode.GeneratedExperimental), GameToolRegistry.Empty);
+                }
+                catch (Exception exception)
+                {
+                    throw new InvalidDataException(
+                        $"Production evaluation failed at row {index} ({example.Source}/{example.SemanticFamilyId}): {example.Input}", exception);
+                }
+            });
         var productionPredictions = new List<StructuredPerception>(examples.Count);
         var responseSources = new Dictionary<ResponseSource, int>();
         var invalid = 0;
@@ -400,16 +450,18 @@ internal static class Evaluation
         var authoritativeToolResponses = 0;
         var generatedExperimental = 0;
         var generatedExperimentalInvalid = 0;
+        var knownDomainFallback = 0;
+        var schemaRegistry = DemoGameTools.CreateMerchant();
         for (var index = 0; index < examples.Count; index++)
         {
             var example = examples[index];
-            var tools = DemoGameTools.CreateMerchant();
-            var result = brain.Reply(new ReplyRequest("EVALUATION", $"ROW-{index}",
-                example.Turns, NpcDialogueState.Initial,
-                NpcPersona.Default, 42), tools);
+            var result = productionResults[index];
             productionPredictions.Add(result.Perception);
             responseSources[result.Diagnostics.ResponseSource] =
                 responseSources.GetValueOrDefault(result.Diagnostics.ResponseSource) + 1;
+            if (result.Diagnostics.ResponseSource == ResponseSource.Fallback && result.Perception.Domains.Count > 0 &&
+                result.Text.Equals("I DO NOT KNOW.", StringComparison.Ordinal))
+                knownDomainFallback++;
             if (example.Policy != ResponsePolicy.NoResponse && result.Text.Length == 0) unexpectedEmpty++;
             if (result.Text.Length > 256) overlength++;
             try
@@ -421,7 +473,7 @@ internal static class Evaluation
             if (example.SupervisedHeads.Contains("tool") && example.ToolSchema != "NONE")
             {
                 toolRows++;
-                var expectedArguments = ExpectedToolArguments(example, tools);
+                var expectedArguments = ExpectedToolArguments(example, schemaRegistry);
                 var invocation = result.Diagnostics.ToolInvocation;
                 if (invocation is not null && invocation.ToolName == example.ToolSchema &&
                     DictionaryEqual(invocation.Arguments, expectedArguments)) exactToolArguments++;
@@ -430,11 +482,9 @@ internal static class Evaluation
                         result.Text.Contains(value, StringComparison.Ordinal))) authoritativeToolResponses++;
             }
 
-            if (index < 100)
+            if (index < experimentalResults.Length)
             {
-                var experimental = brain.Reply(new ReplyRequest("EVALUATION-GENERATED", $"ROW-{index}",
-                    example.Turns, NpcDialogueState.Initial,
-                    NpcPersona.Default, 42, ResponseMode.GeneratedExperimental), GameToolRegistry.Empty);
+                var experimental = experimentalResults[index];
                 generatedExperimental++;
                 try
                 {
@@ -450,6 +500,7 @@ internal static class Evaluation
         var toolFidelity = (double)authoritativeToolResponses / Math.Max(1, toolRows);
         var benchmark = EvaluateBenchmark(brain);
         var hardInvariants = invalid == 0 && unexpectedEmpty == 0 && overlength == 0 &&
+                             knownDomainFallback == 0 &&
                              toolFidelity == 1.0 && benchmark.ToolFidelity == 1.0 &&
                              benchmark.StructuralSuccess == 1.0;
         var stagePass = raw.Composite >= 0.60 && raw.PolicyAccuracy >= 0.90 &&
@@ -461,6 +512,7 @@ internal static class Evaluation
                           raw.MutatingToolPrecision >= 0.99 && toolArgumentExact >= 0.90 &&
                           raw.KnowledgeTargetAccuracy >= 0.90 &&
                           raw.ResponseTop1 >= 0.85 && raw.ResponseTop3 >= 0.95 &&
+                          raw.VariationRecallAt10 >= 0.95 && raw.VariationMrr >= 0.80 &&
                           benchmark.SemanticSuccess >= 0.90 && hardInvariants;
 
         Console.WriteLine($"V11_RECORDS {examples.Count}");
@@ -493,7 +545,8 @@ internal static class Evaluation
         PrintStructured("PRODUCTION_CONSTRAINED", production);
         Console.WriteLine($"TOOL_ARGUMENT_EXACT_MATCH {toolArgumentExact:F4} N {toolRows}");
         Console.WriteLine($"TOOL_FIDELITY {toolFidelity:F4}");
-        Console.WriteLine($"PRODUCTION_INVALID {invalid} UNEXPECTED_EMPTY {unexpectedEmpty} OVERLENGTH {overlength}");
+        Console.WriteLine($"PRODUCTION_INVALID {invalid} UNEXPECTED_EMPTY {unexpectedEmpty} OVERLENGTH {overlength} " +
+                          $"KNOWN_DOMAIN_FALLBACK {knownDomainFallback}");
         foreach (var source in Enum.GetValues<ResponseSource>())
             Console.WriteLine($"RESPONSE_SOURCE {source} {responseSources.GetValueOrDefault(source)}");
         Console.WriteLine($"GENERATED_EXPERIMENTAL {generatedExperimental} INVALID {generatedExperimentalInvalid}");
@@ -556,6 +609,8 @@ internal static class Evaluation
         Console.WriteLine($"{prefix}_KNOWLEDGE_TARGET_ACCURACY {metrics.KnowledgeTargetAccuracy:F4}");
         Console.WriteLine($"{prefix}_RESPONSE_TOP1 {metrics.ResponseTop1:F4}");
         Console.WriteLine($"{prefix}_RESPONSE_TOP3 {metrics.ResponseTop3:F4}");
+        Console.WriteLine($"{prefix}_VARIATION_RECALL_AT10 {metrics.VariationRecallAt10:F4}");
+        Console.WriteLine($"{prefix}_VARIATION_MRR {metrics.VariationMrr:F4}");
         Console.WriteLine($"{prefix}_COMPOSITE {metrics.Composite:F4}");
     }
 
@@ -573,7 +628,7 @@ internal static class Evaluation
         var toolCount = 0;
         var toolFidelity = 0;
         var failures = new List<string>();
-        foreach (var conversation in rows.GroupBy(row => row.Id.Split('-')[0], StringComparer.Ordinal))
+        foreach (var conversation in rows.GroupBy(row => BenchmarkConversationId(row.Id), StringComparer.Ordinal))
         {
             var state = NpcDialogueState.Initial;
             var turns = new List<DialogueTurn>();
@@ -615,6 +670,12 @@ internal static class Evaluation
         return new BenchmarkMetrics((double)semantic / rows.Length,
             (double)toolFidelity / Math.Max(1, toolCount), (double)structural / rows.Length,
             rows.Length, failures);
+
+        static string BenchmarkConversationId(string id)
+        {
+            var turn = id.LastIndexOf("-T", StringComparison.Ordinal);
+            return turn > 0 ? id[..turn] : id;
+        }
     }
 
     private static void WriteV11Telemetry(

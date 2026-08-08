@@ -522,6 +522,26 @@ public sealed partial class Brain
     internal StructuredMetrics DebugEvaluateStructured(IReadOnlyList<V10TrainingExample> examples) =>
         _structuredHeads.Evaluate(examples, example => ContextVector(example.Context));
 
+    internal (StructuredMetrics Metrics, StructuredPerception[] Predictions) DebugEvaluateStructuredBatch(
+        IReadOnlyList<V10TrainingExample> examples)
+    {
+        var vectors = new double[examples.Count][];
+        var predictions = new StructuredPerception[examples.Count];
+        Parallel.For(0, examples.Count,
+            new ParallelOptions { MaxDegreeOfParallelism = Math.Min(4, Environment.ProcessorCount) }, index =>
+            {
+                vectors[index] = ContextVector(examples[index].Context);
+                predictions[index] = _structuredHeads.Predict(
+                    examples[index].Context, [], vectors[index], examples[index].Input);
+            });
+        var contextByExample = Enumerable.Range(0, examples.Count).ToDictionary(
+            index => EvaluationExampleKey(examples[index]),
+            index => (IReadOnlyList<double>)vectors[index], StringComparer.Ordinal);
+        var metrics = _structuredHeads.EvaluateWithPredictions(examples, predictions,
+            example => contextByExample[EvaluationExampleKey(example)]);
+        return (metrics, predictions);
+    }
+
     private double[] ContextVector(string text)
     {
         var normalized = DialogueText.Normalize(text);
