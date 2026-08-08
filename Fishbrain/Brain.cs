@@ -524,7 +524,6 @@ public sealed partial class Brain
 
     private double[] ContextVector(string text)
     {
-        SyncScalarWeights();
         var normalized = DialogueText.Normalize(text);
         var encoded = _tokenizer.Encode(normalized);
         if (encoded.Length > Config.ContextLength) encoded = encoded[^Config.ContextLength..];
@@ -972,10 +971,17 @@ public sealed partial class Brain
             var evaluationExamples = fullStage
                 ? validation.StructuredSamples
                 : StratifiedMilestoneSample(validation.StructuredSamples, 128, Config.Seed);
+            var contextVectors = new double[evaluationExamples.Count][];
+            Parallel.For(0, evaluationExamples.Count,
+                new ParallelOptions { MaxDegreeOfParallelism = Math.Min(4, Environment.ProcessorCount) },
+                index => contextVectors[index] = ContextVector(evaluationExamples[index].Context));
+            var contextByExample = Enumerable.Range(0, evaluationExamples.Count).ToDictionary(
+                index => EvaluationExampleKey(evaluationExamples[index]),
+                index => (IReadOnlyList<double>)contextVectors[index], StringComparer.Ordinal);
             var metrics = _structuredHeads.Evaluate(evaluationExamples,
-                example => ContextVector(example.Context));
+                example => contextByExample[EvaluationExampleKey(example)]);
             _confidenceCalibration = _structuredHeads.Calibrate(evaluationExamples,
-                example => ContextVector(example.Context));
+                example => contextByExample[EvaluationExampleKey(example)]);
             var realizationLoss = DebugAverageLoss(validation.LanguageSamples.Take(64));
             var productionEligible = double.IsFinite(metrics.Composite) &&
                                      metrics.MutatingToolPrecision >= 0.99;
@@ -1077,6 +1083,9 @@ public sealed partial class Brain
 
     private static string StableTrainingKey(int seed, string value) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes($"{seed}|{value}")));
+
+    private static string EvaluationExampleKey(V10TrainingExample example) =>
+        $"{example.Source}\u001f{example.SemanticFamilyId}\u001f{example.Context}";
 
     private void WriteTrainingTelemetry(
         string checkpointPath, string corpusHash, IReadOnlyList<V10TrainingExample> validation,
