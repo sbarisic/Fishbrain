@@ -38,14 +38,23 @@ internal sealed class PackedTrainer
         BrainConfig config,
         DialogueTokenizer tokenizer,
         double[] weights,
-        IReadOnlyList<int> tokens)
+        IReadOnlyList<int> tokens,
+        int poolTokenCount)
     {
         if (tokens.Count is < 1 || tokens.Count > config.ContextLength)
             throw new ArgumentOutOfRangeException(nameof(tokens));
         var gradients = Array.Empty<double>();
         var trainer = new PackedTrainer(config, tokenizer, weights, gradients);
         var sequence = trainer.Forward(tokens.ToArray(), 0);
-        return (double[])sequence.Layers[^1][^1].Final.Clone();
+        var finalLayer = sequence.Layers[^1];
+        var start = Math.Max(0, finalLayer.Length - Math.Max(1, poolTokenCount));
+        var result = new double[config.EmbeddingSize];
+        for (var position = start; position < finalLayer.Length; position++)
+        for (var dimension = 0; dimension < result.Length; dimension++)
+            result[dimension] += finalLayer[position].Final[dimension];
+        var scale = 1.0 / (finalLayer.Length - start);
+        for (var dimension = 0; dimension < result.Length; dimension++) result[dimension] *= scale;
+        return result;
     }
 
     private double Calculate(TrainingSample sample)

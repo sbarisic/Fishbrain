@@ -528,7 +528,9 @@ public sealed partial class Brain
         var normalized = DialogueText.Normalize(text);
         var encoded = _tokenizer.Encode(normalized);
         if (encoded.Length > Config.ContextLength) encoded = encoded[^Config.ContextLength..];
-        return PackedTrainer.ContextVector(Config, _tokenizer, _weights, encoded);
+        var current = ExtractCurrentPlayerTurn(normalized);
+        var currentTokenCount = Math.Min(encoded.Length, _tokenizer.Encode(current).Length);
+        return PackedTrainer.ContextVector(Config, _tokenizer, _weights, encoded, currentTokenCount);
     }
 
     internal static string ExtractCurrentPlayerTurn(string normalizedDialogue)
@@ -969,7 +971,7 @@ public sealed partial class Brain
             var fullStage = _step is 20_000 or 40_000 or 60_000 or 80_000;
             var evaluationExamples = fullStage
                 ? validation.StructuredSamples
-                : StratifiedMilestoneSample(validation.StructuredSamples, 1_024, _step);
+                : StratifiedMilestoneSample(validation.StructuredSamples, 128, _step);
             var metrics = _structuredHeads.Evaluate(evaluationExamples,
                 example => ContextVector(example.Context));
             _confidenceCalibration = _structuredHeads.Calibrate(evaluationExamples,
