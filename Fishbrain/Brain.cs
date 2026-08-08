@@ -517,7 +517,7 @@ public sealed partial class Brain
     }
 
     internal StructuredPerception DebugPredictStructuredRaw(string input) =>
-        _structuredHeads.Predict(DialogueText.Normalize(input), [], ContextVector(input));
+        _structuredHeads.Predict(DialogueText.Normalize(input), [], ContextVector(input), ExtractCurrentPlayerTurn(input));
 
     internal StructuredMetrics DebugEvaluateStructured(IReadOnlyList<V10TrainingExample> examples) =>
         _structuredHeads.Evaluate(examples, example => ContextVector(example.Context));

@@ -131,7 +131,8 @@ internal sealed class CompositionalHeadModel
     }
 
     public StructuredPerception Predict(
-        string input, IReadOnlyList<DialogueSlot> preservedSlots, IReadOnlyList<double>? contextVector = null)
+        string input, IReadOnlyList<DialogueSlot> preservedSlots, IReadOnlyList<double>? contextVector = null,
+        string? currentInput = null)
     {
         var features = Features(input, contextVector);
         var speech = PredictMulti<SpeechAct>("speechActs", _layout.Speech, features, maximum: 3);
@@ -144,7 +145,7 @@ internal sealed class CompositionalHeadModel
         var (knowledgeTarget, knowledgeConfidence) = PredictSoftmax<KnowledgeTarget>(_layout.KnowledgeTarget, features);
         var (toolIndex, toolConfidence) = PredictSoftmaxIndex(_layout.Tool, _tools.Length, features);
         var (candidateIndex, candidateConfidence) = PredictSoftmaxIndex(_layout.Candidate, _candidates.Length, features);
-        var learnedSlots = PredictSlots(input);
+        var learnedSlots = PredictSlots(currentInput ?? input);
         var slots = preservedSlots.Count == 0
             ? learnedSlots
             : preservedSlots.Concat(learnedSlots)
@@ -173,7 +174,7 @@ internal sealed class CompositionalHeadModel
         IReadOnlyList<V10TrainingExample> examples,
         Func<V10TrainingExample, IReadOnlyList<double>>? context = null)
     {
-        var predictions = examples.Select(example => Predict(example.Context, [], context?.Invoke(example))).ToArray();
+        var predictions = examples.Select(example => Predict(example.Context, [], context?.Invoke(example), example.Input)).ToArray();
         return EvaluatePredictions(examples, predictions, CandidateTopKAccuracy(examples, 3, context));
     }
 
@@ -181,7 +182,7 @@ internal sealed class CompositionalHeadModel
         IReadOnlyList<V10TrainingExample> examples,
         Func<V10TrainingExample, IReadOnlyList<double>>? context = null)
     {
-        var predictions = examples.Select(example => Predict(example.Context, [], context?.Invoke(example))).ToArray();
+        var predictions = examples.Select(example => Predict(example.Context, [], context?.Invoke(example), example.Input)).ToArray();
         var result = V11Schemas.DefaultCalibration;
         CalibrateMulti("speechActs", _layout.Speech, example => example.SpeechActs.Select(value => (int)value).ToHashSet());
         CalibrateMulti("domains", _layout.Domain, example => example.Domains.Select(value => (int)value).ToHashSet());

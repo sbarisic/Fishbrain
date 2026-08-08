@@ -25,7 +25,7 @@ public sealed partial class Brain
         ResolveReferences(current, request.State, slots);
 
         var learned = _structuredHeads.Updates > 0
-            ? _structuredHeads.Predict(packed.Text, slots, ContextVector(packed.Text))
+            ? _structuredHeads.Predict(packed.Text, slots, ContextVector(packed.Text), current)
             : RulePerception(current, slots, tools);
         var raw = learned;
         var constraints = new List<PerceptionConstraint>();
