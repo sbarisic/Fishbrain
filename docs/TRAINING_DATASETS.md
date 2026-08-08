@@ -1,7 +1,8 @@
 # Training Data Expansion Plan
 
-This plan adds game-grounded dialogue, task semantics, social goals, and mature
-language without treating a generic assistant corpus as the target product.
+This plan adds game-grounded dialogue, general-purpose banter and small talk, task
+semantics, social goals, and mature language without treating a generic assistant
+corpus as the target product.
 Licenses were reviewed from primary project pages on 2026-08-07, but this is an
 engineering screen rather than legal advice. Pin and archive the exact license
 shipped with every downloaded revision before importing any row.
@@ -17,8 +18,43 @@ Use three kinds of data:
 3. Mature/toxic corpora for recognition and held-out robustness, not automatic
    NPC response imitation.
 
-The next balanced 30,000-row experiment should remain majority project-owned.
-External assistant data should provide paraphrases, not decide game behavior.
+The next corpus expansion should remain majority project-owned. External assistant
+data may contribute conversational language and preference contrasts, but it must not
+decide game behavior, persona truth, or tool authorization.
+
+## General banter and small-talk curriculum
+
+The existing 60,000-row corpus is a bounded baseline. Its social examples do not prove
+the breadth or multi-turn quality required for general conversation. Add project-owned
+conversation families that cover:
+
+- greetings, introductions, farewells, thanks, apologies, and conversational repair;
+- daily routines, food, weather-like observations, travel, work, hobbies, celebrations,
+  frustrations, plans, memories, and harmless hypotheticals;
+- persona-consistent likes, dislikes, opinions, values, anecdotes, and uncertainty;
+- jokes, wordplay, playful teasing, friendly sarcasm, light disagreement, and boundaries
+  when teasing becomes hostile;
+- follow-up questions, short answers, pronouns, callbacks, interruptions, topic changes,
+  and returning to an earlier topic;
+- supportive but non-clinical responses to ordinary sadness, stress, excitement, boredom,
+  embarrassment, and loneliness;
+- honest handling of unknown facts without a cold generic refusal or invented knowledge;
+- social conversation before and after tool use, proving that stale operational domains
+  do not contaminate later banter.
+
+Author complete conversations, not isolated prompt-response pairs. Each family needs
+multiple valid replies and hard negatives such as repetition, non sequiturs, persona
+contradictions, unjustified certainty, excessive questions, parroting, and premature
+conversation shutdown. Preserve persona, relationship, mood, topic, and callback targets
+as explicit supervision. The desired reply may be free-form, but exact world facts and
+tool results must remain structured fields.
+
+Do not copy failed model text into positive targets. Store it as a rejected response with
+a reviewed failure label, then author one or more acceptable constraints or responses.
+Split by conversation and semantic family before expansion. Keep every `B` scenario in
+[GAME_DIALOGUE_SCENARIOS.md](GAME_DIALOGUE_SCENARIOS.md) and its paraphrases out of
+training. Retrain only after the conversational evaluator exists, so improvement is
+measured against held-out sessions instead of the training examples.
 
 ## Existing sources
 
@@ -90,7 +126,12 @@ This separation allows `FIX THIS DAMN SWORD` to remain a repair request,
 `KILL THE NECROMANCER` to remain a combat directive, and a targeted slur to be
 recognized as both hostility and an identity attack.
 
-## Proposed 30,000-row corpus
+## Historical 30,000-row planning mix
+
+This table predates the current 60,000-row corpus. It is retained as source-selection
+history, not as the target size or sufficient coverage for the new conversational
+requirement. Recalculate quotas after the banter/small-talk scenario matrix and evaluator
+are implemented.
 
 | Component | Rows | Supervision |
 |---|---:|---|
@@ -135,7 +176,7 @@ Extend `data/sources.json` so every source records:
 
 ```json
 {
-  "id": "SOURCE_AND_VERSION",
+  "id": "SOURCE_REVISION_ID",
   "upstream_url": "HTTPS://...",
   "revision": "IMMUTABLE_COMMIT_OR_RELEASE",
   "artifact_url": "HTTPS://...",

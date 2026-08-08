@@ -12,6 +12,14 @@ The production path does not freely generate facts. It routes each reply through
 
 Experimental word generation is available through `ResponseMode.GeneratedExperimental`, but it is not the default and never renders authoritative tool results.
 
+## Conversational scope
+
+Fishbrain must support general-purpose banter and small talk, not only commands and game-service requests. An NPC should be able to greet, chat about ordinary topics, express persona-consistent preferences, trade jokes, respond to playful teasing, ask and answer follow-up questions, change topics naturally, and refer back to recent conversation without falling into a repetitive fallback.
+
+“General-purpose” describes the breadth of social conversation. It does not give the model authority to invent world state, claim unavailable capabilities, or execute unregistered actions. Exact game facts and mutations remain behind persona data and typed game tools. Unknown factual questions should receive an honest, conversational limitation instead of a fabricated answer.
+
+The checked-in model is a bounded baseline and has not yet passed a dedicated general-conversation gate. The corpus, response architecture, held-out scenarios, and evaluation process must be expanded before this requirement can be claimed as implemented.
+
 ## Requirements
 
 - .NET 10 SDK
@@ -193,4 +201,4 @@ See [INFO.md](INFO.md) for implementation boundaries and release gates.
 
 ## Current model status
 
-The checked-in `model-latest.fbm` is the completed 210K best-production candidate. It is 41,834,317 bytes with SHA-256 `5cc8680df9a42f10dc7b4db99807dc1f1b8ec17e9223b9382cb22687ce7dc1c8`. It passes the exact full-validation neural gate, the integration stage gate, the 256-turn benchmark threshold, and every hard runtime invariant. On the independent 5,999-row test split, the stricter quality release gate remains closed on raw domain F1 (0.8324 versus 0.85), slot F1 (0.8296 versus 0.85), and tool accuracy (0.9489 versus 0.95). The thresholds were not weakened. See `INFO.md` and `docs/MODEL_EVALUATION.md` for complete results and live probe classifications.
+The checked-in `model-latest.fbm` is the completed 210K bounded-dialogue candidate. It is 41,834,317 bytes with SHA-256 `5cc8680df9a42f10dc7b4db99807dc1f1b8ec17e9223b9382cb22687ce7dc1c8`. It passes the exact full-validation neural gate, the integration stage gate, the 256-turn operational benchmark threshold, and every hard runtime invariant. On the independent 5,999-row test split, the stricter quality release gate remains closed on raw domain F1 (0.8324 versus 0.85), slot F1 (0.8296 versus 0.85), and tool accuracy (0.9489 versus 0.95). It also has no passing general-banter or small-talk evaluation. The thresholds were not weakened. See `INFO.md` and `docs/MODEL_EVALUATION.md` for complete results, live probe classifications, and the new conversational acceptance contract.

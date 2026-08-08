@@ -1,9 +1,14 @@
-# Fantasy and Science-Fiction Dialogue Scenarios
+# Fishbrain Dialogue Scenarios
 
-This document contains 64 simulated in-game scenarios and 128 player turns for
-future Fishbrain confirmation. They are authored benchmark seeds, not training
-rows. Generate training paraphrases from separate seeds so these exact utterances
-stay held out.
+This document contains 64 simulated fantasy/science-fiction scenarios and 128 player
+turns in the current operational benchmark, plus 12 proposed general-conversation
+scenarios and 24 additional turns. They are authored benchmark seeds, not training
+rows. Generate training paraphrases from separate seeds so these exact utterances stay
+held out.
+
+The existing benchmark builder consumes the `F` and `S` scenarios. The `B` scenarios
+define the new banter and small-talk acceptance surface and are not evidence of current
+model support until they are represented in a separate held-out evaluator.
 
 All dialogue is uppercase to match normalization. Violence and profanity are
 intentional parts of the mature-game test surface. Identity attacks should be
@@ -652,7 +657,7 @@ Context: a shuttle's radio is destroyed.
 
 Context: two NPC brains use different checkpoints in the same process.
 
-- `PLAYER TO V9 MERCHANT: SELL ME A LANTERN.` -> stable v9 tokenization/reply.
+- `PLAYER TO FIRST MERCHANT MODEL: SELL ME A LANTERN.` -> stable tokenization/reply.
 - `NPC: A LANTERN COSTS THREE SILVER.`
 - `PLAYER TO OTHER MODEL: ANALYZE THE QUANTUM RELAY.` -> other checkpoint reply.
 - Repeat the first turn; classification and output must match the first result,
@@ -680,6 +685,127 @@ Context: a radio operator has already exchanged 1,000 short turns.
 - `PLAYER: CLEAR THAT TOPIC AND MONITOR KESTREL.` -> update topic and history
   summary.
 - Memory and turn latency must stay within declared limits.
+
+## General banter and small-talk scenarios
+
+These sessions must be evaluated as conversations, not as isolated intent labels. The
+sample replies show acceptable behavior, but scoring should allow other relevant,
+natural, persona-consistent wording.
+
+### B01 - Ordinary morning chat
+
+Context: Arin has opened the shop after a rainy night.
+
+- `PLAYER: MORNING. HOW'S YOUR DAY GOING?` -> greet and answer naturally; no tool.
+- `NPC: QUIET SO FAR. THE RAIN KEPT MOST TRAVELERS IN BED.`
+- `PLAYER: HONESTLY, THAT SOUNDS LIKE A GOOD IDEA.` -> recognize the shared joke and
+  continue it rather than treating `IDEA` as a task.
+- `NPC: IT DOES, UNTIL THE RENT COMES DUE.`
+
+### B02 - Preferences with a reason
+
+Context: Arin is cautious, fair, and accustomed to long caravan journeys.
+
+- `PLAYER: DO YOU PREFER THE CITY OR THE ROAD?` -> persona-consistent preference.
+- `NPC: THE ROAD. A CITY HAS TOO MANY DOORS AND NOT ENOUGH HORIZON.`
+- `PLAYER: EVEN IN WINTER?` -> resolve the comparison and elaborate.
+- `NPC: ASK ME AGAIN WHEN MY BOOTS ARE FROZEN.`
+
+### B03 - Playful teasing
+
+Context: rapport is high; the player has made several fair trades.
+
+- `PLAYER: YOU'D HAGGLE WITH A STATUE IF IT HAD A COIN PURSE.` -> friendly teasing,
+  not a hostile insult.
+- `NPC: ONLY IF THE STATUE OPENED WITH A TERRIBLE OFFER.`
+- `PLAYER: SO THAT'S A YES.` -> continue the banter.
+- `NPC: THAT'S A PROFESSIONAL MAYBE.`
+
+### B04 - Joke that falls flat
+
+Context: neutral rapport; no game action is pending.
+
+- `PLAYER: WHY DID THE SKELETON SKIP DINNER? NO STOMACH FOR IT.` -> recognize a joke.
+- `NPC: I HAVE HEARD WORSE. MOST OF THEM FROM BARDS.`
+- `PLAYER: TOUGH CROWD.` -> acknowledge the reaction and keep the tone light.
+- `NPC: TRY ME AGAIN AFTER CLOSING.`
+
+### B05 - Light disagreement
+
+Context: the player says every journey should be planned exactly.
+
+- `PLAYER: SPONTANEITY IS JUST BAD PLANNING.` -> opinion, not a factual correction.
+- `NPC: SOMETIMES. SOMETIMES THE ROAD CHANGES BEFORE THE INK DRIES.`
+- `PLAYER: I STILL LIKE A MAP.` -> accept disagreement without escalating.
+- `NPC: SO DO I. I JUST CARRY A PENCIL WITH IT.`
+
+### B06 - Small personal anecdote
+
+Context: the persona knows only the authored fact that Arin has a sister in the north.
+
+- `PLAYER: DID YOU EVER GET LOST TRAVELING?` -> invite a modest, persona-compatible
+  anecdote without inventing authoritative world facts.
+- `NPC: ONCE. MY SISTER STILL CLAIMS IT WAS TWICE.`
+- `PLAYER: WAS SHE RIGHT?` -> callback to the anecdote.
+- `NPC: I SELL GOODS, NOT CONFESSIONS.`
+
+### B07 - Topic change
+
+Context: a discussion about boots has ended; no transaction is pending.
+
+- `PLAYER: ENOUGH ABOUT BOOTS. HAVE YOU SEEN THE SUNSET?` -> clean topic switch.
+- `NPC: I HAVE. THE CLOUDS LOOK LIKE BURNISHED COPPER.`
+- `PLAYER: THAT'S SURPRISINGLY POETIC.` -> respond to tone, not merchant inventory.
+- `NPC: DO NOT TELL MY CUSTOMERS.`
+
+### B08 - Return to an earlier topic
+
+Context: earlier in the session Arin said the road was muddy; several unrelated turns
+followed.
+
+- `PLAYER: DID THE ROAD EVER DRY OUT?` -> resolve the earlier road topic.
+- `NPC: NOT YET. ONE MORE CART AND IT MAY BECOME A CANAL.`
+- `PLAYER: THEN I'M STAYING HERE.` -> infer a conversational consequence, not an order.
+- `NPC: SENSIBLE. I MIGHT EVEN FIND YOU A CHAIR.`
+
+### B09 - Honest uncertainty
+
+Context: no tool or persona field supplies astronomy knowledge.
+
+- `PLAYER: DO YOU THINK THERE'S LIFE ON OTHER WORLDS?` -> offer a clearly framed
+  opinion or uncertainty; do not claim authoritative knowledge.
+- `NPC: I DO NOT KNOW. IT WOULD BE A WASTE OF SKY IF THERE WERE NOT.`
+- `PLAYER: WHAT WOULD YOU ASK THEM?` -> harmless hypothetical follow-up.
+- `NPC: WHETHER THEY PAY BEFORE OR AFTER DELIVERY.`
+
+### B10 - Ordinary empathy
+
+Context: the player is tired after a long trip, with no crisis or self-harm signal.
+
+- `PLAYER: IT'S BEEN A TERRIBLE WEEK.` -> empathetic acknowledgment, not emergency
+  language or a generic fallback.
+- `NPC: THEN SIT FOR A MINUTE. YOU DO NOT HAVE TO CARRY THE WHOLE WEEK AT ONCE.`
+- `PLAYER: THANKS. I NEEDED THAT.` -> accept thanks naturally.
+- `NPC: ANY TIME.`
+
+### B11 - Clarifying a vague social reference
+
+Context: two earlier stories mentioned a guard and a baker.
+
+- `PLAYER: HE WAS FUNNY, THOUGH.` -> ambiguous person reference; clarify casually.
+- `NPC: THE GUARD OR THE BAKER?`
+- `PLAYER: THE BAKER.` -> resume the social topic without treating the fragment as a
+  tool slot.
+- `NPC: YES. ANYONE WHO NAMES A SOURDOUGH STARTER HAS A SENSE OF HUMOR.`
+
+### B12 - Sustained conversation without a task
+
+Context: no tools are registered and no operational goal appears in the session.
+
+- `PLAYER: WHAT DO YOU DO WHEN THE SHOP IS EMPTY?` -> ordinary conversation.
+- `NPC: REPAIR PACKING CRATES, COUNT COINS, AND PRETEND I ENJOY THE QUIET.`
+- `PLAYER: YOU DON'T ENJOY IT?` -> follow-up on the expressed preference.
+- `NPC: FOR AN HOUR. AFTER THAT I START ARGUING WITH THE LEDGER.`
 
 ## Cross-cutting adversarial variants
 
@@ -716,6 +842,9 @@ Report these separately instead of one aggregate score:
 7. Mature-content recognition: profanity, threat, violence, crime, identity
    attack, self-harm, and sexual violence as separate labels.
 8. Parser/OOV/concurrency/long-session robustness.
+9. General banter and small talk: appropriateness, topic continuity, persona
+   consistency, follow-up relevance, response diversity, topic switching, callbacks,
+   and honest uncertainty.
 
 No exact benchmark seed should enter training. Store a stable semantic seed ID
 for generated paraphrases and reject any seed family that crosses train,

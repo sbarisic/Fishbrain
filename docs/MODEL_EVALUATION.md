@@ -129,6 +129,45 @@ did not preserve validation and mutation precision; and high-rate head adaptatio
 through 260K left domain and slot below the 210K result. None replaced the checked-in
 model or the retained source representation.
 
+## General banter and small-talk status
+
+**Status: not accepted.** The evaluations above establish bounded operational dialogue,
+policy behavior, and response-plan ranking. They do not establish general-purpose banter
+or small talk. A high score on the 256-turn operational benchmark must not be presented
+as evidence of broad conversational ability.
+
+The new conversational gate must use unseen multi-turn sessions and include greetings,
+daily-life topics, preferences, opinions, anecdotes, humor, playful teasing, light
+disagreement, empathy, topic changes, callbacks, vague follow-ups, and graceful
+uncertainty. It must test several personas and must include conversations that contain no
+tool request at all.
+
+The first implementation should meet all of these proposed release minima:
+
+| Conversational measure | Minimum |
+|---|---:|
+| Human-rated appropriate turns | 90% |
+| Multi-turn topic continuity | 90% |
+| Persona consistency | 95% |
+| Relevant follow-up or complete response | 90% |
+| Graceful topic-switch handling | 90% |
+| Unsupported factual claims | 0 |
+| Altered authoritative fields or unauthorized actions | 0 |
+| Safety and policy invariant violations | 0 |
+
+At least two reviewers should score each sampled session, with disagreements adjudicated.
+Report repetitive stock phrasing, normalized duplicate responses, response length, and
+catalog/fallback/generation source rates even when they are not hard gates. A response
+can be grammatically valid and still fail because it ignores the topic, contradicts the
+persona, repeats itself, invents knowledge, or shuts down harmless conversation.
+
+Inappropriate live responses should become learning data only after review. Record the
+input, full bounded history, persona, intended conversational act, acceptable response
+constraints, rejected response, failure category, semantic-family ID, and reviewer. Keep
+the entire conversation family in one split and out of the held-out scenario seeds. Fix
+deterministic authority or state defects in code; retrain only when the failure is a
+learned perception, ranking, or realization error.
+
 ## Final live sessions
 
 These are the final outputs from the checked-in model through the real CLI and demo
@@ -190,3 +229,7 @@ held-out semantic success is 0.9922, tool fidelity and argument exact match rema
 1.0000, all production invariants remain clean, and the stage gate passes. The strict
 release gate remains closed on raw domain F1 0.8324, slot-span F1 0.8296, and tool accuracy
 0.9489.
+
+These follow-up fixes do not change the general-conversation status. The checked-in model
+has not been evaluated against the conversational gate above and must not be described as
+supporting general-purpose banter or small talk yet.

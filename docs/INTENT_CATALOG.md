@@ -48,6 +48,26 @@ the exact behavior. This keeps checkpoint layout stable as catalog IDs grow.
 
 Actor codes below are `P` player, `N` NPC, `B` either, and `S` system/meta.
 
+## General conversation composition
+
+General-purpose banter and small talk are required product behavior. This catalog is a
+semantic inventory, not a closed list of sentences or topics. Ordinary conversation
+should compose the existing social, relationship, knowledge, activity, and meta facets
+with additional realization annotations for:
+
+- topic and prior-topic callback;
+- persona preference or opinion;
+- anecdote and hypothetical framing;
+- humor, wordplay, friendly teasing, and light disagreement;
+- empathy, curiosity, follow-up, and conversational repair;
+- uncertainty and the boundary between opinion and authoritative fact.
+
+These annotations should guide multi-turn state and response realization. They must not
+become hundreds of mutually exclusive top-level intent classes. A harmless joke, for
+example, may still be `SOCIAL` with a friendly stance and no tool or factual knowledge
+target. Held-out acceptance examples live in `GAME_DIALOGUE_SCENARIOS.md` under the `B`
+prefix.
+
 ## 1. Social openings and conversational control
 
 | ID | Actor | Meaning |

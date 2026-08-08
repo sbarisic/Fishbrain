@@ -14,7 +14,13 @@ internal static class Program
 	{
 		try
 		{
-			if (args.Length == 0) { Usage(); return 1; }
+			if (args.Length == 0)
+			{
+				//Usage();
+				//return 1;
+				args = new[] { "chat" };
+			}
+
 			switch (args[0].ToLowerInvariant())
 			{
 				case "train":

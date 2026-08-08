@@ -4,9 +4,11 @@ This document records the implementation boundaries and release contract. See `R
 
 ## Design boundary
 
-Fishbrain is not a general-purpose LLM. It is a compact contextual perception, planning, retrieval, and optional generation model intended to run inside a game process without external services or NuGet dependencies.
+Fishbrain is a compact contextual dialogue model intended to run inside a game process without external services or NuGet dependencies. Its product scope includes general-purpose banter and small talk as well as game-grounded commands, questions, and transactions.
 
 The neural model proposes structured perception, a knowledge target, a tool schema, and a response plan. Deterministic code owns validation, constraints, state reduction, tool execution, authoritative rendering, eligibility masks, and fallbacks. This boundary prevents a generated sentence from inventing or rewriting game state.
+
+General conversation does not weaken that authority boundary. The model may improvise social language, opinions, jokes, and persona-colored reactions, but caller-owned persona data and game tools remain the only sources for exact identity, world, inventory, currency, quest, and action facts.
 
 ## Context and tokenization
 
@@ -62,6 +64,20 @@ The reducer owns all `NpcDialogueState` changes:
 The response catalog contains 201 plan IDs and at least 4,400 distinct visible project-owned variations. The intentional no-response plan has one empty surface. Plans declare policy, domain, knowledge target, speech acts, keywords, and variations. Metadata masks ineligible plans before scoring. The runtime retrieves the top five eligible plans, applies contextual plan/ranking scores, and uses candidate ID as the deterministic final tie-breaker.
 
 Production response-source telemetry distinguishes tool templates, persona templates, capability templates, ranked variations, clarifications, fallbacks, and experimental generation. A recognized domain must not emit generic `I DO NOT KNOW` text.
+
+## General conversation requirement
+
+The production runtime must handle ordinary social conversation beyond a finite command catalog. Required behavior includes:
+
+- multi-turn greetings, farewells, introductions, and conversational repair;
+- ordinary small talk about daily life, weather-like observations, food, travel, hobbies, work, stories, and hypothetical topics;
+- persona-consistent preferences, opinions, humor, playful teasing, and light disagreement;
+- relevant follow-up questions, topic changes, callbacks, and pronoun/reference continuity;
+- varied, natural responses that do not repeat a stock phrase or merely paraphrase the player;
+- honest conversational uncertainty when a factual answer is unavailable;
+- unchanged safety, capability, tool-authorization, and authoritative-field guarantees.
+
+The response catalog remains useful for exact policies and high-risk boundaries, but catalog ranking alone is not sufficient for this breadth. The target architecture needs a production conversational realization path conditioned on current input, bounded history, persona, affect, and dialogue state. It may use retrieval, constrained generation, or both. Exact facts must still be inserted only after deterministic validation, and free-form text must never rewrite a tool result.
 
 ## Corpus integrity
 
@@ -119,6 +135,8 @@ Required thresholds are:
 
 Tool fidelity, mutation safety, persona fidelity, OOV preservation, parser/state invariants, and structural invariants require 100%. Unexpected empty, invalid, overlength, generic known-domain fallback, duplicate mutation, and altered authoritative-field counts must remain zero.
 
+General conversation adds a separate held-out gate. It must measure human-rated appropriateness, multi-turn topic continuity, persona consistency, follow-up relevance, response diversity, repetition, graceful topic switching, and unsupported-fact honesty. The safety and authoritative-field invariants remain hard requirements in those sessions. Until this suite exists and passes, a model can pass the operational benchmark but cannot be described as supporting general-purpose banter and small talk.
+
 The final 210K artifact measured 2.7463/4.1461 ms median/p95 over 2,048 replies on the development machine. This remains a recorded measurement rather than a relative compatibility claim; future performance comparisons should build the relevant Git revisions independently instead of adding old-format loaders to the current runtime.
 
 ## Current trained artifact
@@ -127,4 +145,4 @@ The completed 210,000-step run is stored at `data/models/model-latest.fbm`. The 
 
 The full 6,001-row validation stage passes every exact raw neural minimum. Its composite is 0.9077; representative passing values are domain F1 0.8561, slot F1 0.8568, tool accuracy 0.9551, mutating-tool precision 0.9907, response top-1 0.8539, and response top-3 0.9669.
 
-The independent 5,999-row test evaluation passes the stage gate and every hard runtime invariant. It records 99.22% semantic assertion success on the 256-turn benchmark, 100% tool fidelity, 100% tool-argument exact match, 100% mutating-tool precision, and zero invalid, unexpected-empty, overlength, or generic known-domain fallback outputs. The quality release gate remains closed because raw domain macro-F1 is 0.8324, slot span F1 is 0.8296, and tool selection accuracy is 0.9489. The other raw neural thresholds pass, including response top-1/top-3 at 0.8596/0.9636 and variation Recall@10/MRR at 0.9818/0.9146. These misses are reported as failures; `--gate release` returns a nonzero exit code and does not weaken or bypass the thresholds.
+The independent 5,999-row test evaluation passes the stage gate and every hard runtime invariant. It records 99.22% semantic assertion success on the 256-turn operational benchmark, 100% tool fidelity, 100% tool-argument exact match, 100% mutating-tool precision, and zero invalid, unexpected-empty, overlength, or generic known-domain fallback outputs. The quality release gate remains closed because raw domain macro-F1 is 0.8324, slot span F1 is 0.8296, and tool selection accuracy is 0.9489. The other raw neural thresholds pass, including response top-1/top-3 at 0.8596/0.9636 and variation Recall@10/MRR at 0.9818/0.9146. No general-conversation gate has been run, so the artifact is not accepted for general-purpose banter or small talk. These misses are reported as failures; `--gate release` returns a nonzero exit code and does not weaken or bypass the thresholds.
