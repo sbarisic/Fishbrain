@@ -78,21 +78,21 @@ internal sealed class CompositionalHeadModel
         Add("speechActs", () => TrainMulti(_layout.Speech, Enum.GetValues<SpeechAct>().Length, features,
             example.SpeechActs.Select(value => (int)value).ToHashSet(), learningRate));
         Add("domains", () => TrainMulti(_layout.Domain, Enum.GetValues<DialogueDomain>().Length, features,
-            example.Domains.Select(value => (int)value).ToHashSet(), learningRate));
+            example.Domains.Select(value => (int)value).ToHashSet(), learningRate, 3.0));
         Add("goals", () => TrainMulti(_layout.Goal, Enum.GetValues<DialogueGoal>().Length, features,
-            example.Goals.Select(value => (int)value).ToHashSet(), learningRate));
+            example.Goals.Select(value => (int)value).ToHashSet(), learningRate, 2.5));
         Add("affect", () => TrainSoftmax(_layout.Affect, Enum.GetValues<UserAffect>().Length, features, (int)example.Affect, learningRate));
         Add("stance", () => TrainSoftmax(_layout.Stance, Enum.GetValues<DialogueStance>().Length, features, (int)example.Stance, learningRate));
         Add("policy", () => TrainSoftmax(_layout.Policy, Enum.GetValues<ResponsePolicy>().Length, features, (int)example.Policy, learningRate));
         Add("content", () => TrainMulti(_layout.Content, Enum.GetValues<ContentFlag>().Length, features,
-            example.ContentFlags.Select(value => (int)value).ToHashSet(), learningRate));
+            example.ContentFlags.Select(value => (int)value).ToHashSet(), learningRate, 4.0));
         Add("knowledgeTarget", () => TrainSoftmax(_layout.KnowledgeTarget, Enum.GetValues<KnowledgeTarget>().Length,
             features, (int)example.KnowledgeTarget, learningRate));
         Add("tool", () => TrainSoftmax(_layout.Tool, _tools.Length, features,
             Math.Max(0, Array.IndexOf(_tools, example.ToolSchema)), learningRate));
         Add("responseCandidate", () => TrainSoftmax(_layout.Candidate, _candidates.Length, features,
             Math.Max(0, Array.IndexOf(_candidates, example.ResponseCandidateId)), learningRate));
-        Add("slots", () => TrainSlots(example, learningRate * 0.20));
+        Add("slots", () => TrainSlots(example, learningRate * 0.10));
         Updates++;
         return loss / Math.Max(1, heads);
 
@@ -127,7 +127,7 @@ internal sealed class CompositionalHeadModel
     {
         if (!example.SupervisedHeads.Contains("slots"))
             throw new ArgumentException("The auxiliary slot pass requires slot supervision.", nameof(example));
-        return TrainSlots(example, learningRate * 0.20);
+        return TrainSlots(example, learningRate * 0.10);
     }
 
     public StructuredPerception Predict(
@@ -329,7 +329,7 @@ internal sealed class CompositionalHeadModel
                     index + 1 < tokens.Length ? tokens[index + 1].Text : "<END>",
                     index > 1 ? tokens[index - 2].Text : "<START2>",
                     index + 2 < tokens.Length ? tokens[index + 2].Text : "<END2>"), target, learningRate,
-                target == 0 ? 1.0 : 8.0);
+                target == 0 ? 1.0 : 4.0);
         }
         return loss / tokens.Length;
     }
@@ -393,14 +393,16 @@ internal sealed class CompositionalHeadModel
                 index + 2 < words.Length ? words[index + 2].Text : "<END2>")).Confidence).Average();
     }
 
-    private double TrainMulti(int offset, int classes, double[] features, IReadOnlySet<int> targets, double rate)
+    private double TrainMulti(
+        int offset, int classes, double[] features, IReadOnlySet<int> targets, double rate,
+        double positiveWeight = 2.0)
     {
         var loss = 0.0;
         for (var label = 0; label < classes; label++)
         {
             var probability = Sigmoid(Dot(offset + label * FeatureCount, features));
             var target = targets.Contains(label) ? 1.0 : 0.0;
-            var weight = target == 1.0 ? 2.0 : 1.0;
+            var weight = target == 1.0 ? positiveWeight : 1.0;
             loss -= weight * (target * Math.Log(Math.Max(1e-12, probability)) +
                     (1.0 - target) * Math.Log(Math.Max(1e-12, 1.0 - probability)));
             Update(offset + label * FeatureCount, features, rate * weight * (target - probability));
