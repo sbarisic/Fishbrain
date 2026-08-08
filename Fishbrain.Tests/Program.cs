@@ -15,7 +15,7 @@ var tests = new (string Name, Action Test)[]
     ("OOV SLOT PRESERVATION", OovSlotPreservation),
     ("MULTI INTENT", MultiIntent),
     ("STATE CONSISTENCY", StateConsistency),
-    ("V11 TRANSCRIPT REGRESSIONS", V11TranscriptRegressions),
+    ("TRANSCRIPT REGRESSIONS", TranscriptRegressions),
     ("POLICY PRECEDENCE", PolicyPrecedence),
     ("CLARIFICATION CONTINUATION", ClarificationContinuation),
     ("PENDING ACTION CONTINUATION", PendingActionContinuation),
@@ -26,7 +26,7 @@ var tests = new (string Name, Action Test)[]
     ("AUTHORITATIVE DEMO WORLD", AuthoritativeDemoWorld),
     ("CONCURRENT WORLD IDEMPOTENCY", ConcurrentWorldIdempotency),
     ("REFERENCE RESOLUTION", ReferenceResolution),
-    ("RESPONSE CATALOG", ResponseCatalog),
+    ("RESPONSE CATALOG", ResponseCatalogValidation),
     ("TOOL SCHEMA VALIDATION", ToolSchemaValidation),
     ("TOOL SCHEMA SNAPSHOT", ToolSchemaSnapshot),
     ("RUNTIME BOUNDARY VALIDATION", RuntimeBoundaryValidation),
@@ -167,7 +167,7 @@ static void StateConsistency()
     }
 }
 
-static void V11TranscriptRegressions()
+static void TranscriptRegressions()
 {
     var brain = TestBrain();
     var tools = DemoGameTools.CreateMerchant();
@@ -356,12 +356,12 @@ static void ReferenceResolution()
         $"unique place reference fills follow-up slot: REF={first.State.References.Place} TEXT={second.Text} TOOL={second.Diagnostics.ToolInvocation}");
 }
 
-static void ResponseCatalog()
+static void ResponseCatalogValidation()
 {
-    Assert(V11ResponseCatalog.Plans.Count >= 200, "at least 200 semantic response plans");
-    Assert(V11ResponseCatalog.Plans.SelectMany(plan => plan.Variations).Distinct(StringComparer.Ordinal).Count() >= 4400,
+    Assert(ResponseCatalog.Plans.Count >= 200, "at least 200 semantic response plans");
+    Assert(ResponseCatalog.Plans.SelectMany(plan => plan.Variations).Distinct(StringComparer.Ordinal).Count() >= 4400,
         "at least 4400 distinct project-owned response variations");
-    Assert(V11ResponseCatalog.Find("NO_RESPONSE")?.Variations.SequenceEqual([string.Empty]) == true,
+    Assert(ResponseCatalog.Find("NO_RESPONSE")?.Variations.SequenceEqual([string.Empty]) == true,
         "no-response has one intentional empty surface, not duplicate padding");
 }
 
@@ -388,7 +388,7 @@ static void ToolSchemaSnapshot()
 
 static void CompactCheckpoint()
 {
-    var directory = Path.Combine(Path.GetTempPath(), "fishbrain-v10-checkpoint-" + Guid.NewGuid().ToString("N"));
+    var directory = Path.Combine(Path.GetTempPath(), "fishbrain-checkpoint-" + Guid.NewGuid().ToString("N"));
     Directory.CreateDirectory(directory);
     try
     {
@@ -457,22 +457,6 @@ static void RuntimeBoundaryValidation()
     catch (InvalidDataException) { oversizedConfigRejected = true; }
     Assert(oversizedConfigRejected, "aggregate model parameter limits are enforced before allocation");
 
-    var oldBinaryPath = Path.Combine(Path.GetTempPath(), "fishbrain-old-binary-" + Guid.NewGuid().ToString("N") + ".fbm");
-    try
-    {
-        File.WriteAllBytes(oldBinaryPath, "FISHBRN10\n"u8.ToArray());
-        var oldBinaryRejected = false;
-        try { _ = Brain.Load(oldBinaryPath); }
-        catch (InvalidDataException exception)
-        {
-            oldBinaryRejected = exception.Message.Contains("older binary", StringComparison.Ordinal);
-        }
-        Assert(oldBinaryRejected, "old binary checkpoints produce a clear compatibility error");
-    }
-    finally
-    {
-        if (File.Exists(oldBinaryPath)) File.Delete(oldBinaryPath);
-    }
 }
 
 static void SharedReleaseThresholds()
@@ -514,15 +498,15 @@ static void PhaseLocalSampling()
         "head-polish ranking sampling uses consecutive phase-local ordinals");
     var isolatedBuildAnchor = Path.Combine(Environment.CurrentDirectory, "data", "logs", "nested", "output");
     var benchmark = Fishbrain.Program.ResolveRepositoryFileFrom([isolatedBuildAnchor],
-        "data", "benchmarks", "v11-256.jsonl");
-    Assert(File.Exists(benchmark) && Path.GetFileName(benchmark) == "v11-256.jsonl",
+        "data", "benchmarks", "benchmark-256.jsonl");
+    Assert(File.Exists(benchmark) && Path.GetFileName(benchmark) == "benchmark-256.jsonl",
         "repository data discovery climbs from isolated build directories");
 }
 
 static void CheckedInModelSmoke()
 {
     var modelPath = Fishbrain.Program.ResolveRepositoryFileFrom([Environment.CurrentDirectory, AppContext.BaseDirectory],
-        "data", "models", "model-v11-latest.fbm");
+        "data", "models", "model-latest.fbm");
     var brain = Brain.Load(modelPath);
     var world = new DemoWorldState();
     var tools = DemoGameTools.CreateMerchant(world);

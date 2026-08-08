@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Fishbrain;
 
-internal sealed record V10TrainingExample(
+internal sealed record TrainingExample(
 	string Context,
 	string Input,
 	DialogueTurn[] Turns,
@@ -81,13 +81,13 @@ internal sealed class CompositionalHeadModel
 			var expected = DefaultLabelThresholds();
 			if (labelThresholds.Count != expected.Count || expected.Keys.Any(key => !labelThresholds.ContainsKey(key)) ||
 				labelThresholds.Values.Any(value => !double.IsFinite(value) || value is < 0.05 or > 0.99))
-				throw new InvalidDataException("Structured per-label calibration does not match the v11 schema.");
+				throw new InvalidDataException("Structured per-label calibration does not match the model schema.");
 			_labelThresholds = new Dictionary<string, double>(labelThresholds, StringComparer.Ordinal);
 		}
 	}
 
 	public double Train(
-		V10TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector = null,
+		TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector = null,
 		IReadOnlyList<double>? domainPositiveWeights = null)
 	{
 		var features = Features(example.Context, contextVector);
@@ -128,7 +128,7 @@ internal sealed class CompositionalHeadModel
 	}
 
 	public double TrainDomainsOnly(
-		V10TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector,
+		TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector,
 		IReadOnlyList<double> domainPositiveWeights)
 	{
 		if (!example.SupervisedHeads.Contains("domains")) return 0.0;
@@ -140,7 +140,7 @@ internal sealed class CompositionalHeadModel
 	}
 
 	public double TrainToolOnly(
-		V10TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector)
+		TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector)
 	{
 		if (!example.SupervisedHeads.Contains("tool")) return 0.0;
 		var target = Math.Max(0, Array.IndexOf(_tools, example.ToolSchema));
@@ -151,7 +151,7 @@ internal sealed class CompositionalHeadModel
 	}
 
 	public double TrainResponseOnly(
-		V10TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector)
+		TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector)
 	{
 		if (!example.SupervisedHeads.Contains("responseCandidate")) return 0.0;
 		var target = Math.Max(0, Array.IndexOf(_candidates, example.ResponseCandidateId));
@@ -168,7 +168,7 @@ internal sealed class CompositionalHeadModel
 		_ => ReadOnlyToolWeight
 	};
 
-	public double TrainRanking(V10TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector = null)
+	public double TrainRanking(TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector = null)
 	{
 		if (!example.SupervisedHeads.Contains("responseCandidate")) return 0.0;
 		var target = Array.IndexOf(_candidates, example.ResponseCandidateId);
@@ -187,7 +187,7 @@ internal sealed class CompositionalHeadModel
 		return -Math.Log(Math.Max(1e-12, probability));
 	}
 
-	public double TrainSlotsOnly(V10TrainingExample example, double learningRate)
+	public double TrainSlotsOnly(TrainingExample example, double learningRate)
 	{
 		if (!example.SupervisedHeads.Contains("slots"))
 			throw new ArgumentException("The auxiliary slot pass requires slot supervision.", nameof(example));
@@ -235,8 +235,8 @@ internal sealed class CompositionalHeadModel
 	}
 
 	public StructuredMetrics Evaluate(
-		IReadOnlyList<V10TrainingExample> examples,
-		Func<V10TrainingExample, IReadOnlyList<double>>? context = null)
+		IReadOnlyList<TrainingExample> examples,
+		Func<TrainingExample, IReadOnlyList<double>>? context = null)
 	{
 		var predictions = examples.Select(example => Predict(example.Context, [], context?.Invoke(example), example.Input)).ToArray();
 		return EvaluatePredictions(examples, predictions,
@@ -245,18 +245,18 @@ internal sealed class CompositionalHeadModel
 	}
 
 	public StructuredMetrics EvaluateWithPredictions(
-		IReadOnlyList<V10TrainingExample> examples,
+		IReadOnlyList<TrainingExample> examples,
 		IReadOnlyList<StructuredPerception> predictions,
-		Func<V10TrainingExample, IReadOnlyList<double>>? context = null) =>
+		Func<TrainingExample, IReadOnlyList<double>>? context = null) =>
 		EvaluatePredictions(examples, predictions,
 			CandidateTopKAccuracy(examples, 3, context),
 			CandidateTopKAccuracy(examples, 10, context), CandidateMeanReciprocalRank(examples, context));
 
-	public Dictionary<string, V11Schemas.ConfidenceThreshold> Calibrate(
-		IReadOnlyList<V10TrainingExample> examples,
-		Func<V10TrainingExample, IReadOnlyList<double>>? context = null)
+	public Dictionary<string, ModelSchemas.ConfidenceThreshold> Calibrate(
+		IReadOnlyList<TrainingExample> examples,
+		Func<TrainingExample, IReadOnlyList<double>>? context = null)
 	{
-		var result = V11Schemas.DefaultCalibration;
+		var result = ModelSchemas.DefaultCalibration;
 		CalibrateMulti("speechActs", _layout.Speech, example => example.SpeechActs.Select(value => (int)value).ToHashSet());
 		CalibrateMulti("domains", _layout.Domain, example => example.Domains.Select(value => (int)value).ToHashSet());
 		CalibrateMulti("goals", _layout.Goal, example => example.Goals.Select(value => (int)value).ToHashSet());
@@ -281,7 +281,7 @@ internal sealed class CompositionalHeadModel
 		return result;
 
 		void CalibrateMulti(
-			string head, int offset, Func<V10TrainingExample, IReadOnlySet<int>> expectedLabels)
+			string head, int offset, Func<TrainingExample, IReadOnlySet<int>> expectedLabels)
 		{
 			var supervised = examples.Where(example => example.SupervisedHeads.Contains(head)).ToArray();
 			if (supervised.Length == 0) return;
@@ -324,7 +324,7 @@ internal sealed class CompositionalHeadModel
 
 		void CalibrateHead(
 			string schemaName, string confidenceName,
-			Func<(V10TrainingExample Example, int Index), bool> correct)
+			Func<(TrainingExample Example, int Index), bool> correct)
 		{
 			var scored = examples.Select((example, index) => (Example: example, Index: index))
 				.Where(item => item.Example.SupervisedHeads.Contains(schemaName) &&
@@ -346,7 +346,7 @@ internal sealed class CompositionalHeadModel
 				.ThenBy(item => item.Threshold)
 				.FirstOrDefault();
 			if (selected.Coverage > 0)
-				result[schemaName] = new V11Schemas.ConfidenceThreshold(selected.Threshold,
+				result[schemaName] = new ModelSchemas.ConfidenceThreshold(selected.Threshold,
 					result[schemaName].Margin);
 		}
 
@@ -355,7 +355,7 @@ internal sealed class CompositionalHeadModel
 	}
 
 	internal static StructuredMetrics EvaluatePredictions(
-		IReadOnlyList<V10TrainingExample> examples,
+		IReadOnlyList<TrainingExample> examples,
 		IReadOnlyList<StructuredPerception> predictions,
 		double? responseTop3 = null,
 		double? responseTop10 = null,
@@ -392,7 +392,7 @@ internal sealed class CompositionalHeadModel
 			candidateTop10, candidateMrr, composite);
 	}
 
-	private double TrainSlots(V10TrainingExample example, double learningRate)
+	private double TrainSlots(TrainingExample example, double learningRate)
 	{
 		var tokens = Tokenizer.Lex(DialogueText.Normalize(example.Input)).Where(token => token.Kind == LexicalTokenKind.Word).ToArray();
 		if (tokens.Length == 0) return 0.0;
@@ -578,8 +578,8 @@ internal sealed class CompositionalHeadModel
 	}
 
 	private double CandidateTopKAccuracy(
-		IReadOnlyList<V10TrainingExample> examples, int count,
-		Func<V10TrainingExample, IReadOnlyList<double>>? context)
+		IReadOnlyList<TrainingExample> examples, int count,
+		Func<TrainingExample, IReadOnlyList<double>>? context)
 	{
 		var scored = examples.Where(example => example.SupervisedHeads.Contains("responseCandidate")).ToArray();
 		if (scored.Length == 0) return double.NaN;
@@ -593,8 +593,8 @@ internal sealed class CompositionalHeadModel
 	}
 
 	private double CandidateMeanReciprocalRank(
-		IReadOnlyList<V10TrainingExample> examples,
-		Func<V10TrainingExample, IReadOnlyList<double>>? context)
+		IReadOnlyList<TrainingExample> examples,
+		Func<TrainingExample, IReadOnlyList<double>>? context)
 	{
 		var scored = examples.Where(example => example.SupervisedHeads.Contains("responseCandidate")).ToArray();
 		if (scored.Length == 0) return double.NaN;
@@ -610,7 +610,7 @@ internal sealed class CompositionalHeadModel
 	}
 
 	private static double ToolPrecision(
-		IReadOnlyList<V10TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
+		IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
 		IReadOnlyCollection<string> positiveTools)
 	{
 		var indices = Enumerable.Range(0, examples.Count)
@@ -624,7 +624,7 @@ internal sealed class CompositionalHeadModel
 	}
 
 	private static double SlotSpanF1(
-		IReadOnlyList<V10TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions)
+		IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions)
 	{
 		var indices = Enumerable.Range(0, examples.Count)
 			.Where(index => examples[index].SupervisedHeads.Contains("slots")).ToArray();
@@ -638,8 +638,8 @@ internal sealed class CompositionalHeadModel
 	}
 
 	private static double Accuracy<T>(
-		IReadOnlyList<V10TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
-		string head, Func<V10TrainingExample, T> expected, Func<StructuredPerception, T> actual)
+		IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
+		string head, Func<TrainingExample, T> expected, Func<StructuredPerception, T> actual)
 	{
 		var indices = Enumerable.Range(0, examples.Count)
 			.Where(index => examples[index].SupervisedHeads.Contains(head)).ToArray();
@@ -649,8 +649,8 @@ internal sealed class CompositionalHeadModel
 	}
 
 	private static double MultiLabelMacroF1<T>(
-		IReadOnlyList<V10TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
-		string head, Func<V10TrainingExample, IReadOnlyCollection<T>> expected,
+		IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
+		string head, Func<TrainingExample, IReadOnlyCollection<T>> expected,
 		Func<StructuredPerception, IReadOnlyCollection<T>> actual, IReadOnlyList<T> labels)
 	{
 		var indices = Enumerable.Range(0, examples.Count)

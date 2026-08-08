@@ -9,7 +9,7 @@ public sealed partial class Brain
     private const double ReadOnlyToolPrecisionThreshold = 0.95;
     private const double MutatingToolPrecisionThreshold = 0.99;
 
-    internal static IReadOnlyList<ResponseCandidate> V11Candidates { get; } = V11ResponseCatalog.Plans
+    internal static IReadOnlyList<ResponseCandidate> ResponseCandidates { get; } = ResponseCatalog.Plans
         .Select(plan => new ResponseCandidate(plan.Id, plan.Variations[0], [plan.Id], [plan.Policy],
             plan.Domain is null ? [] : [plan.Domain.Value], Enum.GetValues<ResponseTone>(), false, [], []))
         .ToArray();
@@ -142,7 +142,7 @@ public sealed partial class Brain
         }
         else if (request.ResponseMode == ResponseMode.GeneratedExperimental)
         {
-            text = GeneratedReply(packed.Text, current, ToLegacyState(request.State), request.Seed).Text;
+            text = GeneratedReply(packed.Text, current, ToModelState(request.State), request.Seed).Text;
             source = ResponseSource.GeneratedExperimental;
         }
         else
@@ -988,7 +988,7 @@ public sealed partial class Brain
     private static (ResponsePlanDefinition Plan, string Text)? RankResponse(
         StructuredPerception perception, string input, int seed, GameToolRegistry tools)
     {
-        var plans = V11ResponseCatalog.Plans.Where(plan =>
+        var plans = ResponseCatalog.Plans.Where(plan =>
             plan.Policy == perception.Policy &&
             (plan.Domain is null || perception.Domains.Contains(plan.Domain.Value)) &&
             (plan.KnowledgeTarget == KnowledgeTarget.None || plan.KnowledgeTarget == perception.KnowledgeTarget) &&
@@ -1056,7 +1056,7 @@ public sealed partial class Brain
         return $"{domain.ToString().ToUpperInvariant()}_{policy.ToString().ToUpperInvariant()}";
     }
 
-    private static NpcState ToLegacyState(NpcDialogueState state) => new(
+    private static NpcState ToModelState(NpcDialogueState state) => new(
         state.Rapport, state.Mood, DialogueIntent.Unknown, state.LastAffect, DialogueTopic.None, NpcGoal.None);
 
     private static IReadOnlyDictionary<string, double> MergeConfidence(

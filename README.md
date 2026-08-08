@@ -1,6 +1,6 @@
-# Fishbrain v11
+# Fishbrain
 
-Fishbrain is a small, dependency-free .NET dialogue model and runtime for game NPCs. V11 uses a two-layer contextual Transformer for perception and planning, while game tools remain authoritative for mutable world state and exact facts.
+Fishbrain is a small, dependency-free .NET dialogue model and runtime for game NPCs. It uses a two-layer contextual Transformer for perception and planning, while game tools remain authoritative for mutable world state and exact facts.
 
 The production path does not freely generate facts. It routes each reply through:
 
@@ -27,20 +27,20 @@ From the repository root:
 dotnet run -c Release --project Fishbrain -- chat
 ```
 
-The CLI resolves `data/models/model-v11-latest.fbm` relative to the application/repository, not the current working directory. You can also pass an explicit model:
+The CLI resolves `data/models/model-latest.fbm` relative to the application/repository, not the current working directory. You can also pass an explicit model:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- chat data/models/model-v11-latest.fbm
+dotnet run -c Release --project Fishbrain -- chat data/models/model-latest.fbm
 ```
 
 All input casing is accepted. Fishbrain normalizes dialogue internally to uppercase. Known words remain one token per word. Unknown words use bounded uppercase character tokens and preserve their normalized source span for slots and tool arguments.
 
 ## Public runtime API
 
-V11 requires structured turns, validated dialogue state, and an explicit persona:
+The runtime requires structured turns, validated dialogue state, and an explicit persona:
 
 ```csharp
-var brain = Brain.Load("data/models/model-v11-latest.fbm");
+var brain = Brain.Load("data/models/model-latest.fbm");
 var persona = new NpcPersona(
     "MERCHANT_ARIN",
     "ARIN",
@@ -72,7 +72,7 @@ The final structured turn must be a player turn. Literal words such as `PLAYER` 
 - the selected turn plan and tone;
 - confidence, constraints, slots, OOV words, response source, tool invocation, selected candidate, and fallback diagnostics.
 
-The old flat `Reply(string, NpcState)` contract and v10 checkpoints are archives. V11 does not migrate them.
+Only the current structured runtime and checkpoint schemas are supported. Fishbrain does not contain compatibility loaders or migration paths for obsolete formats.
 
 ## Persona, state, and world ownership
 
@@ -106,7 +106,7 @@ Tool schemas declare parameters, result fields, mutation behavior, and permitted
 
 ## Model
 
-The v11 shared contextual model uses:
+The shared contextual model uses:
 
 | Setting | Value |
 |---|---:|
@@ -120,11 +120,11 @@ The v11 shared contextual model uses:
 
 The final layer is mean-pooled over the current player turn and fused with 4,096 hashed lexical features, state, persona, and tool-availability features. Independent heads predict speech acts, domains, goals, affect, stance, response policy, content flags, BIO slots, knowledge target, tool schema, and one of 201 response plans. The project-owned catalog contains at least 4,400 distinct visible surface variations; the intentional no-response plan has one empty surface.
 
-The checkpoint header includes the model and label schemas, per-label calibration, tool schemas, response plans, corpus hash, and integrity hashes. Full optimizer checkpoints stay under ignored `data/training/`; the compact inference artifact is `data/models/model-v11-latest.fbm`.
+The checkpoint header includes the model and label schemas, per-label calibration, tool schemas, response plans, corpus hash, and integrity hashes. Full optimizer checkpoints stay under ignored `data/training/`; the compact inference artifact is `data/models/model-latest.fbm`.
 
 ## Corpus
 
-V11 compiles exactly 60,000 contextual rows:
+The compiler produces exactly 60,000 contextual rows:
 
 | Group | Rows |
 |---|---:|
@@ -155,18 +155,18 @@ Downloaded raw artifacts remain ignored under `data/raw`. After placing the pinn
 
 ```powershell
 ./scripts/prepare-civil-comments.ps1
-./scripts/build-v11-benchmark.ps1
-dotnet run -c Release --project Fishbrain.DataGenerator -- compile --count 60000 --seed 42 --raw data/raw --output data/compiled-v11 --manifest data/sources.json
-dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled-v11 --raw data/raw --manifest data/sources.json
+./scripts/build-benchmark.ps1
+dotnet run -c Release --project Fishbrain.DataGenerator -- compile --count 60000 --seed 42 --raw data/raw --output data/compiled --manifest data/sources.json
+dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled --raw data/raw --manifest data/sources.json
 ```
 
 ## Train, evaluate, and inspect
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach data/compiled-v11 data/training/model-v11-training.json --planned 210000 --until 210000
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled-v11/test.jsonl data/models/model-v11-latest.fbm --gate release
-dotnet run -c Release --project Fishbrain -- inspect data/models/model-v11-latest.fbm
-dotnet run -c Release --project Fishbrain -- latency data/models/model-v11-latest.fbm 2048
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/training/model-training.json --planned 210000 --until 210000
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-latest.fbm --gate release
+dotnet run -c Release --project Fishbrain -- inspect data/models/model-latest.fbm
+dotnet run -c Release --project Fishbrain -- latency data/models/model-latest.fbm 2048
 ```
 
 The completed curriculum interleaves contextual structured, ranking, and experimental-generation updates through 160K. From 160K through 200K it freezes the shared encoder and polishes the structured and ranking heads with deterministic rare-domain, tool, response, and slot sampling. The final 10K freezes every passing head and trains only response-plan classification and ranking. It checkpoints every 1,000 steps and performs full validation every 20K and at the configured final step. Resume restores optimizer, scheduler, sampler, vocabulary, and RNG state exactly. A completed curriculum can be extended explicitly with a larger `--planned` and `--until`; an in-progress plan cannot be changed.
@@ -193,4 +193,4 @@ See [INFO.md](INFO.md) for implementation boundaries and release gates.
 
 ## Current model status
 
-The checked-in `model-v11-latest.fbm` is the completed 210K best-production candidate. It is 41,834,335 bytes with SHA-256 `231ed399fd57d762206ee7ef9a38213751eed13cae264d23ccf6585f2481badb`. It passes the exact full-validation neural gate, the integration stage gate, the 256-turn benchmark threshold, and every hard runtime invariant. On the independent 5,999-row test split, the stricter quality release gate remains closed on raw domain F1 (0.8324 versus 0.85), slot F1 (0.8296 versus 0.85), and tool accuracy (0.9489 versus 0.95). The thresholds were not weakened. See `INFO.md` and `docs/MODEL_EVALUATION.md` for complete results and live probe classifications.
+The checked-in `model-latest.fbm` is the completed 210K best-production candidate. It is 41,834,317 bytes with SHA-256 `5cc8680df9a42f10dc7b4db99807dc1f1b8ec17e9223b9382cb22687ce7dc1c8`. It passes the exact full-validation neural gate, the integration stage gate, the 256-turn benchmark threshold, and every hard runtime invariant. On the independent 5,999-row test split, the stricter quality release gate remains closed on raw domain F1 (0.8324 versus 0.85), slot F1 (0.8296 versus 0.85), and tool accuracy (0.9489 versus 0.95). The thresholds were not weakened. See `INFO.md` and `docs/MODEL_EVALUATION.md` for complete results and live probe classifications.

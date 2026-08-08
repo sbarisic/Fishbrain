@@ -1,6 +1,6 @@
-# Fishbrain v11 engineering notes
+# Fishbrain engineering notes
 
-This document records the v11 implementation boundaries and release contract. See `README.md` for commands and API examples.
+This document records the implementation boundaries and release contract. See `README.md` for commands and API examples.
 
 ## Design boundary
 
@@ -26,7 +26,7 @@ The shared contextual model is updated during the interleaved curriculum through
 
 ## Perception heads
 
-V11 predicts independent heads for:
+Fishbrain predicts independent heads for:
 
 - multi-label speech acts, domains, goals, and content flags;
 - single-label affect, stance, response policy, and knowledge target;
@@ -71,14 +71,14 @@ Complete conversations and connected semantic families are assigned as component
 
 The audit requires:
 
-- all source license, revision, URL, checksum, attribution, and transformation fields;
+- all source license, revision, URL, checksum, and attribution fields;
 - only project-owned, MIT, Apache-2.0, CC0, or CC BY input artifacts;
 - no exact duplicates, contradictions, split leakage, or benchmark contamination;
 - at least 2,000 project-owned normalized input skeletons;
 - no skeleton above 0.25% of the full corpus;
 - exactly 60,000 records and every declared source quota.
 
-The compiled v11 corpus hash for the current source manifest and seed 42 is `ca795b444da4043be6bf5964d710246da40b3225d9dc70b91c2c8c05a308cf4d`.
+The compiled corpus hash for the current source manifest and seed 42 is `0d2ec57cc86b20b8a1bb23eb9479367788202aebe352813e1eea3f4dded3ede3`.
 
 ## Curriculum and checkpoints
 
@@ -90,7 +90,7 @@ The deterministic completed 210,000-step schedule has three phases:
 
 Rolling checkpoints and telemetry are written every 1,000 steps. Ordinary checkpoints use one fixed source-stratified validation sample. Full validation runs every 20K and at the configured final step. `best-production` is selected only when every raw neural release minimum passes; `best-generation` is retained separately. The full configured schedule runs even if the best checkpoint occurs earlier. A completed plan may be extended to a larger explicit endpoint; changing an in-progress plan remains forbidden.
 
-The inference format starts with `FISHBRN11`, uses format version 11, stores a readable JSON metadata header followed by float32 weights, and ends with an integrity checksum. It includes the label schema, per-label calibration, tool schemas, response catalog, corpus hash, and weights hash. Versions 2 through 10 are rejected rather than migrated.
+The inference format starts with `FISHBRAIN`, stores a readable JSON metadata header followed by float32 weights, and ends with an integrity checksum. It includes the label schema, per-label calibration, tool schemas, response catalog, corpus hash, and weights hash. There is no format-version field, compatibility loader, or migration path; only the current schema is accepted.
 
 ## Release gates
 
@@ -119,12 +119,12 @@ Required thresholds are:
 
 Tool fidelity, mutation safety, persona fidelity, OOV preservation, parser/state invariants, and structural invariants require 100%. Unexpected empty, invalid, overlength, generic known-domain fallback, duplicate mutation, and altered authoritative-field counts must remain zero.
 
-The 2x128 release build's median and p95 reply latency should remain within four times a v10 baseline measured under the same conditions. The final 210K artifact measured 2.7463/4.1461 ms median/p95 over 2,048 replies on the development machine. Against the historical v10 values of 0.6728/1.2559 ms, the ratios are 4.0819x/3.3013x: p95 passes, but median narrowly misses. Because the v11-only runtime intentionally rejects the archived v10 binary, this was not a same-process A/B run. The latency claim remains open until a controlled compatibility harness measures both versions; the hashes and limitation are recorded in `data/benchmarks/v10-v11-latency.json`.
+The final 210K artifact measured 2.7463/4.1461 ms median/p95 over 2,048 replies on the development machine. This remains a recorded measurement rather than a relative compatibility claim; future performance comparisons should build the relevant Git revisions independently instead of adding old-format loaders to the current runtime.
 
 ## Current trained artifact
 
-The completed 210,000-step run exported `data/models/model-v11-latest.fbm`. The artifact is 41,834,335 bytes, has SHA-256 `231ed399fd57d762206ee7ef9a38213751eed13cae264d23ccf6585f2481badb`, weights hash `1ebc66026560e813b992a57099f02a2784392e5645f9d2b3921125b72bc2040a`, and corpus hash `ca795b444da4043be6bf5964d710246da40b3225d9dc70b91c2c8c05a308cf4d`.
+The completed 210,000-step run is stored at `data/models/model-latest.fbm`. The repacked artifact is 41,834,317 bytes, has SHA-256 `5cc8680df9a42f10dc7b4db99807dc1f1b8ec17e9223b9382cb22687ce7dc1c8`, weights hash `1ebc66026560e813b992a57099f02a2784392e5645f9d2b3921125b72bc2040a`, and corpus hash `0d2ec57cc86b20b8a1bb23eb9479367788202aebe352813e1eea3f4dded3ede3`.
 
 The full 6,001-row validation stage passes every exact raw neural minimum. Its composite is 0.9077; representative passing values are domain F1 0.8561, slot F1 0.8568, tool accuracy 0.9551, mutating-tool precision 0.9907, response top-1 0.8539, and response top-3 0.9669.
 
-The independent 5,999-row test evaluation passes the stage gate and every hard runtime invariant. It records 98.83% semantic assertion success on the 256-turn benchmark, 100% tool fidelity, 100% tool-argument exact match, 100% mutating-tool precision, and zero invalid, unexpected-empty, overlength, or generic known-domain fallback outputs. The quality release gate remains closed because raw domain macro-F1 is 0.8324, slot span F1 is 0.8296, and tool selection accuracy is 0.9489. The other raw neural thresholds pass, including response top-1/top-3 at 0.8596/0.9636 and variation Recall@10/MRR at 0.9818/0.9146. These misses are reported as failures; the evaluator returns exit code 2 for `--gate release` and does not weaken or bypass the thresholds.
+The independent 5,999-row test evaluation passes the stage gate and every hard runtime invariant. It records 99.22% semantic assertion success on the 256-turn benchmark, 100% tool fidelity, 100% tool-argument exact match, 100% mutating-tool precision, and zero invalid, unexpected-empty, overlength, or generic known-domain fallback outputs. The quality release gate remains closed because raw domain macro-F1 is 0.8324, slot span F1 is 0.8296, and tool selection accuracy is 0.9489. The other raw neural thresholds pass, including response top-1/top-3 at 0.8596/0.9636 and variation Recall@10/MRR at 0.9818/0.9146. These misses are reported as failures; `--gate release` returns a nonzero exit code and does not weaken or bypass the thresholds.

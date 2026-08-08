@@ -12,22 +12,13 @@ internal static class Program
 			switch (command)
 			{
 				case "fetch":
-					await CorpusPipeline.FetchAsync(options);
+					await SourceFetcher.FetchAsync(options);
 					return 0;
 				case "compile":
-					V10CorpusPipeline.Compile(options);
+					CorpusCompiler.Compile(options);
 					return 0;
 				case "audit":
-					V10CorpusPipeline.Audit(options);
-					return 0;
-				case "compile-v9":
-					CorpusPipeline.Compile(options);
-					return 0;
-				case "audit-v9":
-					CorpusPipeline.Audit(options);
-					return 0;
-				case "selftest" when args.Length == 1:
-					SelfTests.Run();
+					CorpusCompiler.Audit(options);
 					return 0;
 				default:
 					Usage();
@@ -45,9 +36,8 @@ internal static class Program
 	{
 		Console.WriteLine("FISHBRAIN TEACHING DATA");
 		Console.WriteLine("  fetch [--manifest data/sources.json] [--raw data/raw]");
-		Console.WriteLine("  compile [--count 60000] [--seed 42] [--raw data/raw] [--output data/compiled-v11]");
-		Console.WriteLine("  audit [--input data/compiled-v11] [--manifest data/sources.json]");
-		Console.WriteLine("  selftest");
+		Console.WriteLine("  compile [--count 60000] [--seed 42] [--raw data/raw] [--output data/compiled]");
+		Console.WriteLine("  audit [--input data/compiled] [--manifest data/sources.json]");
 	}
 }
 
@@ -63,7 +53,7 @@ internal sealed record CliOptions(
 	{
 		var rootManifest = Path.Combine("data", "sources.json");
 		var manifest = File.Exists(rootManifest) ? rootManifest : Path.Combine(AppContext.BaseDirectory, "sources.json");
-		var result = new CliOptions(manifest, Path.Combine("data", "raw"), Path.Combine("data", "compiled-v11"), Path.Combine("data", "compiled-v11"), 60_000, 42);
+		var result = new CliOptions(manifest, Path.Combine("data", "raw"), Path.Combine("data", "compiled"), Path.Combine("data", "compiled"), 60_000, 42);
 		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		for (var index = 0; index < args.Length; index += 2)
 		{

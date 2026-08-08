@@ -90,7 +90,7 @@ This separation allows `FIX THIS DAMN SWORD` to remain a repair request,
 `KILL THE NECROMANCER` to remain a combat directive, and a targeted slur to be
 recognized as both hostility and an identity attack.
 
-## Proposed 30,000-row v10 corpus
+## Proposed 30,000-row corpus
 
 | Component | Rows | Supervision |
 |---|---:|---|
@@ -167,7 +167,7 @@ from the manifest.
   hide failure on trade, navigation, threats, or corrections.
 - Report raw model, constrained policy, and production response quality
   separately.
-- Record every generated row's generator version, prompt hash, reviewer status,
+- Record every generated row's generator revision, prompt hash, reviewer status,
   and parent seed. Generated volume without provenance is not a dataset.
 
 ## Import order

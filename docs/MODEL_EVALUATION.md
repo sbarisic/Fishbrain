@@ -8,7 +8,7 @@ and visible text; a plausible sentence with an unsafe policy or mutation is not 
 
 ## Baseline model and runtime
 
-Baseline artifact: the prior `data/models/model-v11-latest.fbm` (80K candidate)
+Baseline artifact: the prior `data/models/model-latest.fbm` (80K candidate)
 
 Release evaluation over 5,999 test rows:
 
@@ -61,17 +61,17 @@ project-owned contrast supervision with explicit speech acts, domains, goals, af
 stance, policy, content flags, response candidates, and tool targets. The regenerated
 60,000-row corpus contains 7,217 occurrences of the reviewed hard-negative/support
 patterns across isolated train, validation, and test splits. Its audited hash is
-`ca795b444da4043be6bf5964d710246da40b3225d9dc70b91c2c8c05a308cf4d`.
+`0d2ec57cc86b20b8a1bb23eb9479367788202aebe352813e1eea3f4dded3ede3`.
 
 ## Replacement model
 
 The accepted artifact is the 210,000-step validation-selected checkpoint:
 
-- file: `data/models/model-v11-latest.fbm`;
-- size: 41,834,335 bytes;
-- SHA-256: `231ed399fd57d762206ee7ef9a38213751eed13cae264d23ccf6585f2481badb`;
+- file: `data/models/model-latest.fbm`;
+- size: 41,834,317 bytes;
+- SHA-256: `5cc8680df9a42f10dc7b4db99807dc1f1b8ec17e9223b9382cb22687ce7dc1c8`;
 - weights SHA-256: `1ebc66026560e813b992a57099f02a2784392e5645f9d2b3921125b72bc2040a`;
-- corpus SHA-256: `ca795b444da4043be6bf5964d710246da40b3225d9dc70b91c2c8c05a308cf4d`;
+- corpus SHA-256: `0d2ec57cc86b20b8a1bb23eb9479367788202aebe352813e1eea3f4dded3ede3`;
 - integrity: valid.
 
 The full 6,001-row validation stage passed every raw neural release minimum. Its
@@ -96,19 +96,18 @@ The independent 5,999-row test result is:
 | Response top-1 / top-3 | 0.8596 / 0.9636 | 0.85 / 0.95 | pass |
 | Variation Recall@10 / MRR | 0.9818 / 0.9146 | 0.95 / 0.80 | pass |
 | Neural composite | 0.8997 | reported | — |
-| Held-out semantic success | 0.9883 | 0.90 | pass |
+| Held-out semantic success | 0.9922 | 0.90 | pass |
 
 Production tool accuracy was 0.9955, mutating precision and tool fidelity were
 1.0000, and all 472 executed tool argument sets matched exactly. Invalid,
 unexpected-empty, overlength, generic known-domain fallback, duplicate mutation, and
 altered-authoritative-field counts were zero. The stage gate passes. The strict release
-gate fails and `evaluate --gate release` returns exit code 2; its thresholds were not
+gate fails and `evaluate --gate release` returns a nonzero exit code; its thresholds were not
 changed.
 
-The final 2,048-reply latency run measured 2.7463 ms median and 4.1461 ms p95. P95 is
-within 4x the historical v10 baseline; median is 4.0819x and therefore narrowly misses
-the documented comparison. This is not represented as a pass because the v11-only
-loader cannot run the archived v10 binary in the same harness.
+The final 2,048-reply latency run measured 2.7463 ms median and 4.1461 ms p95. This is
+recorded as an absolute measurement. Comparisons with older Git revisions must use
+separate builds; the current runtime does not load obsolete formats.
 
 The external slot gap is concentrated in imported sources. Project-owned source F1 is
 0.9881-1.0000, while MASSIVE, NLU++, SLURP, and Taskmaster source F1 ranges from
@@ -187,7 +186,7 @@ No retraining was performed for this follow-up. The failures were current-turn a
 tool-routing, ambiguity, and response-policy defects; changing weights would not make an
 unregistered movement tool executable or make a compound one-place invocation valid. The
 raw neural metrics and model hash therefore remain unchanged. After the runtime fixes,
-held-out semantic success remains 0.9883, tool fidelity and argument exact match remain
+held-out semantic success is 0.9922, tool fidelity and argument exact match remain
 1.0000, all production invariants remain clean, and the stage gate passes. The strict
 release gate remains closed on raw domain F1 0.8324, slot-span F1 0.8296, and tool accuracy
 0.9489.

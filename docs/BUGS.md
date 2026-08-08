@@ -1,10 +1,10 @@
-# Fishbrain v11 full-source audit
+# Fishbrain full-source audit
 
 Audit date: 2026-08-08
 
 Scope: every tracked C# project, runtime and tool contracts, training and evaluation,
 corpus generation, checkpoints, command-line workflows, tests, scripts, documentation,
-and the checked-in v11 model.
+and the checked-in model.
 
 This file records confirmed defects and architectural limitations found during the
 audit. `FIXED` means the source correction and a focused regression test or corpus
@@ -39,11 +39,11 @@ known product or engineering limit, not a hidden release claim.
 | ID | Priority | Status | Finding and resolution |
 |---|---|---|---|
 | F017 | P0 | PARTIAL | The checked-in 80K model failed the release gate. The 210K replacement passes every exact validation minimum and improves the independent test split, but the strict test release gate remains closed on domain F1 0.8324, slot F1 0.8296, and tool accuracy 0.9489. No threshold was weakened. |
-| F018 | P1 | FIXED | Only 512 lexical hash buckets served all structured heads, creating avoidable collisions. The v11 schema now uses 4,096 lexical buckets; this deliberately requires a new checkpoint. |
+| F018 | P1 | FIXED | Only 512 lexical hash buckets served all structured heads, creating avoidable collisions. The current schema uses 4,096 lexical buckets; this deliberately requires a new checkpoint. |
 | F019 | P1 | FIXED | Unknown structured tools/candidates silently became class zero, and unknown or duplicate supervised heads were accepted. Training-data loading now rejects unknown targets and malformed supervision while permitting explicit language-only rows. |
 | F020 | P1 | FIXED | Structured rows accepted null collections, invalid enum values, malformed slot spans, and non-finite confidence. Both compilation and training load validate the complete schema. |
 | F021 | P1 | FIXED | A nonstandard planned step count could finish without running full validation or producing a best-production checkpoint. The configured final step is always a full stage. |
-| F022 | P1 | FIXED | The held-out benchmark labeled `HELLO?` as profanity, causing a guaranteed false failure. Both v10 and v11 benchmark sources now label it ordinary. |
+| F022 | P1 | FIXED | The held-out benchmark labeled `HELLO?` as profanity, causing a guaranteed false failure. Both base and contextual benchmark sources now label it ordinary. |
 | F023 | P1 | FIXED | Corpus turns and serialized contextual input could disagree, especially on final punctuation. External rows now derive input from the same structured turns; audit rejects disagreement. |
 | F024 | P1 | FIXED | Corpus audit did not prove that compiled provenance matched the pinned source manifest. It now checks every source, revision, license, attribution, path, URL, and checksum. |
 | F025 | P1 | FIXED | Source paths could escape the declared raw directory during fetch/verification. Paths are resolved and rejected if their relative form leaves the raw root. |
@@ -58,11 +58,11 @@ known product or engineering limit, not a hidden release claim.
 |---|---|---|---|
 | F030 | P0 | FIXED | Inference checkpoints checked bytes but did not validate format text, progress, corpus hash, vocabulary ordering, complete candidate/tool schemas, trained tools, finite weights, or bounded parameter counts. All are validated before model construction. |
 | F031 | P0 | FIXED | Training checkpoints could restore non-finite model/optimizer values and invalid progress metadata. Full numerical, schema, vocabulary, corpus, catalog, and progress checks now precede restoration. |
-| F032 | P1 | FIXED | Confidence calibration accepted `NaN` and unexpected schema keys. Calibration dictionaries must exactly match v11 and contain finite bounded values. |
+| F032 | P1 | FIXED | Confidence calibration accepted `NaN` and unexpected schema keys. Calibration dictionaries must exactly match the current schema and contain finite bounded values. |
 | F033 | P1 | FIXED | Unbounded configuration values could request extreme allocations, and `NaN` optimizer settings bypassed range comparisons. Configuration dimensions, steps, and all floating-point settings are bounded and finite. |
 | F034 | P2 | FIXED | CLI history grew forever even though only a bounded context is usable. The interactive client retains the latest 64 alternating turns; durable context remains in `NpcDialogueState`. |
 | F035 | P3 | FIXED | The unused second-order `MarkovChain` experiment implied a supported generation path that had no caller. It has been removed. |
-| F036 | P2 | FIXED | Runtime tests omitted policy precedence, clarification/action continuation, lexical hard negatives, and concurrent world idempotency. Focused tests now cover each invariant. Generator tests now cover v11 state bounds and CLI validation. |
+| F036 | P2 | FIXED | Runtime tests omitted policy precedence, clarification/action continuation, lexical hard negatives, and concurrent world idempotency. Focused tests now cover each invariant. Generator tests cover state bounds and CLI validation. |
 | F037 | P0 | FIXED | Training called a checkpoint production-eligible using only the looser stage gate, so it could export a model that the release evaluator rejected. Best-production selection and release evaluation now share the complete neural-quality threshold set; runtime fidelity and benchmark checks remain additional release requirements. |
 | F038 | P1 | FIXED | A stage measured structured metrics before applying its newly computed calibration, then saved and exported the calibrated state. Calibration now updates multi-label thresholds first, recomputes predictions for confidence calibration, and runs stage evaluation last so checkpoint selection measures the exact saved model. |
 | F039 | P2 | FIXED | Full validation milestones were hard-coded only through 80K even though completed curricula can be extended beyond that point. Every 20,000-step boundary and the configured final step now receive full validation. |
@@ -87,12 +87,12 @@ known product or engineering limit, not a hidden release claim.
 | F058 | P1 | REJECTED | A current-turn-only lexical representation for domain/tool heads improved some contextual errors but destabilized validation and mutating-tool precision. The source and artifact retain the validated full-context representation. |
 | F059 | P2 | REJECTED | Experimental suffix, affix, length, and numeric slot-shape features did not close the independent slot gap without validation regression. They are not shipped. |
 | F060 | P1 | REJECTED | A high-rate head-only adaptation through 260K recovered tool accuracy but left domain and slot below their prior values and mutating precision below its gate. The experiment was discarded. |
-| F061 | P1 | FIXED | Short teaching/self-test curricula initialized focus families used only after 160K and failed when their tiny fixture lacked rare domains. Focus sets are now required only if the requested run can enter head polishing; the eight built-in tests pass. |
+| F061 | P1 | FIXED | Short teaching/self-test curricula initialized focus families used only after 160K and failed when their tiny fixture lacked rare domains. Focus sets are now required only if the requested run can enter head polishing; the built-in tests pass. |
 | F062 | P0 | FIXED | A stale learned knowledge target could render `MY NAME IS ARIN.` for unrelated turns such as `GOODBYE`, an apology, or `BALANCE`. Authoritative persona templates now require an explicit current-turn or resolved state reference, and a checked-in-model regression exercises the real artifact. |
 | F063 | P1 | FIXED | The short command `BALANCE` did not enter the authoritative `GET_BALANCE` path. It is now explicit validated evidence and returns the demo world's current amount. |
 | F064 | P1 | FIXED | Low-confidence fallback could turn an explicit apology or informative hard-negative statement into a clarification. Explicit apologies now enforce acknowledgment, validated statements retain acknowledgment, current domain evidence takes precedence over stale context for response selection, and self-harm support removes the spurious combat domain. |
 | F065 | P2 | FIXED | A contextual `WHAT SHOULD WE DO?` retained the active domain but returned a non-actionable generic sentence. The bounded runtime now returns safe domain-aware first-step guidance while richer situation summarization remains A008. |
-| F066 | P2 | FIXED | Loading an archived v10 binary checkpoint fell through to the JSON parser and reported a misleading `JsonException`. Fishbrain binary prefixes are now recognized before JSON parsing and return the documented compatibility error. |
+| F066 | P2 | SUPERSEDED | A compatibility-specific error was previously added for an obsolete binary checkpoint. The compatibility branch has now been removed; only the current unversioned format is recognized. |
 | F067 | P0 | FIXED | After a merchant transaction, learned `ItemsInventory` and request/order labels leaked into unrelated later turns. Current-turn item evidence now vetoes that stale domain and repairs speech acts only when that specific stale-context condition occurs. The complete reported stateful transcript is a checked-in-model regression. |
 | F068 | P1 | FIXED | `WHAT DO YOU HAVE FOR SALE?` did not match the authoritative wares route. Common sale phrasing now selects `LIST_WARES`. |
 | F069 | P1 | FIXED | `TELL ME ABOUT IRON SWORD` was treated as an open-world fact instead of a known merchant item. Known item descriptions now use the authoritative price lookup and cannot fall through to `LOOKUP_WORLD_FACT`. |
@@ -103,6 +103,9 @@ known product or engineering limit, not a hidden release claim.
 | F074 | P1 | FIXED | A poison report received an unrelated inventory response. Poison reports now produce a distressed, cautious health/survival response. This is bounded dialogue guidance, not medical diagnosis. |
 | F075 | P0 | FIXED | An identity-exclusive statement was neutrally acknowledged. Reviewed identity-group exclusion patterns now carry `IdentityAttack` and the hostile refusal policy. |
 | F076 | P2 | FIXED | A question about the runtime's `ITEMS INVENTORY MESSAGE` label was routed as a world fact. Classification questions now use the meta-system domain and explain that the label described the previous topic. |
+| F077 | P2 | FIXED | Generation numbers remained in current filenames, type names, checkpoint metadata, artifact paths, benchmark IDs, telemetry, tests, and documentation. Current components now use responsibility-based names, the inference magic is `FISHBRAIN`, and checkpoint/corpus schemas contain no project format-version field. |
+| F078 | P2 | FIXED | The data generator retained obsolete compile/audit commands, an old flat corpus pipeline, and an archived annotation catalog. Those compatibility paths were removed; `CorpusCompiler` and `SourceFetcher` are the only data paths. |
+| F079 | P2 | FIXED | `Brain.Tools` exposed the obsolete mutable reflection tool registry beside the authoritative immutable `GameToolRegistry`. The property, registry implementation, and compatibility self-test were removed. |
 
 ## Open architectural and product limits
 
@@ -114,24 +117,22 @@ known product or engineering limit, not a hidden release claim.
 | A004 | P2 | OPEN | Ranked responses are safe but often mechanical because 4,400-plus distinct visible variations are programmatically expanded. Add authored dialogue packs and human preference review; keep experimental free generation opt-in. |
 | A005 | P2 | OPEN | The corpus compiler uses static mutable compilation state. The CLI is single-shot, but an embeddable/concurrent compiler should move held-out and external-input sets into a compilation context object. |
 | A006 | P2 | OPEN | External normalization rejection still reports only success/failure at several source adapters. Add typed rejection reasons and per-source rejection counts to the audit output. |
-| A007 | P3 | OPEN | `V10CorpusPipeline` is the v11 compiler and `Brain.cs` retains a disabled pre-v11 training block. Rename/split by responsibility and remove archived code after a separate compatibility-history decision. |
 | A008 | P2 | OPEN | Follow-up reasoning is structured but shallow. `WHAT SHOULD WE DO?` now receives safe domain-aware first-step guidance, but the runtime cannot reconstruct detailed entities, hazards, dependencies, or objectives from a summarized situation. Add an explicit caller-owned situation/task state rather than relying on lexical turn history. |
 | A009 | P2 | OPEN | This compact model is not a general-purpose language model. It supports bounded game-dialogue schemas, authored response plans, and approved tools; unsupported knowledge must continue to clarify or defer. |
-| A010 | P2 | OPEN | `Brain.Tools` exposes the mutable pre-v11 reflection registry even though the public structured reply path uses immutable `GameToolRegistry`. Keep it only for checkpoint-era compatibility, then remove it at the next deliberate API break. |
-| A011 | P2 | OPEN | The final 210K artifact measured 2.7463/4.1461 ms median/p95. Its p95 is within 4x the historical v10 baseline, but median is 4.0819x. Build a controlled dual-version harness and profile the larger vocabulary/structured path before claiming the latency gate. |
+| A011 | P2 | OPEN | The final 210K artifact measured 2.7463/4.1461 ms median/p95. Profile the current runtime and compare separate builds from relevant Git revisions; do not add obsolete-format loading to the production runtime for benchmarking. |
 
 ## Verification contract
 
 The audited revision is verified with these commands. The final command intentionally
-returns exit code 2 while the three independent neural misses remain:
+returns a nonzero exit code while the three independent neural misses remain:
 
 ```powershell
 dotnet build Fishbrain.slnx -c Release --artifacts-path data/logs/final-solution-artifacts -p:UseAppHost=false
 dotnet run -c Release --project Fishbrain -- selftest
 dotnet run -c Release --project Fishbrain.Tests
 dotnet run -c Release --project Fishbrain.DataGenerator.Tests
-dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled-v11 --raw data/raw --manifest data/sources.json
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled-v11/test.jsonl data/models/model-v11-latest.fbm --gate release
+dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled --raw data/raw --manifest data/sources.json
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-latest.fbm --gate release
 ```
 
 The audit intentionally keeps the partial, rejected, and open items visible. They are

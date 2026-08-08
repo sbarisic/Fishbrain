@@ -48,7 +48,7 @@ public sealed record TurnPerception(
 
 public sealed record TurnDecision(ResponseAction Action);
 
-internal sealed record LegacyReplyResult(
+internal sealed record GeneratedReplyResult(
 	string Text,
 	NpcState State,
 	TurnPerception Perception,
