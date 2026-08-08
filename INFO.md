@@ -1,6 +1,6 @@
 # Fishbrain engineering notes
 
-This document records the implementation boundaries and release contract. See `README.md` for commands and API examples.
+This document records the implementation boundaries and release contract. See `README.md` for commands and API examples, and `AI_MODEL.md` for the complete neural architecture, input paths, output heads, and training data flow.
 
 ## Design boundary
 
