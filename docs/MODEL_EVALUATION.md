@@ -136,6 +136,22 @@ policy behavior, and response-plan ranking. They do not establish general-purpos
 or small talk. A high score on the 256-turn operational benchmark must not be presented
 as evidence of broad conversational ability.
 
+A code-review probe on 2026-08-08 confirmed the gap in one stateful checked-in-model
+session:
+
+| Input | Observed response | Classification |
+|---|---|---|
+| `MORNING. HOW'S YOUR DAY GOING?` | `TELL ME WHAT YOU NEED TO KNOW ABOUT SOCIAL.` | Inappropriate; generic fallback instead of small talk |
+| `HONESTLY, THAT SOUNDS LIKE A GOOD IDEA.` | Same generic social fallback | Inappropriate; ignored the prior turn |
+| `DO YOU PREFER THE CITY OR THE ROAD?` | Same generic social fallback | Inappropriate; no persona-consistent preference |
+| `EVEN IN WINTER?` | Same generic social fallback | Inappropriate; follow-up continuity failed |
+
+These outputs are rejected examples, not desired text. The corresponding acceptable
+behaviors remain held out as scenarios `B01` and `B02`; their exact text must not be
+copied into training. Project-owned paraphrase families should be authored from separate
+seeds after the conversational evaluator exists. No retraining was performed during this
+code-structure revision, so the general-conversation status remains unchanged.
+
 The new conversational gate must use unseen multi-turn sessions and include greetings,
 daily-life topics, preferences, opinions, anecdotes, humor, playful teasing, light
 disagreement, empathy, topic changes, callbacks, vague follow-ups, and graceful

@@ -195,7 +195,7 @@ dotnet run -c Release --project Fishbrain.Tests
 dotnet run -c Release --project Fishbrain.DataGenerator.Tests
 ```
 
-The 31 runtime tests cover two-layer optimized/reference numerical parity, bit-equivalent resume, vocabulary isolation, concurrent deterministic replies, bounded histories, role structure, OOV slot copying, checked-in-model dialogue smoke cases, persona fidelity, reference resolution, hostility hysteresis, schema validation, atomic/idempotent mutations, tool exceptions, corrupt checkpoints, and the reported transcript regressions.
+The 32 runtime tests cover two-layer optimized/reference numerical parity, bit-equivalent resume, vocabulary isolation, concurrent deterministic replies, bounded histories, role structure, OOV slot copying, lexical-boundary reference isolation, checked-in-model dialogue smoke cases, persona fidelity, reference resolution, hostility hysteresis, schema validation, atomic/idempotent mutations, tool exceptions, corrupt checkpoints, and the reported transcript regressions.
 
 See [INFO.md](INFO.md) for implementation boundaries and release gates.
 
