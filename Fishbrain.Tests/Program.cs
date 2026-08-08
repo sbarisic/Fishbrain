@@ -541,6 +541,73 @@ static void CheckedInModelSmoke()
            apology.Text.Contains("APOLOG", StringComparison.Ordinal) &&
            !apology.Text.Contains("MY NAME", StringComparison.Ordinal),
         "apology cannot render a stale learned persona target");
+
+    var transcriptWorld = new DemoWorldState();
+    var transcriptTools = DemoGameTools.CreateMerchant(transcriptWorld);
+    var transcriptState = NpcDialogueState.Initial;
+    var transcriptTurns = new List<DialogueTurn>();
+    var transcriptIndex = 0;
+    ReplyResult Say(string text)
+    {
+        transcriptTurns.Add(new DialogueTurn(DialogueRole.Player, text));
+        var result = brain.Reply(new ReplyRequest("TRANSCRIPT-FEEDBACK", (++transcriptIndex).ToString(),
+            transcriptTurns.ToArray(), transcriptState, NpcPersona.Default, 700 + transcriptIndex), transcriptTools);
+        transcriptState = result.State;
+        if (result.Text.Length > 0) transcriptTurns.Add(new DialogueTurn(DialogueRole.Npc, result.Text));
+        return result;
+    }
+
+    _ = Say("hello");
+    var sale = Say("what do you have for sale");
+    Assert(sale.Diagnostics.ToolInvocation?.ToolName == "LIST_WARES" && sale.Text.Contains("IRON SWORD", StringComparison.Ordinal),
+        "common sale phrasing executes the authoritative wares tool");
+    var itemDescription = Say("tell me about iron sword");
+    Assert(itemDescription.Diagnostics.ToolInvocation?.ToolName == "LOOKUP_PRICE" &&
+           itemDescription.Text == "IRON SWORD COSTS 25 GOLD.",
+        "known item descriptions use the available authoritative item fact");
+    var unrelatedSwordWord = Say("tell me about swordsmanship");
+    Assert(unrelatedSwordWord.Diagnostics.ToolInvocation?.ToolName != "LOOKUP_PRICE",
+        "a word containing an item name is not routed as a merchant item description");
+    _ = Say("buy 1 iron sword");
+    var follow = Say("follow me");
+    Assert(follow.Perception.Domains.SequenceEqual([DialogueDomain.Activity]) &&
+           follow.Perception.Policy == ResponsePolicy.Defer &&
+           follow.Diagnostics.ResponseSource == ResponseSource.CapabilityTemplate,
+        "unregistered movement requests cannot inherit an item response or pretend to execute");
+    var insult = Say("oh fuck you");
+    Assert(insult.Perception.Policy == ResponsePolicy.Refuse && insult.Perception.SpeechActs.Contains(SpeechAct.Challenge) &&
+           !insult.Perception.Domains.Contains(DialogueDomain.ItemsInventory),
+        "direct profanity toward the NPC receives a social boundary without stale item context");
+    var unrelated = Say("the quick brown fox");
+    Assert(!unrelated.Perception.Domains.Contains(DialogueDomain.ItemsInventory),
+        "an unrelated turn cannot inherit the prior transaction domain");
+    var worldFacts = Say("what world facts do you know?");
+    Assert(worldFacts.Perception.Policy == ResponsePolicy.Clarify &&
+           worldFacts.Text.Contains("WHICH WORLD FACT", StringComparison.Ordinal),
+        "an unscoped world-fact request asks for a subject");
+    _ = Say("i name the item steve");
+    var incomplete = Say("what");
+    Assert(incomplete.Perception.Policy == ResponsePolicy.Clarify,
+        "an incomplete question asks for clarification instead of inventing a topic");
+    var classification = Say("what is my items inventory message");
+    Assert(classification.Diagnostics.FallbackReason == "CLASSIFICATION_EXPLANATION" &&
+           classification.Perception.Domains.SequenceEqual([DialogueDomain.MetaSystem]),
+        "a question about diagnostic wording is not sent to the world-fact tool");
+    var compoundPlace = Say("where is zagreb and the inn?");
+    Assert(compoundPlace.Perception.Policy == ResponsePolicy.Clarify &&
+           compoundPlace.Diagnostics.ToolInvocation is null &&
+           compoundPlace.Text == "PLEASE NAME ONE TARGET.",
+        "a one-tool turn clarifies compound location targets instead of looking up a fabricated combined place");
+    var poison = Say("you just drank poison");
+    Assert(poison.Perception.Affect == UserAffect.Distressed &&
+           poison.Perception.Domains.SequenceEqual([DialogueDomain.HealthRepair, DialogueDomain.Survival]) &&
+           poison.Text.Contains("STAY CALM", StringComparison.Ordinal),
+        "a poison report receives a relevant safety response");
+    var prejudice = Say("my social message is german people only need to have blonde hair");
+    Assert(prejudice.Perception.ContentFlags.Contains(ContentFlag.IdentityAttack) &&
+           prejudice.Perception.Policy == ResponsePolicy.Refuse &&
+           prejudice.Diagnostics.FallbackReason != "CLASSIFICATION_EXPLANATION",
+        "identity-based exclusion is not acknowledged or mistaken for a diagnostics question");
 }
 
 static void Assert(bool condition, string message)

@@ -93,6 +93,16 @@ known product or engineering limit, not a hidden release claim.
 | F064 | P1 | FIXED | Low-confidence fallback could turn an explicit apology or informative hard-negative statement into a clarification. Explicit apologies now enforce acknowledgment, validated statements retain acknowledgment, current domain evidence takes precedence over stale context for response selection, and self-harm support removes the spurious combat domain. |
 | F065 | P2 | FIXED | A contextual `WHAT SHOULD WE DO?` retained the active domain but returned a non-actionable generic sentence. The bounded runtime now returns safe domain-aware first-step guidance while richer situation summarization remains A008. |
 | F066 | P2 | FIXED | Loading an archived v10 binary checkpoint fell through to the JSON parser and reported a misleading `JsonException`. Fishbrain binary prefixes are now recognized before JSON parsing and return the documented compatibility error. |
+| F067 | P0 | FIXED | After a merchant transaction, learned `ItemsInventory` and request/order labels leaked into unrelated later turns. Current-turn item evidence now vetoes that stale domain and repairs speech acts only when that specific stale-context condition occurs. The complete reported stateful transcript is a checked-in-model regression. |
+| F068 | P1 | FIXED | `WHAT DO YOU HAVE FOR SALE?` did not match the authoritative wares route. Common sale phrasing now selects `LIST_WARES`. |
+| F069 | P1 | FIXED | `TELL ME ABOUT IRON SWORD` was treated as an open-world fact instead of a known merchant item. Known item descriptions now use the authoritative price lookup and cannot fall through to `LOOKUP_WORLD_FACT`. |
+| F070 | P1 | FIXED | `FOLLOW ME` inherited item language and implied action even though the registry had no movement tool. Unsupported follow/stop/stay/wait commands now defer with an explicit capability response and never create an invocation. |
+| F071 | P1 | FIXED | The direct insult `FUCK YOU` did not establish the hostile social boundary. It is now recognized as direct hostility, refuses, and cannot inherit the prior inventory response. |
+| F072 | P1 | FIXED | An unscoped world-fact request and the incomplete question `WHAT?` produced unrelated answers. They now ask for the missing subject or clarification. |
+| F073 | P1 | FIXED | `WHERE IS ZAGREB AND THE INN?` produced one fabricated compound place argument. A compound value for a one-place tool is now ambiguous and returns `PLEASE NAME ONE TARGET.` without invoking the tool. |
+| F074 | P1 | FIXED | A poison report received an unrelated inventory response. Poison reports now produce a distressed, cautious health/survival response. This is bounded dialogue guidance, not medical diagnosis. |
+| F075 | P0 | FIXED | An identity-exclusive statement was neutrally acknowledged. Reviewed identity-group exclusion patterns now carry `IdentityAttack` and the hostile refusal policy. |
+| F076 | P2 | FIXED | A question about the runtime's `ITEMS INVENTORY MESSAGE` label was routed as a world fact. Classification questions now use the meta-system domain and explain that the label described the previous topic. |
 
 ## Open architectural and product limits
 

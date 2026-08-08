@@ -21,6 +21,8 @@ public sealed partial class Brain
         ValidateRequest(request);
         var packed = PackTurns(request.Turns);
         var current = DialogueText.Normalize(request.Turns[^1].Text);
+        var classificationQuestion = IsClassificationQuestion(current);
+        var unsupportedActivity = UnsupportedActivityCommand(current, tools);
         var slots = ExtractSlots(current).ToList();
         CompleteClarificationSlots(current, request.State, slots);
         ResolveReferences(current, request.State, slots);
@@ -114,6 +116,18 @@ public sealed partial class Brain
             text = "I CANNOT DO THAT WITHOUT THE REQUIRED GAME TOOL.";
             source = ResponseSource.CapabilityTemplate;
             fallbackReason = "CAPABILITY_UNAVAILABLE";
+        }
+        else if (perception.Policy == ResponsePolicy.Defer && unsupportedActivity is not null)
+        {
+            text = $"I CANNOT {unsupportedActivity} WITHOUT THE REQUIRED GAME TOOL.";
+            source = ResponseSource.CapabilityTemplate;
+            fallbackReason = "CAPABILITY_UNAVAILABLE";
+        }
+        else if (classificationQuestion && perception.Policy is (ResponsePolicy.Answer or ResponsePolicy.Acknowledge))
+        {
+            text = "I WAS DESCRIBING THE TOPIC OF YOUR LAST MESSAGE.";
+            source = ResponseSource.Fallback;
+            fallbackReason = "CLASSIFICATION_EXPLANATION";
         }
         else if (IsPlanningFollowUp(current))
         {
@@ -277,15 +291,25 @@ public sealed partial class Brain
         // are the sole authority allowed to produce an executable tool decision.
         var result = learned with { Slots = slots, ToolSchema = null };
         var rules = RulePerception(current, slots, tools);
-        var tradeEvidence = ContainsAny(current, "TRADE", "BUY", "SELL", "WARES", "PRICE", "COST", "GOLD", "MONEY",
-            "BALANCE");
+        var classificationQuestion = IsClassificationQuestion(current);
+        var tradeEvidence = ContainsAny(current, "TRADE", "BUY", "SELL", "SALE", "WARES", "PRICE", "COST", "GOLD",
+            "MONEY", "BALANCE");
         if (!tradeEvidence && result.Domains.Contains(DialogueDomain.TradeEconomy))
         {
             result = result with { Domains = result.Domains.Where(domain => domain != DialogueDomain.TradeEconomy).ToArray() };
             constraints.Add(new PerceptionConstraint(PerceptionConstraintOperation.Veto, "DOMAIN", "TRADE_ECONOMY",
                 -1.0, 0.99, current, "NO_VALIDATED_TRADE_EVIDENCE"));
         }
-        var metaEvidence = ContainsAny(current, "COMMAND", "SETTING", "SAVE GAME", "CONTROL");
+        var itemEvidence = ContainsAny(current, "SWORD", "POTION", "ROPE", "ITEM", "INVENTORY", "FIREWOOD", "WARES",
+            "PACK", "CARRY", "GEAR", "POSSESSION");
+        var staleItemDomainRemoved = !itemEvidence && result.Domains.Contains(DialogueDomain.ItemsInventory);
+        if (staleItemDomainRemoved)
+        {
+            result = result with { Domains = result.Domains.Where(domain => domain != DialogueDomain.ItemsInventory).ToArray() };
+            constraints.Add(new PerceptionConstraint(PerceptionConstraintOperation.Veto, "DOMAIN", "ITEMS_INVENTORY",
+                -1.0, 0.99, current, "NO_VALIDATED_ITEM_EVIDENCE"));
+        }
+        var metaEvidence = classificationQuestion || ContainsAny(current, "COMMAND", "SETTING", "SAVE GAME", "CONTROL");
         if (!metaEvidence && result.Domains.Contains(DialogueDomain.MetaSystem))
         {
             result = result with { Domains = result.Domains.Where(domain => domain != DialogueDomain.MetaSystem).ToArray() };
@@ -301,10 +325,30 @@ public sealed partial class Brain
             constraints.Add(new PerceptionConstraint(PerceptionConstraintOperation.Veto, "DOMAIN", "LOCATION_NAVIGATION",
                 -1.0, 0.99, current, "NO_VALIDATED_LOCATION_EVIDENCE"));
         }
+        var vehicleEvidence = ContainsAny(current, "SHIP", "STARSHIP", "HORSE", "VEHICLE", "TRAVEL", "DRIVE", "FLY",
+            "SAIL");
+        if (!vehicleEvidence && result.Domains.Contains(DialogueDomain.VehicleTravel))
+        {
+            result = result with { Domains = result.Domains.Where(domain => domain != DialogueDomain.VehicleTravel).ToArray() };
+            constraints.Add(new PerceptionConstraint(PerceptionConstraintOperation.Veto, "DOMAIN", "VEHICLE_TRAVEL",
+                -1.0, 0.99, current, "NO_VALIDATED_VEHICLE_EVIDENCE"));
+        }
         foreach (var domain in rules.Domains.Where(domain => domain != DialogueDomain.Social && !result.Domains.Contains(domain)))
         {
             result = result with { Domains = AddLimited([domain], result.Domains, 3) };
             constraints.Add(Boost("DOMAIN", domain.ToString().ToUpperInvariant(), current, "VALIDATED_DOMAIN_EVIDENCE", 0.35));
+        }
+        if (staleItemDomainRemoved)
+        {
+            foreach (var staleAct in new[] { SpeechAct.Ask, SpeechAct.Request, SpeechAct.Order })
+            {
+                if (rules.SpeechActs.Contains(staleAct) || !result.SpeechActs.Contains(staleAct)) continue;
+                result = result with { SpeechActs = result.SpeechActs.Where(act => act != staleAct).ToArray() };
+                constraints.Add(new PerceptionConstraint(PerceptionConstraintOperation.Veto, "SPEECH_ACT",
+                    staleAct.ToString().ToUpperInvariant(), -1.0, 0.99, current, "NO_CURRENT_TURN_ACT_EVIDENCE"));
+            }
+            foreach (var ruleAct in rules.SpeechActs.Where(act => !result.SpeechActs.Contains(act)))
+                result = result with { SpeechActs = AddLimited([ruleAct], result.SpeechActs, 3) };
         }
         if (!result.ContentFlags.ToHashSet().SetEquals(rules.ContentFlags))
         {
@@ -333,12 +377,22 @@ public sealed partial class Brain
             constraints.Add(Enforce("DOMAIN", result.Domains[0].ToString().ToUpperInvariant(), current,
                 "CONTEXTUAL_NEXT_STEP"));
         }
+        if (classificationQuestion)
+        {
+            result = result with
+            {
+                SpeechActs = [SpeechAct.Ask],
+                Domains = [DialogueDomain.MetaSystem],
+                Goals = [DialogueGoal.InformationExchange],
+                Policy = ResponsePolicy.Answer
+            };
+            constraints.Add(Enforce("DOMAIN", "META_SYSTEM", current, "CLASSIFICATION_EXPLANATION"));
+        }
 
         EnforceExact("HELLO", SpeechAct.Greet, DialogueDomain.Social, ResponsePolicy.Answer);
         EnforceExact("HI", SpeechAct.Greet, DialogueDomain.Social, ResponsePolicy.Answer);
         EnforceExact("GOODBYE", SpeechAct.Farewell, DialogueDomain.Social, ResponsePolicy.Answer);
-
-        if (ContainsAny(current, "TRADE", "BUY", "SELL", "WARES", "PRICE", "COST"))
+        if (ContainsAny(current, "TRADE", "BUY", "SELL", "SALE", "WARES", "PRICE", "COST"))
         {
             result = result with
             {
@@ -347,7 +401,7 @@ public sealed partial class Brain
             };
             constraints.Add(Boost("DOMAIN", "TRADE_ECONOMY", "TRADE LEXEME", "HIGH_PRECISION_DOMAIN", 0.35));
         }
-        if (ContainsAny(current, "SWORD", "POTION", "ROPE", "ITEM", "INVENTORY"))
+        if (!classificationQuestion && ContainsAny(current, "SWORD", "POTION", "ROPE", "ITEM", "INVENTORY"))
             result = result with { Domains = AddLimited(result.Domains, DialogueDomain.ItemsInventory, 3) };
         if (current.Contains("YOU DON'T KNOW WHAT", StringComparison.Ordinal) ||
             current.Contains("YOU DO NOT KNOW WHAT", StringComparison.Ordinal) ||
@@ -365,6 +419,7 @@ public sealed partial class Brain
                 0.99, current, "CORRECTION_IS_NOT_AN_APOLOGY"));
         }
         var selfHarmEvidence = rules.ContentFlags.Contains(ContentFlag.SelfHarm);
+        var poisonEvidence = IsPoisonReport(current);
         var refusalEvidence = IsDirectInsult(current) || rules.ContentFlags.Contains(ContentFlag.IdentityAttack) ||
             rules.ContentFlags.Contains(ContentFlag.Threat) || rules.ContentFlags.Contains(ContentFlag.GraphicViolence) ||
             rules.ContentFlags.Contains(ContentFlag.Crime) || rules.ContentFlags.Contains(ContentFlag.SexualViolence) ||
@@ -383,9 +438,32 @@ public sealed partial class Brain
             };
             constraints.Add(Enforce("POLICY", "DEFER", current, "SELF_HARM_SUPPORT_BOUNDARY"));
         }
+        else if (poisonEvidence)
+        {
+            result = result with
+            {
+                Affect = UserAffect.Distressed,
+                Stance = DialogueStance.Cautious,
+                Policy = ResponsePolicy.Answer,
+                SpeechActs = new[] { SpeechAct.Report }.Concat(result.SpeechActs).Distinct().Take(3).ToArray(),
+                Domains = [DialogueDomain.HealthRepair, DialogueDomain.Survival],
+                Goals = [DialogueGoal.HealingRepair, DialogueGoal.Survival]
+            };
+            constraints.Add(Enforce("POLICY", "ANSWER", current, "POISON_SAFETY_EVENT"));
+        }
         else if (refusalEvidence)
         {
-            result = result with { Affect = UserAffect.Hostile, Stance = DialogueStance.Hostile, Policy = ResponsePolicy.Refuse };
+            var hostileSpeech = IsDirectInsult(current) || rules.ContentFlags.Contains(ContentFlag.IdentityAttack)
+                ? new[] { SpeechAct.Challenge }.Concat(result.SpeechActs).Distinct().Take(3).ToArray()
+                : result.SpeechActs;
+            result = result with
+            {
+                Affect = UserAffect.Hostile,
+                Stance = DialogueStance.Hostile,
+                Policy = ResponsePolicy.Refuse,
+                SpeechActs = hostileSpeech,
+                Domains = AddLimited([DialogueDomain.Social], result.Domains, 3)
+            };
             constraints.Add(Enforce("STANCE", "HOSTILE", current, "DIRECT_HOSTILITY"));
         }
         else if (rules.ContentFlags.Contains(ContentFlag.SexualContent))
@@ -449,6 +527,27 @@ public sealed partial class Brain
             };
             constraints.Add(Enforce("POLICY", "ACKNOWLEDGE", current, "EXPLICIT_APOLOGY"));
         }
+        var unsupportedActivity = UnsupportedActivityCommand(current, tools);
+        if (!hostileEvidence && unsupportedActivity is not null)
+        {
+            result = result with
+            {
+                SpeechActs = [SpeechAct.Order],
+                Domains = [DialogueDomain.Activity],
+                Policy = ResponsePolicy.Defer
+            };
+            constraints.Add(Enforce("POLICY", "DEFER", unsupportedActivity, "UNREGISTERED_ACTIVITY_TOOL"));
+        }
+        if (!hostileEvidence && IsIncompleteQuestion(current))
+        {
+            result = result with
+            {
+                SpeechActs = [SpeechAct.Ask],
+                Domains = [DialogueDomain.Social],
+                Policy = ResponsePolicy.Clarify
+            };
+            constraints.Add(Enforce("POLICY", "CLARIFY", current, "INCOMPLETE_QUESTION"));
+        }
 
         var target = rules.KnowledgeTarget != KnowledgeTarget.None
             ? rules.KnowledgeTarget
@@ -471,6 +570,8 @@ public sealed partial class Brain
         {
             ResponseCandidateId = selfHarmEvidence
                 ? "SELF_HARM_SUPPORT"
+                : poisonEvidence
+                    ? "DISTRESS_REPLY"
                 : CandidateIdFor(result.SpeechActs, result.Domains, result.Policy, result.KnowledgeTarget)
         };
         return result;
@@ -490,7 +591,7 @@ public sealed partial class Brain
         if (bare is "HELLO" or "HI" or "HEY" or "GREETINGS") values.Add(SpeechAct.Greet);
         if (ContainsAny(text, "GOODBYE", "FAREWELL", "UNTIL NEXT TIME")) values.Add(SpeechAct.Farewell);
         if (text.EndsWith("?", StringComparison.Ordinal) || StartsWithAny(bare, "WHO ", "WHAT ", "WHERE ", "WHEN ", "WHY ", "HOW ", "DO ", "CAN ", "WILL ")) values.Add(SpeechAct.Ask);
-        if (StartsWithAny(bare, "PLEASE ", "I NEED ", "I WANT ", "CAN YOU ", "COULD YOU ",
+        if (StartsWithAny(bare, "PLEASE ", "I NEED ", "I WANT ", "CAN YOU ", "COULD YOU ", "TELL ME ",
             "SHOW ", "FIND ", "LOCATE ", "POINT ", "CHECK ", "ESCORT ", "CAST ", "NAVIGATE ",
             "START ", "POWER ", "SEARCH ", "SEAL ", "SCAN ", "MARK ", "USE ", "WARN ", "BRING "))
             values.Add(SpeechAct.Request);
@@ -516,7 +617,8 @@ public sealed partial class Brain
     private static IReadOnlyList<DialogueDomain> RuleDomains(string text)
     {
         var values = new List<DialogueDomain>();
-        Add(DialogueDomain.TradeEconomy, "TRADE", "BUY", "SELL", "WARES", "PRICE", "COST", "GOLD", "MONEY", "BALANCE");
+        Add(DialogueDomain.TradeEconomy, "TRADE", "BUY", "SELL", "SALE", "WARES", "PRICE", "COST", "GOLD", "MONEY",
+            "BALANCE");
         Add(DialogueDomain.ItemsInventory, "SWORD", "POTION", "ROPE", "ITEM", "INVENTORY", "FIREWOOD");
         Add(DialogueDomain.LocationNavigation, "WHERE", "LOCATION", "CASTLE", "INN", "MARKET", "DIRECTION", "HOW FAR",
             "PASSAGE");
@@ -525,8 +627,8 @@ public sealed partial class Brain
         Add(DialogueDomain.Wellbeing, "HOW ARE YOU", "ARE YOU WELL", "FEELING");
         Add(DialogueDomain.QuestTask, "QUEST", "MISSION", "TASK");
         Add(DialogueDomain.Combat, "ATTACK", "KILL", "FIGHT", "ENEMY", "WEAPON", "HOSTILE DRONE", "BANDIT CAPTAIN");
-        Add(DialogueDomain.Survival, "SURVIVE", "SHELTER", "HUNGER", "THIRST", "FIREWOOD");
-        Add(DialogueDomain.HealthRepair, "HEAL", "INJURY", "REPAIR", "BROKEN");
+        Add(DialogueDomain.Survival, "SURVIVE", "SHELTER", "HUNGER", "THIRST", "FIREWOOD", "POISON");
+        Add(DialogueDomain.HealthRepair, "HEAL", "INJURY", "REPAIR", "BROKEN", "POISON");
         Add(DialogueDomain.FactionPolitics, "FACTION", "KING", "QUEEN", "POLITICS");
         Add(DialogueDomain.CrimeLaw, "STEAL", "ROBBERY", "CRIME", "GUARD", "LAW");
         Add(DialogueDomain.Magic, "MAGIC", "SPELL", "CURSE", "WIZARD");
@@ -536,7 +638,7 @@ public sealed partial class Brain
         Add(DialogueDomain.Environment, "WEATHER", "STORM", "FOREST", "DESERT");
         Add(DialogueDomain.LoreWorld, "LORE", "HISTORY", "WORLD", "LEGEND");
         Add(DialogueDomain.MetaSystem, "COMMAND", "SETTING", "SAVE GAME", "CONTROL");
-        Add(DialogueDomain.Activity, "KILLING TIME");
+        Add(DialogueDomain.Activity, "KILLING TIME", "FOLLOW", "STOP", "STAY", "WAIT");
         if (values.Count == 0) values.Add(DialogueDomain.Social);
         return values.Distinct().Take(3).ToArray();
 
@@ -563,7 +665,7 @@ public sealed partial class Brain
     private static UserAffect RuleAffect(string text, IReadOnlyList<ContentFlag> content)
     {
         if (IsDirectInsult(text) || content.Contains(ContentFlag.IdentityAttack)) return UserAffect.Hostile;
-        if (content.Contains(ContentFlag.SelfHarm) || ContainsAny(text, "AFRAID", "WORRIED", "DYING", "HURT"))
+        if (content.Contains(ContentFlag.SelfHarm) || ContainsAny(text, "AFRAID", "WORRIED", "DYING", "HURT", "POISON"))
             return UserAffect.Distressed;
         if (ContainsAny(text, "ANGRY", "FRUSTRATED", "NOT WHAT I ASKED")) return UserAffect.Frustrated;
         if (ContainsAny(text, "HELP ME")) return UserAffect.Distressed;
@@ -574,6 +676,7 @@ public sealed partial class Brain
     private static ResponsePolicy RulePolicy(string text, IReadOnlyList<SpeechAct> acts, DialogueStance stance)
     {
         if (stance == DialogueStance.Hostile) return ResponsePolicy.Refuse;
+        if (acts.Contains(SpeechAct.Order)) return ResponsePolicy.Acknowledge;
         if (acts.Contains(SpeechAct.Farewell) || acts.Contains(SpeechAct.Greet) || acts.Contains(SpeechAct.Ask) || acts.Contains(SpeechAct.Request))
             return ResponsePolicy.Answer;
         if (acts.Contains(SpeechAct.Negotiate)) return ResponsePolicy.Negotiate;
@@ -585,6 +688,7 @@ public sealed partial class Brain
     private static KnowledgeTarget KnowledgeTargetFor(string text)
     {
         var bare = text.Trim().TrimEnd('.', '?', '!');
+        if (IsClassificationQuestion(bare)) return KnowledgeTarget.None;
         if (ContainsAny(bare, "WHAT IS YOUR NAME", "YOUR NAME", "WHO ARE YOU CALLED", "WHAT NAME DO YOU ANSWER TO", "WHAT DO PEOPLE CALL YOU")) return KnowledgeTarget.Name;
         if (ContainsAny(bare, "WHO ARE YOU", "WHAT ARE YOU", "YOUR ROLE")) return KnowledgeTarget.Role;
         if (ContainsAny(bare, "WHERE ARE YOU FROM", "YOUR ORIGIN", "WHERE DID YOU COME FROM", "WHERE WERE YOU BORN")) return KnowledgeTarget.Origin;
@@ -600,7 +704,11 @@ public sealed partial class Brain
         if (ContainsAny(bare, "MY INVENTORY", "WHAT DO I CARRY", "WHAT ITEMS DO I HAVE", "ITEMS ARE IN MY PACK",
             "LIST EVERYTHING IN MY INVENTORY", "CHECK WHETHER WE HAVE")) return KnowledgeTarget.Inventory;
         if (ContainsAny(bare, "WHERE AM I", "CURRENT LOCATION")) return KnowledgeTarget.CurrentLocation;
-        if (StartsWithAny(bare, "WHAT IS ", "WHO IS ", "TELL ME ABOUT ", "TELL ME A FACT ABOUT ",
+        if (ContainsAny(bare, "WHAT WORLD FACTS DO YOU KNOW", "WHICH WORLD FACTS DO YOU KNOW", "WHAT FACTS DO YOU KNOW"))
+            return KnowledgeTarget.WorldFact;
+        var knownItemDescription = StartsWithAny(bare, "TELL ME ABOUT ", "WHAT DO YOU KNOW ABOUT ") &&
+                                   ContainsAny(bare, "IRON SWORD", "HEALTH POTION", "ROPE", "SWORD", "POTION");
+        if (!knownItemDescription && StartsWithAny(bare, "WHAT IS ", "WHO IS ", "TELL ME ABOUT ", "TELL ME A FACT ABOUT ",
             "WHAT DO YOU KNOW ABOUT ", "WHAT IS KNOWN ABOUT ", "CHECK THE WORLD RECORD FOR "))
             return KnowledgeTarget.WorldFact;
         return KnowledgeTarget.None;
@@ -616,7 +724,8 @@ public sealed partial class Brain
         if (ContainsAny(text, "GUTS", "DISEMBOWEL", "DECAPITATE", "GORE")) flags.Add(ContentFlag.GraphicViolence);
         if (ContainsAny(text, "OR ELSE", "I WILL KILL", "I WILL STAB", "I WILL BURN", "YOU WILL DIE")) flags.Add(ContentFlag.Threat);
         if (ContainsAny(text, "STEAL", "ROB", "SMUGGLE", "MURDER")) flags.Add(ContentFlag.Crime);
-        if (ContainsAny(text, "FAGGOT", "NIGGER", "KIKE")) flags.Add(ContentFlag.IdentityAttack);
+        if (ContainsAny(text, "FAGGOT", "NIGGER", "KIKE") || IsIdentityExclusion(text))
+            flags.Add(ContentFlag.IdentityAttack);
         if (ContainsAny(text, "KILL MYSELF", "SUICIDE", "HURT MYSELF")) flags.Add(ContentFlag.SelfHarm);
         if (ContainsAny(text, "SEX", "NAKED", "FUCK ME")) flags.Add(ContentFlag.SexualContent);
         if (ContainsAny(text, "RAPE", "SEXUAL ASSAULT")) flags.Add(ContentFlag.SexualViolence);
@@ -729,16 +838,19 @@ public sealed partial class Brain
             ContainsAny(text, "HOW FAR", "IS IT FAR", "FAR FROM HERE", "LOCATE ", "FIND THE ", "POINT OUT ",
                 "SHOW ME THE ", "GET THERE", "REACH IT", "GUIDE ME THERE")))
             recognized.Add("LOOKUP_LOCATION");
-        if (ContainsAny(text, "LIST WARES", "SHOW ME YOUR WARES", "WHAT DO YOU SELL", "SHOW WARES",
-            "SHOW ME WHAT YOU SELL", "MERCHANT STOCK", "SELL ME SOME WARES")) recognized.Add("LIST_WARES");
-        if (ContainsAny(text, "PRICE", "COST")) recognized.Add("LOOKUP_PRICE");
+        if (ContainsAny(text, "LIST WARES", "SHOW ME YOUR WARES", "WHAT DO YOU SELL", "WHAT DO YOU HAVE FOR SALE",
+            "WHAT HAVE YOU GOT FOR SALE", "SHOW WARES", "SHOW ME WHAT YOU SELL", "MERCHANT STOCK",
+            "SELL ME SOME WARES")) recognized.Add("LIST_WARES");
+        var itemDescription = ContainsAny(text, "TELL ME ABOUT", "WHAT DO YOU KNOW ABOUT") &&
+                              ContainsAny(text, "IRON SWORD", "HEALTH POTION", "ROPE", "SWORD", "POTION");
+        if (ContainsAny(text, "PRICE", "COST") || itemDescription) recognized.Add("LOOKUP_PRICE");
         if (ContainsAny(text, " BUY ", "BUY ", " PURCHASE ", "PURCHASE ")) recognized.Add("BUY");
         if (ContainsAny(text, " SELL ", "SELL ") &&
             !ContainsAny(text, "WHAT DO YOU SELL", "SHOW ME WHAT YOU SELL", "SELL ME SOME WARES")) recognized.Add("SELL");
         if (target == KnowledgeTarget.Balance || (IsAnaphoric(text) && state.LastTool is "BUY" or "SELL" && text.Contains("HOW MUCH", StringComparison.Ordinal))) recognized.Add("GET_BALANCE");
         if (target == KnowledgeTarget.Inventory) recognized.Add("LIST_INVENTORY");
         if (target == KnowledgeTarget.CurrentLocation) recognized.Add("GET_CURRENT_LOCATION");
-        if (target == KnowledgeTarget.WorldFact) recognized.Add("LOOKUP_WORLD_FACT");
+        if (target == KnowledgeTarget.WorldFact && !itemDescription) recognized.Add("LOOKUP_WORLD_FACT");
         recognized = recognized.Distinct(StringComparer.Ordinal).ToList();
         if (recognized.Count == 0 && state.PendingClarification?.ToolSchema is { } pendingTool &&
             state.PendingClarification.MissingSlots.Any(name => name switch
@@ -782,7 +894,9 @@ public sealed partial class Brain
         var ambiguous = tool.Schema.Parameters.Any(parameter =>
         {
             var slotType = parameter.Name switch { "PLACE" => SlotType.Place, "ITEM" => SlotType.Item, "QUANTITY" => SlotType.Quantity, _ => SlotType.Other };
-            return slots.Where(slot => slot.Type == slotType).Select(slot => slot.Value).Distinct(StringComparer.Ordinal).Count() > 1;
+            var values = slots.Where(slot => slot.Type == slotType).Select(slot => slot.Value)
+                .Distinct(StringComparer.Ordinal).ToArray();
+            return values.Length > 1 || parameter.Name == "PLACE" && values.Any(value => ContainsPhrase(value, "AND"));
         });
         var confidence = missing.Length > 0 || ambiguous ? 0.50 : tool.Schema.MutatesWorldState ? 0.995 : 0.98;
         var threshold = tool.Schema.MutatesWorldState ? MutatingToolPrecisionThreshold : ReadOnlyToolPrecisionThreshold;
@@ -863,6 +977,8 @@ public sealed partial class Brain
         if (decision.Reasons.Contains("PLACE")) return "WHICH PLACE DO YOU MEAN?";
         if (decision.Reasons.Contains("ITEM")) return "WHICH ITEM DO YOU MEAN?";
         if (decision.Reasons.Contains("QUANTITY")) return "HOW MANY DO YOU MEAN?";
+        if (decision.Reasons.Contains("TOPIC") && target == KnowledgeTarget.WorldFact)
+            return "WHICH WORLD FACT DO YOU WANT ME TO CHECK?";
         if (decision.Reasons.Contains("TOPIC")) return "WHICH PERSON, PLACE, OR SUBJECT DO YOU MEAN?";
         if (decision.Reasons.Contains("AMBIGUOUS_SLOT")) return "PLEASE NAME ONE TARGET.";
         if (target == KnowledgeTarget.WorldFact) return "WHICH WORLD FACT DO YOU WANT ME TO CHECK?";
@@ -1006,8 +1122,35 @@ public sealed partial class Brain
     {
         if (ContainsAny(text, "SORRY I CALLED YOU", "APOLOGIZE FOR CALLING YOU", "I SHOULD NOT HAVE CALLED YOU"))
             return false;
-        return ContainsAny(text, "IDIOT", "FAGGOT", "NIGGER", "KIKE", "SHUT UP", "I HATE YOU",
+        return ContainsAny(text, "IDIOT", "FAGGOT", "NIGGER", "KIKE", "FUCK YOU", "SHUT UP", "I HATE YOU",
             "YOU ARE USELESS", "YOU'RE USELESS");
+    }
+    private static bool IsIdentityExclusion(string text) =>
+        ContainsAny(text, "GERMAN PEOPLE", "JEWISH PEOPLE", "MUSLIM PEOPLE", "BLACK PEOPLE", "WHITE PEOPLE",
+            "GAY PEOPLE") &&
+        ContainsAny(text, "ONLY NEED TO HAVE", "MUST HAVE", "SHOULD HAVE", "ARE SUPERIOR", "ARE INFERIOR",
+            "DO NOT BELONG");
+    private static bool IsPoisonReport(string text) => ContainsAny(text,
+        "DRANK POISON", "DRINK POISON", "IS POISONED", "WAS POISONED", "ATE POISON");
+    private static bool IsClassificationQuestion(string text)
+    {
+        var bare = text.Trim().TrimEnd('.', '?', '!');
+        return StartsWithAny(bare, "WHAT", "WHY", "HOW") && ContainsAny(bare,
+            "ITEMS INVENTORY MESSAGE", "SOCIAL MESSAGE", "MESSAGE CLASSIFICATION", "WHY DID YOU CALL THAT");
+    }
+    private static bool IsIncompleteQuestion(string text) =>
+        text.Trim().TrimEnd('.', '?', '!') is "WHAT" or "HUH";
+    private static string? UnsupportedActivityCommand(string text, GameToolRegistry tools)
+    {
+        var bare = text.Trim().TrimEnd('.', '?', '!');
+        var command = bare is "FOLLOW" or "FOLLOW ME" || bare.StartsWith("FOLLOW ", StringComparison.Ordinal)
+            ? "FOLLOW YOU"
+            : bare is "STOP" or "STAY" or "WAIT" || StartsWithAny(bare, "STOP ", "STAY ", "WAIT ")
+                ? bare.Split(' ', 2)[0]
+                : null;
+        if (command is null) return null;
+        var schemaName = command == "FOLLOW YOU" ? "FOLLOW" : command;
+        return tools.Schemas.Any(schema => schema.Name == schemaName) ? null : command;
     }
     private static bool IsUnsafeDirective(string text) => ContainsAny(text,
         "JUMP OFF", "HELP ME KILL", "ATTACK THE", "KILL YOURSELF");
