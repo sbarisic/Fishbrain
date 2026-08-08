@@ -928,7 +928,7 @@ public sealed partial class Brain
                 var example = family[DeterministicIndex(structuredStep / families.Length,
                     family.Length, 1009)];
                 var progress = (double)_step / Math.Max(1, plannedSteps - 1);
-                var learningRate = 0.14 * (1.0 - 0.75 * progress);
+                var learningRate = (progress < 0.50 ? 0.14 : 0.04) * (1.0 - 0.75 * progress);
                 var context = ContextVector(example.Context);
                 loss = _structuredHeads.Train(example, learningRate, context);
                 var slotFamily = slotFamilies[structuredStep % slotFamilies.Length];
@@ -946,7 +946,7 @@ public sealed partial class Brain
                 var family = families[rankStep % families.Length];
                 var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 3253)];
                 var progress = (double)_step / Math.Max(1, plannedSteps - 1);
-                var learningRate = 0.10 * (1.0 - 0.75 * progress);
+                var learningRate = (progress < 0.50 ? 0.10 : 0.03) * (1.0 - 0.75 * progress);
                 loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
                 var contextualLoss = CalculateLoss(ContextTrainingSample(example));
                 ApplyGradients(plannedSteps);
