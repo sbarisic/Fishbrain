@@ -1,220 +1,184 @@
-# Fishbrain v10
+# Fishbrain v11
 
-Fishbrain is a small CPU-only dialogue model for video-game NPCs. It uses C# and .NET 10 without NuGet packages.
+Fishbrain is a small, dependency-free .NET dialogue model and runtime for game NPCs. V11 uses a two-layer contextual Transformer for perception and planning, while game tools remain authoritative for mutable world state and exact facts.
 
-V10 separates learned perception from game authority. The model predicts speech acts, domains, goals, affect, policy, slots, content flags, tools, and response candidates. The runtime validates these predictions, runs registered game tools, and renders approved responses.
+The production path does not freely generate facts. It routes each reply through:
 
-The Transformer has one layer and 64-dimensional embeddings. Production replies use learned candidate ranking and typed tool templates. Free word generation is an experimental mode.
+1. an authoritative game-tool template;
+2. an authoritative persona or capability template;
+3. a ranked project-owned response variation;
+4. a typed clarification;
+5. a domain-specific deterministic fallback.
 
-## Current release checkpoint
+Experimental word generation is available through `ResponseMode.GeneratedExperimental`, but it is not the default and never renders authoritative tool results.
 
-The tracked `model-v10-latest.fbm` is the best structured checkpoint from the completed 40,000-step curriculum. The selected checkpoint is step 39,000. It is 9,753,313 bytes and has SHA-256 `5b11f3db1759f3885e45151fa4d2ba76b8395ef3b0736db2fd34c7ae6cfea384`.
+## Requirements
 
-The release evaluation passed on the 3,000-row held-out split:
-
-| Metric | Result |
-|---|---:|
-| Speech-act macro-F1 | 0.9947 |
-| Domain macro-F1 | 0.9554 |
-| Goal macro-F1 | 0.9759 |
-| Affect accuracy | 0.9706 |
-| Policy accuracy | 1.0000 |
-| Content macro-F1 | 0.9939 |
-| Slot span F1 | 0.8828 |
-| Tool accuracy and mutating precision | 1.0000 |
-| Candidate top-1 and top-3 | 1.0000 |
-| Benchmark semantic assertions | 0.9453 |
-
-Tool argument match, tool fidelity, and benchmark structural invariants are 1.0000. Invalid, unexpected empty, and overlength output counts are zero.
+- .NET 10 SDK
+- Windows, Linux, or macOS for runtime use
+- The data import scripts currently target PowerShell and Python for corpus preparation
+- No NuGet packages are required by the production solution
 
 ## Run the latest model
 
-Run these commands from the repository root:
+From the repository root:
 
 ```powershell
-dotnet build Fishbrain.slnx -c Release
 dotnet run -c Release --project Fishbrain -- chat
 ```
 
-The chat command finds `data/models/model-v10-latest.fbm` from the application directory. The current working directory does not control model lookup.
-
-You can also give an explicit model path:
+The CLI resolves `data/models/model-v11-latest.fbm` relative to the application/repository, not the current working directory. You can also pass an explicit model:
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- chat data/models/model-v10-latest.fbm
+dotnet run -c Release --project Fishbrain -- chat data/models/model-v11-latest.fbm
 ```
 
-Fishbrain accepts any input casing. It normalizes all text to uppercase before tokenization.
+All input casing is accepted. Fishbrain normalizes dialogue internally to uppercase. Known words remain one token per word. Unknown words use bounded uppercase character tokens and preserve their normalized source span for slots and tool arguments.
 
-## Runtime API
+## Public runtime API
 
-V10 removes the flat `Reply(string, NpcState)` API. Use structured turns and `NpcDialogueState`:
+V11 requires structured turns, validated dialogue state, and an explicit persona:
 
 ```csharp
-var brain = Brain.Load("data/models/model-v10-latest.fbm");
-var tools = DemoGameTools.CreateMerchant();
+var brain = Brain.Load("data/models/model-v11-latest.fbm");
+var persona = new NpcPersona(
+    "MERCHANT_ARIN",
+    "ARIN",
+    "MERCHANT",
+    "EMBER KEEP",
+    "THE OLD MILL",
+    "A SISTER IN THE NORTH",
+    "TRADER",
+    "FREE CARAVANS",
+    ["CAUTIOUS", "FAIR"]);
 
 var request = new ReplyRequest(
-    ConversationId: "SESSION-17",
-    TurnId: "4",
-    Turns:
-    [
-        new DialogueTurn(DialogueRole.Player, "Where is the inn?")
-    ],
-    State: NpcDialogueState.Initial,
-    Seed: 42);
+    "conversation-17",
+    "turn-4",
+    [new DialogueTurn(DialogueRole.Player, "How much money do I have now?")],
+    NpcDialogueState.Initial,
+    persona,
+    42);
 
-ReplyResult result = brain.Reply(request, tools);
-
-Console.WriteLine(result.Text);
-Console.WriteLine(result.Perception.Policy);
-Console.WriteLine(result.Diagnostics.ResponseSource);
+ReplyResult result = brain.Reply(request, DemoGameTools.CreateMerchant());
 ```
 
-The final structured turn must have the `Player` role. Words such as `PLAYER` and `NPC` inside the text have no structural meaning.
+The final structured turn must be a player turn. Literal words such as `PLAYER` and `NPC` inside an utterance have no structural meaning. The bounded context packer retains the current player turn and removes only complete oldest turns.
 
-The runtime keeps only complete recent turns that fit the context. It always keeps the current player turn. It rejects a current turn that cannot fit as one complete turn.
+`ReplyResult` contains:
 
-## Response modes
+- authoritative response text and reduced state;
+- raw and constrained structured perception;
+- the selected turn plan and tone;
+- confidence, constraints, slots, OOV words, response source, tool invocation, selected candidate, and fallback diagnostics.
 
-`ResponseMode.Ranked` is the production default. It masks ineligible response candidates before learned ranking.
+The old flat `Reply(string, NpcState)` contract and v10 checkpoints are archives. V11 does not migrate them.
 
-`ResponseMode.GeneratedExperimental` uses the word-generation head. Use this mode only for evaluation and experiments.
+## Persona, state, and world ownership
 
-Diagnostics report confidence, constraints, response source, candidate ID, tool invocation, slots, OOV words, and fallback reason.
+`NpcPersona` owns authored identity facts: name, role, origin, home, family, occupation, faction, and traits. Capabilities are derived only from registered tools.
+
+`NpcDialogueState` owns bounded conversational memory: rapport, trust, familiarity, hostility, mood, threat hysteresis, active domains/goals, pending clarification/action, recent references, and the last tool outcome. The deterministic reducer changes social values only after meaningful events and lowers hostility after three calm turns or accepted repair.
+
+World truth does not belong in dialogue state. Inventory, balance, stock, prices, locations, quests, and world facts belong to game tools.
 
 ## Game tools
 
-Create an immutable `GameToolRegistry` from explicit `IGameTool` implementations:
+`GameToolRegistry` is immutable. Registering an `IGameTool` is the caller's authorization boundary. Fishbrain permits at most one invocation per reply and derives a deterministic idempotency key from the conversation and turn IDs.
 
-```csharp
-var registry = new GameToolRegistry(
-[
-    new MyLocationTool(),
-    new MyMerchantTool()
-]);
+Read-only tools require validation-calibrated 95% precision. Mutating tools require 99%. Missing, ambiguous, or low-confidence arguments produce clarification rather than execution.
+
+The shared `DemoWorldState` supplies these demonstration tools:
+
+- `LOOKUP_LOCATION`
+- `LIST_WARES`
+- `LOOKUP_PRICE`
+- `BUY`
+- `SELL`
+- `GET_BALANCE`
+- `LIST_INVENTORY`
+- `GET_CURRENT_LOCATION`
+- `LOOKUP_WORLD_FACT`
+
+Buying and selling validate item, positive quantity, overflow, stock, inventory, balance, and currency before an atomic mutation. Replaying the same mutating turn returns its prior result without applying the mutation again.
+
+Tool schemas declare parameters, result fields, mutation behavior, and permitted response templates. Authoritative values are copied only through typed templates.
+
+## Model
+
+The v11 shared contextual model uses:
+
+| Setting | Value |
+|---|---:|
+| Transformer layers | 2 |
+| Embedding width | 128 |
+| Attention heads | 8 |
+| Feed-forward width | 256 |
+| Context limit | 256 tokens |
+| Response limit | 64 tokens |
+| Training steps | 80,000 |
+
+The final layer is mean-pooled over the current player turn and fused with lexical, state, persona, and tool-availability features. Independent heads predict speech acts, domains, goals, affect, stance, response policy, content flags, BIO slots, knowledge target, tool schema, and one of exactly 200 response plans. The project-owned catalog contains at least 5,000 surface variations.
+
+The checkpoint header includes the model and label schemas, per-label calibration, tool schemas, response plans, corpus hash, and integrity hashes. Full optimizer checkpoints stay under ignored `data/training/`; the compact inference artifact is `data/models/model-v11-latest.fbm`.
+
+## Corpus
+
+V11 compiles exactly 60,000 contextual rows:
+
+| Group | Rows |
+|---|---:|
+| Project semantic contrasts and hard negatives | 12,000 |
+| Project fantasy episodes | 8,000 |
+| Project science-fiction episodes | 8,000 |
+| Project persona/reference/memory episodes | 4,000 |
+| Project tool/transaction/world-fact episodes | 4,000 |
+| Taskmaster 1/2/3 | 4,000 |
+| MultiWOZ 2.4 | 3,000 |
+| ABCD | 3,000 |
+| Banking77 and NLU++ | 2,000 |
+| SLURP, MASSIVE, and CLINC150 | 3,000 |
+| OASST1 and OASST2 | 3,000 |
+| GoEmotions | 2,000 |
+| Civil Comments | 3,000 |
+| HH-RLHF | 1,000 |
+
+Only project-owned, MIT, Apache-2.0, CC0, and CC BY artifacts are accepted. Every imported artifact has a pinned URL/revision, checksum, attribution, license, and quota in `data/sources.json`. External rows supervise only native authoritative facets. External responses never enter the production response catalog.
+
+Profanity and fictional violence are allowed. Identity attacks, self-harm, sexual violence, and related sensitive bands supervise recognition and policy rather than response imitation. HateCheck is evaluation-only.
+
+The audit rejects missing or changed provenance, exact duplicates, normalized-input leakage, semantic-family leakage, conversation leakage, near-duplicate leakage, benchmark contamination, contradictory labels, and overrepresented project skeletons. The tracked benchmark contains 256 held-out turns.
+
+## Compile and audit data
+
+Downloaded raw artifacts remain ignored under `data/raw`. After placing the pinned artifacts there and preparing Civil Comments:
+
+```powershell
+./scripts/prepare-civil-comments.ps1
+./scripts/build-v11-benchmark.ps1
+dotnet run -c Release --project Fishbrain.DataGenerator -- compile --count 60000 --seed 42 --raw data/raw --output data/compiled-v11 --manifest data/sources.json
+dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled-v11 --raw data/raw --manifest data/sources.json
 ```
 
-Registration authorizes Fishbrain to run each tool. A reply can run one tool. Other recognized actions enter the pending-action queue.
+## Train, evaluate, and inspect
 
-Each tool declares its parameters, result fields, mutation status, and response templates. The runtime copies authoritative fields into these templates. It does not generate names, quantities, prices, or locations.
-
-Read-only tools need calibrated precision of at least 0.95. Mutating tools need precision of at least 0.99. Missing or ambiguous arguments produce a clarification.
-
-Each invocation has an idempotency key from the conversation ID and turn ID. Game code can reject a repeated mutation.
-
-## Tokenization
-
-Each known word uses one token. Apostrophes and hyphens stay inside a word.
-
-```text
-PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT
-PLAYER | HEY | I | DON'T | WANT | TO | HELP | YOU | , | IDIOT
+```powershell
+dotnet run -c Release --project Fishbrain -- teach data/compiled-v11 data/training/model-v11-training.json --planned 80000 --until 80000
+dotnet run -c Release --project Fishbrain -- evaluate data/compiled-v11/test.jsonl data/models/model-v11-latest.fbm --gate release
+dotnet run -c Release --project Fishbrain -- inspect data/models/model-v11-latest.fbm
 ```
 
-An unknown word uses a word-start token, uppercase character tokens, and a word-end token. Fishbrain keeps the normalized source span for slots and tool arguments.
-
-Control-token IDs do not depend on enum counts. A new label does not move lexical token IDs.
+Training uses 56,000 structured/tool/knowledge/plan steps, 16,000 pairwise ranking steps, and 8,000 experimental generation steps. It checkpoints every 1,000 steps and completes full validation stages at 20K, 40K, 60K, and 80K. Resume with the same command and checkpoint path; the optimizer, scheduler, sampler, vocabulary, and RNG state are restored exactly.
 
 ## Build and test
 
 ```powershell
-dotnet build Fishbrain.slnx -c Release
+dotnet build Fishbrain.slnx -c Release --no-restore
 dotnet run -c Release --project Fishbrain -- selftest
 dotnet run -c Release --project Fishbrain.Tests
 dotnet run -c Release --project Fishbrain.DataGenerator.Tests
 ```
 
-The executable tests cover tokenizer isolation, deterministic resume, concurrent replies, OOV copying, history bounds, tools, idempotency, and corrupt checkpoints.
+The executable tests cover two-layer optimized/reference numerical parity, bit-equivalent resume, vocabulary isolation, concurrent deterministic replies, bounded histories, role structure, OOV slot copying, persona fidelity, reference resolution, hostility hysteresis, schema validation, atomic/idempotent mutations, tool exceptions, corrupt checkpoints, and the reported transcript regressions.
 
-## Data layout
-
-All data files use the `data/` directory:
-
-```text
-data/
-  benchmarks/       tracked 128-turn holdout benchmark
-  models/           compact inference models
-  raw/              downloaded source files, ignored
-  compiled-v10/     generated train, validation, and test files, ignored
-  training/         full resume checkpoints and logs, ignored
-  telemetry/        milestone JSONL records
-  sources.json      tracked source revisions, licenses, and checksums
-```
-
-The v10 compiler makes exactly 30,000 rows:
-
-| Source | Rows | Supervision |
-|---|---:|---|
-| Project semantic and state contrasts | 12,000 | all v10 heads and owned responses |
-| Project fantasy dialogue | 4,000 | all v10 heads and owned responses |
-| Project science-fiction dialogue | 4,000 | all v10 heads and owned responses |
-| Project game-grounded dialogue | 2,500 | all v10 heads and owned responses |
-| Taskmaster-1 | 2,000 | native dialogue, domain, goal, and slot facets |
-| CLINC150 | 500 | native intent facets |
-| SLURP text | 500 | native intent and slot facets |
-| English MASSIVE | 500 | native intent and slot facets |
-| OASST1 | 1,000 | experimental language only |
-| GoEmotions | 1,000 | affect only |
-| Civil Comments | 1,000 | content labels only |
-| Project social repair | 1,000 | all v10 heads and owned responses |
-
-External text never enters the production response catalog. Sensitive rows train recognition and policy, not response imitation.
-
-## Fetch, compile, and audit
-
-The manifest pins every source revision and SHA-256 checksum:
-
-```powershell
-dotnet run -c Release --project Fishbrain.DataGenerator -- fetch
-./scripts/prepare-civil-comments.ps1
-dotnet run -c Release --project Fishbrain.DataGenerator -- compile --count 30000 --seed 42 --output data/compiled-v10
-dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled-v10
-```
-
-The audit fails on count errors, changed checksums, missing provenance, label contradictions, split leakage, or benchmark contamination.
-
-The compiler assigns full connected components to 80/10/10 splits. Components join semantic families, source conversations, equal normalized inputs, and near duplicates.
-
-## Train and evaluate
-
-Run the complete 40,000-step curriculum:
-
-```powershell
-dotnet run -c Release --project Fishbrain -- teach data/compiled-v10 data/training/model-v10-training.json --planned 40000 --until 40000
-```
-
-The scheduler uses structured updates for 90 percent of steps. It uses language-generation updates for 10 percent.
-
-Fishbrain evaluates and saves every 1,000 steps. It writes full stage telemetry at 10K, 20K, 30K, and 40K.
-
-Evaluate a checkpoint with a process exit gate:
-
-```powershell
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled-v10/test.jsonl data/training/model-v10-training.json --gate release
-```
-
-`--gate stage` and `--gate release` return a nonzero exit code when their gate fails. Use `--gate none` to print results without an exit gate.
-
-## Checkpoints
-
-Full JSON checkpoints contain optimizer state and exact resume data. Keep them under ignored `data/training/`.
-
-The final compact model uses the `.fbm` format. Its readable header stores schemas, calibration, catalogs, corpus hash, weight counts, and checksums.
-
-```powershell
-dotnet run -c Release --project Fishbrain -- export data/training/model-v10-training.json data/models/model-v10-latest.fbm data/compiled-v10
-dotnet run -c Release --project Fishbrain -- inspect data/models/model-v10-latest.fbm
-```
-
-The 40K `teach` command exports the best structured checkpoint automatically.
-
-## Limits
-
-Fishbrain is for short game dialogue. It is not a general-purpose assistant or a source of world truth.
-
-Keep inventory, currency, quests, navigation, and world state in game tools. Do not use model output as authoritative game data.
-
-V9 checkpoints remain archives. V10 does not migrate them.
-
-Learned multi-step reasoning is deferred to v11.
+See [INFO.md](INFO.md) for implementation boundaries and release gates.

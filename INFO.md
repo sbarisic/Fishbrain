@@ -1,159 +1,104 @@
-# Fishbrain v10 engineering notes
+# Fishbrain v11 engineering notes
 
-This file records the v10 design and its implementation boundaries. See `README.md` for commands and the public API.
+This document records the v11 implementation boundaries and release contract. See `README.md` for commands and API examples.
 
-## Runtime flow
+## Design boundary
 
-```text
-structured turns
-      |
-      v
-bounded complete-turn packer
-      |
-      v
-raw compositional heads
-      |
-      v
-confidence and deterministic constraints
-      |
-      +----> one authorized game tool
-      |             |
-      |             v
-      |       typed result template
-      |
-      v
-eligible candidate mask
-      |
-      v
-learned response ranking
-      |
-      v
-deterministic state reducer
-```
+Fishbrain is not a general-purpose LLM. It is a compact contextual perception, planning, retrieval, and optional generation model intended to run inside a game process without external services or NuGet dependencies.
 
-The immutable `Brain` owns its vocabulary, tokenizer, Transformer weights, structured heads, catalogs, and calibration. Each reply owns its scratch state and deterministic random source.
+The neural model proposes structured perception, a knowledge target, a tool schema, and a response plan. Deterministic code owns validation, constraints, state reduction, tool execution, authoritative rendering, eligibility masks, and fallbacks. This boundary prevents a generated sentence from inventing or rewriting game state.
 
-The caller owns `NpcDialogueState`. The model has no hidden conversation state.
+## Context and tokenization
 
-## Model
+Each `Brain` owns an immutable `DialogueTokenizer`. No static lexical vocabulary is shared between models. The tokenizer accepts any input casing and normalizes internally to uppercase.
 
-The language model uses one Transformer layer with these settings:
+Known lexical words use one token each. An unknown word is encoded as word-start, uppercase character/digit/apostrophe/hyphen tokens, and word-end. The runtime preserves the normalized original span for slot copying and tool arguments. Control-token IDs are independent of label enum counts.
 
-| Setting | Value |
-|---|---:|
-| Embedding dimension | 64 |
-| Attention heads | 4 |
-| MLP dimension | 128 |
-| Context length | 128 tokens |
-| Attention window | 128 tokens |
-| Maximum generated output | 64 tokens |
-| Compositional feature width | 512 |
-| Planned steps | 40,000 |
-| Structured updates | 90 percent |
-| Generation updates | 10 percent |
+The context packer accepts structured `DialogueTurn` values. It retains the current player turn and removes only complete oldest turns until the 256-token budget fits. Role-looking text inside an utterance does not become structure. The contextual Transformer mean-pools final-layer states for the current player turn.
 
-The packed trainer stores weights and gradients in contiguous `double[]` arrays. It uses `System.Numerics.Vector<double>` for optimizer updates and hot numeric loops.
+## Transformer and numerical path
 
-The structured model uses hashed sparse features. Independent heads use the correct loss for each target type.
+The shared model has two distinct Transformer layers, 128-dimensional embeddings, eight attention heads, a 256-dimensional feed-forward block, and a 256-token context. Training and inference iterate over the configured layer count.
 
-- Speech acts, domains, goals, and content flags use sigmoid with binary cross-entropy.
-- Affect, stance, response policy, tool schema, and candidate ID use softmax cross-entropy.
-- Slots use token-level BIO softmax cross-entropy.
+Packed training uses contiguous arrays and `System.Numerics.Vector<double>` where applicable. Reference and optimized forward/backward paths are checked for numerical parity. Tests also cover finite gradients, deterministic initialization, and bit-equivalent save/resume behavior.
 
-Validation calibrates confidence thresholds. Production clarifies when a required decision is below its threshold.
+All structured, ranking, and generation curriculum phases update the shared contextual model. Structured heads fuse 512 hashed lexical features with the 128-dimensional contextual vector. The production response-plan reranker uses the same contextual representation and hard negatives.
 
-The completed release curriculum selected step 39,000 as `model-v10-latest.fbm`. Its held-out raw composite score is 0.9748, slot span F1 is 0.8828, and the release gate passes. The compiler, checkpoint, training telemetry, and evaluation telemetry use corpus hash `416df5f33ceb58f65f6f590290c261fe7981c7a67fc7a03df7209a1528c0bd12`.
+## Perception heads
 
-## Perception schema
+V11 predicts independent heads for:
 
-Speech acts are multi-label: greet, farewell, ask, request, order, offer, inform, report, confirm, correct, accept, refuse, warn, threaten, apologize, thank, challenge, and negotiate.
+- multi-label speech acts, domains, goals, and content flags;
+- single-label affect, stance, response policy, and knowledge target;
+- token-level BIO slots;
+- tool schema and response-plan softmax outputs.
 
-Domains are multi-label. They cover social, identity, wellbeing, assistance, activity, navigation, trade, inventory, quests, combat, survival, repair, factions, crime, magic, technology, vehicles, environment, lore, and systems.
+Multi-label heads use sigmoid/BCE. Exclusive heads and slots use softmax cross-entropy. Thresholds are calibrated per label. Ordinary speech-act, domain, and goal outputs are limited to three; a third label must exceed its threshold by 0.15. Content flags are not capped.
 
-Goals are multi-label. They cover rapport, closure, information, finding, access, items, transactions, tasks, coordination, travel, combat, survival, repair, influence, concealment, negotiation, systems, emotion, and clarification.
+Constraints are typed as `ENFORCE`, `VETO`, or `BOOST`. Structural and validation-proven rules may enforce or veto. Lexical hints normally boost. Reply diagnostics preserve the operation, label, evidence, score change, and final confidence.
 
-Slots use BIO labels for person, place, item, faction, quantity, currency, time, direction, vehicle, system, credential, action, proposition, and other.
+## Knowledge and authority
 
-Content flags cover profanity, fictional violence, graphic violence, threats, crime, identity attacks, self-harm, sexual content, and sexual violence.
+`KnowledgeTarget` separates questions about name, role, origin, home, family, occupation, faction, traits, capabilities, balance, inventory, location, and world facts.
 
-## State ownership
+Persona facts are caller-authored and rendered through typed templates. Capabilities come only from the registered tools. Dialogue state contains conversational memory but never owns inventory, currency, stock, prices, location, quest truth, or world facts.
 
-`NpcDialogueState` stores bounded dialogue state only:
+The demo tools share one `DemoWorldState`. Mutations validate their complete precondition set before changing state. Their idempotency cache is keyed by the deterministic invocation key, so a replay returns the prior result. Tool exceptions become typed failure results; authoritative fields still pass schema validation before rendering.
 
-- Rapport, trust, familiarity, and hostility use values from zero through three.
-- Active domains and goals contain at most four values each.
-- Pending actions contain at most three ordered values.
-- One clarification and one transaction can be active.
-- Person, place, item, vehicle, and system references contain at most 32 normalized characters.
+## State reducer
 
-The reducer owns every transition. Tools own inventory, money, quest truth, navigation, and other world facts.
+The reducer owns all `NpcDialogueState` changes:
 
-## Tool boundary
+- hostility rises only after validated insults, threats, attacks, or betrayals;
+- neutral turns do not lower hostility immediately;
+- hostility lowers after three calm turns or accepted social repair;
+- rapport and trust change only for meaningful events;
+- recent person, place, item, vehicle, and system references are bounded to 32 normalized characters;
+- ambiguous reference phrases clarify instead of guessing;
+- one action executes per reply and additional recognized actions enter the bounded pending queue.
 
-`GameToolRegistry` is immutable after construction. It accepts explicit `IGameTool` objects and validates each schema.
+## Response selection
 
-Registration is the authorization boundary. Fishbrain can run mutating tools after registration.
+The response catalog contains exactly 200 plan IDs and at least 5,000 project-owned variations. Plans declare policy, domain, knowledge target, speech acts, keywords, and variations. Metadata masks ineligible plans before scoring. The runtime retrieves the top five eligible plans, applies contextual plan/ranking scores, and uses candidate ID as the deterministic final tie-breaker.
 
-The runtime permits one invocation per reply. The idempotency key uses the conversation ID and turn ID.
+Production response-source telemetry distinguishes tool templates, persona templates, capability templates, ranked variations, clarifications, fallbacks, and experimental generation. A recognized domain must not emit generic `I DO NOT KNOW` text.
 
-Read-only tools require 0.95 precision. Mutating tools require 0.99 precision. Missing or ambiguous slots always produce a clarification.
+## Corpus integrity
 
-Tool results contain typed fields. Only declared templates can render these fields.
+The compiler produces exactly 60,000 rows and records full turns, initial state, persona, structured targets, slots, tool arguments, response plan, positive/rejected variation IDs, and provenance. Project-owned data contributes 36,000 rows; compatible external data contributes 24,000.
 
-The repository includes location, ware list, price, buy, and sell demo tools. Merchant behavior depends on registered tools, not a persona flag.
+Complete conversations and connected semantic families are assigned as components to an approximately 80/10/10 split. Component edges include semantic family, source conversation, normalized-input equality, and near-duplicate signatures.
 
-## Response ownership
+The audit requires:
 
-The project owns all production response candidates. Each candidate has a stable ID, policies, domains, tones, requirements, and template fields.
+- all source license, revision, URL, checksum, attribution, and transformation fields;
+- only project-owned, MIT, Apache-2.0, CC0, or CC BY input artifacts;
+- no exact duplicates, contradictions, split leakage, or benchmark contamination;
+- at least 2,000 project-owned normalized input skeletons;
+- no skeleton above 0.25% of the full corpus;
+- exactly 60,000 records and every declared source quota.
 
-The runtime masks ineligible candidates before ranking. It selects the highest eligible candidate above the calibrated threshold.
+The compiled v11 corpus hash for the current source manifest and seed 42 is `c240725fa1f316fa02b8a8968269056b72fa123f4bca1fad5b4534385c8834fd`.
 
-If no candidate passes, the runtime uses a typed clarification or deterministic fallback. It records the selected response source in diagnostics.
+## Curriculum and checkpoints
 
-Exact-example memory does not run in the v10 production API. The old v9 path remains internal for archived tests only.
+The deterministic 80,000-step schedule is:
 
-## Corpus rules
+- 56,000 contextual structured/tool/knowledge/plan updates;
+- 16,000 pairwise response-ranking updates;
+- 8,000 experimental generation updates.
 
-The compiler creates exactly 30,000 rows. It keeps external sources under their native supervision masks.
+Rolling checkpoints and telemetry are written every 1,000 steps. Ordinary checkpoints use one fixed source-stratified validation sample. Full validation runs at 20K, 40K, 60K, and 80K. `best-production` is selected by the structured composite subject to finite metrics and mutating-tool precision. `best-generation` is retained separately. The full 80K schedule runs even if the best checkpoint occurs earlier.
 
-Only project-owned rows can supervise production candidates. Identity attacks and other sensitive bands supervise recognition and response policy only.
+The inference format starts with `FISHBRN11`, uses format version 11, stores a readable JSON metadata header followed by float32 weights, and ends with an integrity checksum. It includes the label schema, per-label calibration, tool schemas, response catalog, corpus hash, and weights hash. Versions 2 through 10 are rejected rather than migrated.
 
-The source manifest permits commercial-use licenses only. It rejects noncommercial, research-only, and unclear licenses.
+## Release gates
 
-The compiler joins rows into split components by four relations:
+The release evaluator reports raw neural and constrained production metrics separately. It also reports response-source counts, tool argument exact match, authoritative-field fidelity, unexpected empty/invalid/overlength output, benchmark failures, hashes, throughput, and environment details.
 
-1. The rows share a semantic family.
-2. The rows share a source conversation.
-3. The rows have equal normalized input.
-4. The rows are near duplicates.
+Required thresholds are:
 
-It assigns each complete component to one split. The targets are 24,000 train rows, 3,000 validation rows, and 3,000 test rows.
-
-The tracked benchmark contains 128 turns from 64 fantasy and science-fiction scenarios. The compiler excludes its exact text and semantic families.
-
-## Checkpoint version 10
-
-The full training checkpoint stores these items:
-
-- The fixed v10 version and model configuration.
-- The immutable word vocabulary.
-- Transformer and structured-head weights.
-- Adam moments and deterministic random state.
-- Completed step, sampler position, and best-role metadata.
-- Label schemas, calibration, tool schemas, and candidate catalog.
-- Corpus hash and an integrity checksum.
-
-The compact `.fbm` model removes optimizer state and exact memory. It stores a readable JSON header, float32 weights, and SHA-256 integrity data.
-
-The loader rejects v2 through v9 checkpoints. It also rejects corrupt v10 headers, schemas, counts, weights, and checksums.
-
-## Evaluation
-
-The evaluator reports raw neural metrics and constrained production metrics separately. It also reports response-source counts and experimental generation results.
-
-The release gate uses these minimum values:
-
-| Metric | Minimum |
+| Metric | Threshold |
 |---|---:|
 | Speech-act macro-F1 | 0.85 |
 | Domain macro-F1 | 0.85 |
@@ -162,19 +107,16 @@ The release gate uses these minimum values:
 | Policy accuracy | 0.90 |
 | Content macro-F1 | 0.90 |
 | Slot span F1 | 0.85 |
-| Tool accuracy | 0.95 |
+| Knowledge-target accuracy | 0.90 |
+| Tool selection | 0.95 |
 | Mutating-tool precision | 0.99 |
 | Tool argument exact match | 0.90 |
-| Candidate top-1 | 0.80 |
-| Candidate top-3 | 0.95 |
-| Benchmark semantic assertions | 0.90 |
+| Response-plan top-1 | 0.85 |
+| Response-plan top-3 | 0.95 |
+| Variation Recall@10 | 0.95 |
+| Variation MRR | 0.80 |
+| 256-turn semantic assertions | 0.90 |
 
-The release gate also requires zero invalid output, unexpected empty output, overlength output, duplicate mutation, benchmark contamination, and altered authoritative tool fields.
+Tool fidelity, mutation safety, persona fidelity, OOV preservation, parser/state invariants, and structural invariants require 100%. Unexpected empty, invalid, overlength, generic known-domain fallback, duplicate mutation, and altered authoritative-field counts must remain zero.
 
-Telemetry includes the corpus hash, checkpoint hash, environment, vector width, throughput, losses, raw metrics, constrained metrics, response sources, and gate results.
-
-## Deferred work
-
-V10 does not include learned multi-step reasoning. The `THINK -> STATE -> THINK -> ACTION` design belongs to v11.
-
-Do not increase Transformer capacity until v10 evaluation shows a capacity bottleneck.
+The 2x128 release build's median and p95 reply latency must remain within four times the v10 baseline measured on the same machine.

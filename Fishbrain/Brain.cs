@@ -985,7 +985,7 @@ public sealed partial class Brain
             var realizationLoss = DebugAverageLoss(validation.LanguageSamples.Take(64));
             var productionEligible = double.IsFinite(metrics.Composite) &&
                                      metrics.MutatingToolPrecision >= 0.99;
-            var bestStructured = productionEligible && metrics.Composite > _bestPerceptionScore;
+            var bestStructured = fullStage && productionEligible && metrics.Composite > _bestPerceptionScore;
             var bestGeneration = double.IsFinite(realizationLoss) && realizationLoss < _bestRealizationLoss;
             if (bestStructured)
             {
