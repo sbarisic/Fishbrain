@@ -60,8 +60,18 @@ public sealed record CognitiveTransition(NpcState State, ResponseTone Tone);
 public static class DialogueText
 {
     public static string Normalize(string text) => Tokenizer.Normalize(text);
-    public static bool IsCanonical(string text) =>
-        text is not null && string.Equals(text, Tokenizer.Normalize(text), StringComparison.Ordinal);
+    public static bool IsCanonical(string text)
+    {
+        if (text is null) return false;
+        try
+        {
+            return string.Equals(text, Tokenizer.Normalize(text), StringComparison.Ordinal);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+    }
     public static string TerminateTurn(string canonicalText)
     {
         ArgumentException.ThrowIfNullOrEmpty(canonicalText);

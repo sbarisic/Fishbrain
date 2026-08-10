@@ -56,7 +56,7 @@ public sealed partial class Brain
         }
         else
         {
-            plannedSteps = requestedPlannedSteps ?? 80_000;
+            plannedSteps = requestedPlannedSteps ?? 260_000;
             var config = new BrainConfig { PlannedSteps = plannedSteps };
             var vocabulary = WordVocabulary.Build(trainPath);
             var tokenizer = new DialogueTokenizer(vocabulary);
@@ -148,6 +148,7 @@ public sealed partial class Brain
             StructuredWeights = _structuredHeads.Snapshot(),
             StructuredUpdates = _structuredHeads.Updates,
             StructuredLabelThresholds = _structuredHeads.SnapshotLabelThresholds(),
+            FrozenStructuredHeads = _structuredHeads.SnapshotFrozenHeads(),
             ConfidenceCalibration = _confidenceCalibration,
             LabelSchemas = ModelSchemas.Labels,
             ToolSchemas = DemoGameTools.CreateMerchant().Schemas.OrderBy(schema => schema.Name).ToArray(),
@@ -241,51 +242,20 @@ public sealed partial class Brain
         Config.PlannedSteps = plannedSteps;
         var language = data.LanguageSamples.ToArray();
         if (language.Length == 0) throw new InvalidDataException("Teaching requires language samples.");
-        var familiesBySource = data.StructuredSamples
-            .GroupBy(example => $"{example.Source}|{string.Join(',', example.SpeechActs)}|" +
-                                $"{string.Join(',', example.Domains)}|{string.Join(',', example.Goals)}|" +
-                                $"{example.Affect}|{example.Policy}|{example.ToolSchema}|{example.ResponseCandidateId}",
-                StringComparer.Ordinal)
-            .OrderBy(group => group.Key, StringComparer.Ordinal)
-            .Select(source => source.GroupBy(example => example.SemanticFamilyId, StringComparer.Ordinal)
-                .OrderBy(group => group.Key, StringComparer.Ordinal)
-                .Select(group => group.OrderBy(example => example.Input, StringComparer.Ordinal).ToArray())
-                .ToArray())
+        var conversationalLanguage = language.Where(sample =>
+                sample.Source.StartsWith("PROJECT_DISCOURSE", StringComparison.Ordinal) ||
+                sample.Source == "PROJECT_CONVERSATION")
             .ToArray();
-        var families = Enumerable.Range(0, familiesBySource.Max(source => source.Length))
-            .SelectMany(index => familiesBySource.Where(source => index < source.Length).Select(source => source[index]))
-            .ToArray();
-        if (families.Length == 0) throw new InvalidDataException("Teaching requires structured samples.");
-        var slotFamiliesBySource = data.StructuredSamples
-            .Where(example => example.SupervisedHeads.Contains("slots"))
-            .GroupBy(example => example.Source, StringComparer.Ordinal)
-            .OrderBy(group => group.Key, StringComparer.Ordinal)
-            .Select(source => source.GroupBy(example => example.SemanticFamilyId, StringComparer.Ordinal)
-                .OrderBy(group => group.Key, StringComparer.Ordinal)
-                .Select(group => group.OrderBy(example => example.Input, StringComparer.Ordinal).ToArray())
-                .ToArray())
-            .ToArray();
-        if (slotFamiliesBySource.Length == 0)
-            throw new InvalidDataException("Teaching requires slot-supervised samples.");
-        var slotFamilies = Enumerable.Range(0, slotFamiliesBySource.Max(source => source.Length))
-            .SelectMany(index => slotFamiliesBySource.Where(source => index < source.Length).Select(source => source[index]))
-            .ToArray();
-        var domainPositiveWeights = BalancedPositiveWeights(data.StructuredSamples, "domains",
-            Enum.GetValues<DialogueDomain>().Length, example => example.Domains.Select(value => (int)value));
-        var rareDomainFamilies = untilStep > HeadPolishStartStep
-            ? FocusFamilies(example => example.Domains.Contains(DialogueDomain.Magic) ||
-                                       example.Domains.Contains(DialogueDomain.VehicleTravel))
-            : families;
-        var explicitToolFamilies = untilStep > HeadPolishStartStep
-            ? FocusFamilies(example => example.SupervisedHeads.Contains("tool") && example.ToolSchema != "NONE")
-            : families;
-        var hardNoToolFamilies = untilStep > HeadPolishStartStep
-            ? FocusFamilies(example => example.SupervisedHeads.Contains("tool") && example.ToolSchema == "NONE" &&
-                                       (example.Domains.Contains(DialogueDomain.TradeEconomy) ||
-                                        example.Domains.Contains(DialogueDomain.ItemsInventory) ||
-                                        example.Goals.Contains(DialogueGoal.Transaction)))
-            : families;
+        if (untilStep > ResponsePolishStartStep && conversationalLanguage.Length == 0)
+        {
+            throw new InvalidDataException("Conversational realization polishing requires project conversation samples.");
+        }
 
+        var sampler = new TrainingCurriculumSampler(
+            data.StructuredSamples,
+            Config.Seed,
+            requireAllBands: recovery is not null);
+        var calibrationExamples = FamilyBalancedSubset(validation.StructuredSamples, 2_000, Config.Seed);
         var timer = System.Diagnostics.Stopwatch.StartNew();
         var intervalStart = timer.Elapsed;
         var intervalStep = _step;
@@ -297,83 +267,50 @@ public sealed partial class Brain
             var schedule = _step % 10;
             if (_step >= ResponsePolishStartStep)
             {
-                if (schedule <= 7)
-                {
-                    phase = "RESPONSE_POLISH";
-                    var responseStep = HeadPolishStructuredIndex(_step, ResponsePolishStartStep);
-                    var family = families[responseStep % families.Length];
-                    var example = family[DeterministicIndex(responseStep / families.Length,
-                        family.Length, 4241)];
-                    var learningRate = CurriculumLearningRate(_step, 0.14) * 8.0;
-                    loss = _structuredHeads.TrainResponseOnly(example, learningRate, ContextVector(example.Context));
-                    _step = checked(_step + 1);
-                }
-                else
-                {
-                    phase = "RESPONSE_RANK";
-                    var rankStep = HeadPolishRankingIndex(_step, ResponsePolishStartStep);
-                    var family = families[rankStep % families.Length];
-                    var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 4243)];
-                    var learningRate = CurriculumLearningRate(_step, 0.10) * 8.0;
-                    loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
-                    _step = checked(_step + 1);
-                }
+                phase = "CONVERSATION";
+                var generationStep = _step - ResponsePolishStartStep;
+                var sample = conversationalLanguage[DeterministicIndex(
+                    generationStep,
+                    conversationalLanguage.Length,
+                    4253)];
+                loss = CalculateLoss(sample);
+                ApplyGradients(plannedSteps);
             }
             else if (_step >= HeadPolishStartStep)
             {
-                if (schedule <= 7)
+                var polishStep = _step - HeadPolishStartStep;
+                var polishSchedule = polishStep % 20;
+                if (polishSchedule < 12)
                 {
-                    phase = "HEAD_POLISH";
-                    var structuredStep = HeadPolishStructuredIndex(_step, HeadPolishStartStep);
-                    var position = structuredStep % 8;
-                    var cycle = structuredStep / 8;
-                    var (selectedFamilies, selectedStep, seed) = position switch
-                    {
-                        0 => (rareDomainFamilies, cycle * 2, 4201),
-                        4 => (rareDomainFamilies, cycle * 2 + 1, 4201),
-                        1 => (explicitToolFamilies, cycle, 4207),
-                        5 => (hardNoToolFamilies, cycle, 4211),
-                        2 => (families, cycle * 4, 4217),
-                        3 => (families, cycle * 4 + 1, 4217),
-                        6 => (families, cycle * 4 + 2, 4217),
-                        _ => (families, cycle * 4 + 3, 4217)
-                    };
-                    var family = selectedFamilies[selectedStep % selectedFamilies.Length];
-                    var example = family[DeterministicIndex(selectedStep / selectedFamilies.Length,
-                        family.Length, seed)];
-                    var learningRate = CurriculumLearningRate(_step, 0.14) * 8.0;
-                    var context = ContextVector(example.Context);
-                    loss = position switch
-                    {
-                        0 or 4 => _structuredHeads.TrainDomainsOnly(
-                            example, learningRate, context, domainPositiveWeights),
-                        1 or 5 => _structuredHeads.TrainToolOnly(example, learningRate, context),
-                        _ => _structuredHeads.Train(example, learningRate, context, domainPositiveWeights)
-                    };
-                    if (position is 0 or 1 or 4 or 5)
-                    {
-                        var responsePosition = position switch { 0 => 0, 1 => 1, 4 => 2, _ => 3 };
-                        var responseStep = cycle * 4 + responsePosition;
-                        var responseFamily = families[responseStep % families.Length];
-                        var responseExample = responseFamily[DeterministicIndex(
-                            responseStep / families.Length, responseFamily.Length, 4231)];
-                        loss = (loss + _structuredHeads.TrainResponseOnly(responseExample, learningRate,
-                            ContextVector(responseExample.Context))) * 0.5;
-                    }
-                    var slotFamily = slotFamilies[structuredStep % slotFamilies.Length];
-                    var slotExample = slotFamily[DeterministicIndex(structuredStep / slotFamilies.Length,
-                        slotFamily.Length, 4217)];
-                    loss = (loss + _structuredHeads.TrainSlotsOnly(slotExample, learningRate)) * 0.5;
+                    phase = "DISCOURSE";
+                    var batch = sampler.DiscourseBatch(polishStep / 20 * 12 + polishSchedule);
+                    loss = TrainStructuredBatch(
+                        batch,
+                        StructuredLearningRate(_step),
+                        StructuredTrainingMode.Discourse);
+                    _step = checked(_step + 1);
+                }
+                else if (polishSchedule < 17)
+                {
+                    phase = "HEAD_RANK";
+                    var rankStep = polishStep / 20 * 5 + polishSchedule - 12;
+                    var batch = sampler.RankingBatch(rankStep);
+                    loss = TrainStructuredBatch(
+                        batch,
+                        StructuredLearningRate(_step),
+                        StructuredTrainingMode.Ranking);
+                    _step = checked(_step + 1);
                     _step = checked(_step + 1);
                 }
                 else
                 {
-                    phase = "HEAD_RANK";
-                    var rankStep = HeadPolishRankingIndex(_step, HeadPolishStartStep);
-                    var family = families[rankStep % families.Length];
-                    var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 4229)];
-                    var learningRate = CurriculumLearningRate(_step, 0.10) * 8.0;
-                    loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
+                    phase = "CORRECTIVE";
+                    var correctiveStep = polishStep / 20 * 3 + polishSchedule - 17;
+                    var batch = sampler.CorrectiveOperationalBatch(correctiveStep);
+                    loss = TrainStructuredBatch(
+                        batch,
+                        StructuredLearningRate(_step),
+                        StructuredTrainingMode.All);
                     _step = checked(_step + 1);
                 }
             }
@@ -381,17 +318,12 @@ public sealed partial class Brain
             {
                 phase = "STRUCTURED";
                 var structuredStep = StructuredCurriculumIndex(_step);
-                var family = families[structuredStep % families.Length];
-                var example = family[DeterministicIndex(structuredStep / families.Length,
-                    family.Length, 1009)];
-                var learningRate = CurriculumLearningRate(_step, 0.14);
-                var context = ContextVector(example.Context);
-                loss = _structuredHeads.Train(example, learningRate, context);
-                var slotFamily = slotFamilies[structuredStep % slotFamilies.Length];
-                var slotExample = slotFamily[DeterministicIndex(structuredStep / slotFamilies.Length,
-                    slotFamily.Length, 1877)];
-                loss = (loss + _structuredHeads.TrainSlotsOnly(slotExample, learningRate)) * 0.5;
-                var contextualLoss = CalculateLoss(ContextTrainingSample(example));
+                var batch = sampler.BaseStructuredBatch(structuredStep);
+                loss = TrainStructuredBatch(
+                    batch,
+                    StructuredLearningRate(_step),
+                    StructuredTrainingMode.All);
+                var contextualLoss = CalculateLoss(ContextTrainingSample(batch[0]));
                 ApplyGradients(plannedSteps);
                 loss = (loss + contextualLoss) * 0.5;
             }
@@ -399,11 +331,12 @@ public sealed partial class Brain
             {
                 phase = "RANKING";
                 var rankStep = RankingCurriculumIndex(_step);
-                var family = families[rankStep % families.Length];
-                var example = family[DeterministicIndex(rankStep / families.Length, family.Length, 3253)];
-                var learningRate = CurriculumLearningRate(_step, 0.10);
-                loss = _structuredHeads.TrainRanking(example, learningRate, ContextVector(example.Context));
-                var contextualLoss = CalculateLoss(ContextTrainingSample(example));
+                var batch = sampler.RankingBatch(rankStep);
+                loss = TrainStructuredBatch(
+                    batch,
+                    StructuredLearningRate(_step),
+                    StructuredTrainingMode.Ranking);
+                var contextualLoss = CalculateLoss(ContextTrainingSample(batch[0]));
                 ApplyGradients(plannedSteps);
                 loss = (loss + contextualLoss) * 0.5;
             }
@@ -424,8 +357,8 @@ public sealed partial class Brain
             if (_step % TeachingCheckpointInterval != 0) continue;
             var fullStage = _step == plannedSteps || _step % 20_000 == 0;
             var evaluationExamples = fullStage
-                ? validation.StructuredSamples
-                : StratifiedMilestoneSample(validation.StructuredSamples, 128, Config.Seed);
+                ? FamilyBalancedEvaluationSet(validation.StructuredSamples, Config.Seed)
+                : calibrationExamples;
             var contextVectors = new double[evaluationExamples.Count][];
             Parallel.For(0, evaluationExamples.Count,
                 new ParallelOptions { MaxDegreeOfParallelism = Math.Min(4, Environment.ProcessorCount) },
@@ -433,8 +366,15 @@ public sealed partial class Brain
             var contextByExample = Enumerable.Range(0, evaluationExamples.Count).ToDictionary(
                 index => EvaluationExampleKey(evaluationExamples[index]),
                 index => (IReadOnlyList<double>)contextVectors[index], StringComparer.Ordinal);
-            _confidenceCalibration = _structuredHeads.Calibrate(evaluationExamples,
-                example => contextByExample[EvaluationExampleKey(example)]);
+            if (fullStage)
+            {
+                var calibrationContexts = calibrationExamples.ToDictionary(
+                    EvaluationExampleKey,
+                    example => (IReadOnlyList<double>)ContextVector(example.Context),
+                    StringComparer.Ordinal);
+                _confidenceCalibration = _structuredHeads.Calibrate(calibrationExamples,
+                    example => calibrationContexts[EvaluationExampleKey(example)]);
+            }
             var metrics = _structuredHeads.Evaluate(evaluationExamples,
                 example => contextByExample[EvaluationExampleKey(example)]);
             var realizationLoss = DebugAverageLoss(validation.LanguageSamples.Take(64));
@@ -452,6 +392,10 @@ public sealed partial class Brain
                 _bestRealizationLoss = realizationLoss;
                 _bestRealizationStep = _step;
             }
+            if (_step == HeadPolishStartStep)
+            {
+                _structuredHeads.FreezePassingOperationalHeads(metrics);
+            }
             Console.WriteLine(
                 $"VALIDATION STEP {_step,6} SPEECH_F1 {metrics.SpeechActMacroF1:F4} " +
                 $"DOMAIN_F1 {metrics.DomainMacroF1:F4} GOAL_F1 {metrics.GoalMacroF1:F4} " +
@@ -459,6 +403,9 @@ public sealed partial class Brain
                 $"CONTENT_F1 {metrics.ContentMacroF1:F4} SLOT_F1 {metrics.SlotSpanF1:F4} " +
                 $"TOOL_ACC {metrics.ToolAccuracy:F4} MUTATING_PRECISION {metrics.MutatingToolPrecision:F4} " +
                 $"RESPONSE_TOP1 {metrics.ResponseTop1:F4} RESPONSE_TOP3 {metrics.ResponseTop3:F4} " +
+                $"DISCOURSE_ACC {metrics.DiscourseActAccuracy:F4} SPEAKER_ACC {metrics.SpeakerAttributionAccuracy:F4} " +
+                $"FACT_SPAN_F1 {metrics.FactSpanF1:F4} ANTECEDENT_ACC {metrics.AntecedentAccuracy:F4} " +
+                $"CORRECTION_ACC {metrics.CorrectionStateAccuracy:F4} " +
                 $"COMPOSITE {metrics.Composite:F4} GENERATION_LOSS {realizationLoss:F4}");
             Console.WriteLine($"BEST PRODUCTION {_bestPerceptionScore:F4} AT {_bestPerceptionStep} " +
                               $"GENERATION {_bestRealizationLoss:F4} AT {_bestRealizationStep}");
@@ -484,23 +431,33 @@ public sealed partial class Brain
         {
             var bestPath = CheckpointRolePath(checkpointPath, "best-production");
             if (_bestPerceptionStep == 0 || !File.Exists(bestPath))
+            {
                 throw new InvalidDataException("Training completed without an eligible best production checkpoint.");
-            var output = Path.Combine(Path.GetDirectoryName(recovery.CorpusDirectory)!, "models", "model-latest.fbm");
-            Load(bestPath).ExportInference(output, corpusHash);
-            Console.WriteLine($"EXPORTED BEST PRODUCTION CHECKPOINT {output}");
-        }
-        if (recovery is not null) PrintMilestoneCommands(recovery);
+            }
 
-        TrainingExample[][] FocusFamilies(Func<TrainingExample, bool> predicate)
-        {
-            var selected = data.StructuredSamples.Where(predicate)
-                .GroupBy(example => example.SemanticFamilyId, StringComparer.Ordinal)
-                .OrderBy(group => group.Key, StringComparer.Ordinal)
-                .Select(group => group.OrderBy(example => example.Input, StringComparer.Ordinal).ToArray())
-                .ToArray();
-            if (selected.Length == 0) throw new InvalidDataException("A required head-polish focus set is empty.");
-            return selected;
+            Console.WriteLine($"BEST PRODUCTION CANDIDATE {bestPath}");
+            Console.WriteLine("RUN EVERY RELEASE AND HUMAN CONVERSATION GATE BEFORE EXPORTING MODEL-LATEST.FBM.");
         }
+        if (recovery is not null)
+        {
+            PrintMilestoneCommands(recovery);
+        }
+    }
+
+    private double TrainStructuredBatch(
+        IReadOnlyList<TrainingExample> batch,
+        double learningRate,
+        StructuredTrainingMode mode)
+    {
+        var contextualExample = batch[0];
+        var contextualVector = ContextVector(contextualExample.Context);
+        return _structuredHeads.TrainBatch(
+            batch,
+            learningRate,
+            example => ReferenceEquals(example, contextualExample)
+                ? contextualVector
+                : Array.Empty<double>(),
+            mode);
     }
 
     private TrainingSample ContextTrainingSample(TrainingExample example)
@@ -551,6 +508,66 @@ public sealed partial class Brain
     private static string StableTrainingKey(int seed, string value) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes($"{seed}|{value}")));
 
+    internal static IReadOnlyList<TrainingExample> FamilyBalancedSubset(
+        IReadOnlyList<TrainingExample> examples,
+        int maximum,
+        int seed)
+    {
+        if (maximum <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximum));
+        }
+
+        var representatives = examples.GroupBy(example => example.SemanticFamilyId, StringComparer.Ordinal)
+            .OrderBy(group => StableTrainingKey(seed, group.Key), StringComparer.Ordinal)
+            .Select(group => group.OrderBy(example => example.Input, StringComparer.Ordinal).First())
+            .ToArray();
+        var result = new List<TrainingExample>(Math.Min(maximum, representatives.Length));
+        var selectedFamilies = new HashSet<string>(StringComparer.Ordinal);
+        var safetyQuota = Math.Max(1, maximum / 8);
+        AddStratum(representatives.Where(example => example.ToolSchema is "BUY" or "SELL"), safetyQuota);
+        AddStratum(representatives.Where(TrainingCurriculumSampler.IsToolNullContrast), safetyQuota);
+        AddStratum(representatives, maximum - result.Count);
+        return result;
+
+        void AddStratum(IEnumerable<TrainingExample> candidates, int count)
+        {
+            foreach (var example in candidates
+                         .OrderBy(item => StableTrainingKey(seed, item.SemanticFamilyId), StringComparer.Ordinal))
+            {
+                if (result.Count >= maximum || count <= 0)
+                {
+                    break;
+                }
+
+                if (selectedFamilies.Add(example.SemanticFamilyId))
+                {
+                    result.Add(example);
+                    count--;
+                }
+            }
+        }
+    }
+
+    internal static IReadOnlyList<TrainingExample> FamilyBalancedEvaluationSet(
+        IReadOnlyList<TrainingExample> examples,
+        int seed) => examples
+        .GroupBy(example => example.SemanticFamilyId, StringComparer.Ordinal)
+        .OrderBy(group => StableTrainingKey(seed, group.Key), StringComparer.Ordinal)
+        .Select(group => group.OrderBy(example => example.Input, StringComparer.Ordinal).First())
+        .ToArray();
+
+    internal static double StructuredLearningRate(int step)
+    {
+        if (step < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(step));
+        }
+
+        var progress = Math.Min(1.0, step / 200_000.0);
+        return 0.003 + 0.027 * 0.5 * (1.0 + Math.Cos(Math.PI * progress));
+    }
+
     internal static double CurriculumLearningRate(int step, double initialRate) =>
         initialRate * Math.Pow(0.5, step / 20_000.0);
 
@@ -599,7 +616,7 @@ public sealed partial class Brain
         foreach (var example in supervised)
             foreach (var label in labels(example).Distinct()) counts[label]++;
         return counts.Select(count => count == 0 ? 1.0 :
-            Math.Clamp(Math.Sqrt((double)supervised.Length / count), 2.0, 16.0)).ToArray();
+            Math.Clamp(Math.Sqrt((double)supervised.Length / count), 1.0, 2.0)).ToArray();
     }
 
     private static string EvaluationExampleKey(TrainingExample example) =>
@@ -619,8 +636,8 @@ public sealed partial class Brain
                      .OrderBy(item => item.SemanticFamilyId, StringComparer.Ordinal).Take(32))
         {
             var result = Reply(new ReplyRequest("TRAINING-TELEMETRY", $"STEP-{_step}-{responseSources.Values.Sum()}",
-                [new DialogueTurn(DialogueRole.Player, example.Input)], NpcDialogueState.Initial,
-                NpcPersona.Default, Config.Seed), tools);
+                [new DialogueUtterance(0, DialogueRole.Player, example.Input)], NpcDialogueState.Initial,
+                NpcPersona.Default, PlayerConversationProfile.Empty, 1, Config.Seed), tools);
             responseSources[result.Diagnostics.ResponseSource] =
                 responseSources.GetValueOrDefault(result.Diagnostics.ResponseSource) + 1;
         }

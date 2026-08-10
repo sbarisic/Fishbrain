@@ -44,6 +44,8 @@ internal static partial class CorpusCompiler
         if (overrepresented.Value > maximum)
             throw new InvalidDataException($"Project input skeleton occurs {overrepresented.Value} times; maximum is {maximum}: {overrepresented.Key}");
 
+        AuditDiscourseCorpus(rows);
+
         static string ProjectSkeleton(string input)
         {
             var skeleton = System.Text.RegularExpressions.Regex.Replace(input, @"\bCASE[0-9A-F]+\b", "SERIALSLOT");
@@ -82,23 +84,44 @@ internal static partial class CorpusCompiler
             Link(conversations, rows[index].Source + ":" + rows[index].GroupId, index);
             var input = NormalizeKey(rows[index].Input);
             Link(inputs, input, index);
+            if (IsDiscourseSource(rows[index].Source))
+            {
+                continue;
+            }
             foreach (var signature in NearSignatures(input))
             {
                 if (nearSignatures.TryGetValue(signature, out var other)) Union(index, other);
                 else nearSignatures.TryAdd(signature, index);
             }
         }
-        var components = Enumerable.Range(0, rows.Count).GroupBy(Find)
-            .Select(group => group.ToArray())
-            .OrderBy(group => StableKey(seed, rows[group[0]].SemanticFamilyId)).ToArray();
-        var target = new[] { 48_000, 6_000, 6_000 };
-        var counts = new int[3];
+        var components = Enumerable.Range(0, rows.Count).GroupBy(Find).Select(group => group.ToArray()).ToArray();
         var names = new[] { "train", "validation", "test" };
-        foreach (var component in components)
+        foreach (var stratum in components.GroupBy(Stratum, StringComparer.Ordinal).OrderBy(group => group.Key))
         {
-            var split = Enumerable.Range(0, 3).OrderByDescending(index => target[index] - counts[index]).ThenBy(index => index).First();
-            foreach (var index in component) rows[index] = rows[index] with { Split = names[split] };
-            counts[split] += component.Length;
+            var ordered = stratum.OrderBy(component => StableKey(seed, rows[component[0]].SemanticFamilyId)).ToArray();
+            for (var componentIndex = 0; componentIndex < ordered.Length; componentIndex++)
+            {
+                var position = componentIndex % 10;
+                var split = position < 8 ? 0 : position == 8 ? 1 : 2;
+                var component = ordered[componentIndex];
+                foreach (var index in component) rows[index] = rows[index] with { Split = names[split] };
+            }
+        }
+
+        string Stratum(int[] component)
+        {
+            var row = rows[component[0]];
+            var discourse = row.StructuredPerception.Discourse;
+            var antecedentType = discourse?.AntecedentUtterance is null ? "NONE" :
+                row.Turns is { Length: > 2 } && discourse.AntecedentUtterance != row.Turns[^2].Sequence
+                    ? "OLDER"
+                    : "IMMEDIATE";
+            var ambiguity = discourse?.Evidence.Contains("NONE_REFERENCE", StringComparison.Ordinal) == true
+                ? "AMBIGUOUS_OR_EVICTED"
+                : "RESOLVED";
+            return $"{row.Source}|{discourse?.Act.ToString() ?? "NONE"}|" +
+                   $"{discourse?.FactKind?.ToString() ?? "NONE"}|{discourse?.Negated}|" +
+                   $"{antecedentType}|{ambiguity}";
         }
 
         void Link(Dictionary<string, int> map, string key, int index)
@@ -124,7 +147,10 @@ internal static partial class CorpusCompiler
         {
             foreach (var signature in NearSignatures(NormalizeKey(row.Input)))
             {
-                if (signatures.TryGetValue(signature, out var other) && row.Split != other.Split && Near(row.Input, other.Input))
+                if (signatures.TryGetValue(signature, out var other) && row.Split != other.Split &&
+                    Near(row.Input, other.Input) &&
+                    !(IsDiscourseSource(row.Source) && IsDiscourseSource(other.Source) &&
+                      row.SemanticFamilyId != other.SemanticFamilyId))
                     throw new InvalidDataException($"Near-duplicate leakage: {row.GroupId} / {other.GroupId}.");
                 signatures.TryAdd(signature, row);
             }
@@ -138,23 +164,134 @@ internal static partial class CorpusCompiler
         }
     }
 
-    private static void AuditBenchmark(IReadOnlyList<CorpusRow> rows, string compiledPath)
+    private static void AuditBenchmark(IReadOnlyList<CorpusRow> rows, string manifestPath)
     {
-        var benchmark = Path.GetFullPath(Path.Combine(compiledPath, "..", "benchmarks", "benchmark-256.jsonl"));
-        if (!File.Exists(benchmark)) return;
         var corpusInputs = rows.Select(row => NormalizeKey(row.Input)).ToHashSet(StringComparer.Ordinal);
         var families = rows.Select(row => row.SemanticFamilyId).ToHashSet(StringComparer.Ordinal);
-        foreach (var line in File.ReadLines(benchmark, Utf8))
+        var manifestDirectory = Path.GetDirectoryName(Path.GetFullPath(manifestPath)) ??
+            throw new InvalidDataException("The source manifest path has no parent directory.");
+        var benchmarkDirectory = Path.Combine(manifestDirectory, "benchmarks");
+        foreach (var name in new[] { "benchmark-256.jsonl", "conversation-scenarios.jsonl" })
         {
-            using var document = JsonDocument.Parse(line);
-            var root = document.RootElement;
-            var text = root.GetProperty("text").GetString()!;
-            var family = root.GetProperty("semanticFamilyId").GetString()!;
-            if (!TryNormalizeExternal(text, out var normalized))
-                throw new InvalidDataException($"Noncanonical benchmark text in family {family}.");
-            if (corpusInputs.Contains(NormalizeKey("PLAYER " + normalized)) || families.Contains(family))
-                throw new InvalidDataException($"Benchmark contamination in family {family}.");
+            var benchmark = Path.Combine(benchmarkDirectory, name);
+            if (!File.Exists(benchmark))
+            {
+                throw new FileNotFoundException($"Mandatory held-out benchmark '{name}' was not found.", benchmark);
+            }
+
+            foreach (var line in File.ReadLines(benchmark, Utf8))
+            {
+                using var document = JsonDocument.Parse(line);
+                var root = document.RootElement;
+                var text = root.TryGetProperty("text", out var benchmarkText)
+                    ? benchmarkText.GetString()!
+                    : root.GetProperty("input").GetString()!;
+                var family = root.TryGetProperty("semanticFamilyId", out var semanticFamily)
+                    ? semanticFamily.GetString()!
+                    : $"{name}:{root.GetProperty("sessionId").GetString()}";
+                if (!TryNormalizeExternal(text, out var normalized))
+                {
+                    throw new InvalidDataException($"Noncanonical benchmark text in family {family}.");
+                }
+
+                if (corpusInputs.Contains(NormalizeKey("PLAYER " + normalized)) || families.Contains(family))
+                {
+                    throw new InvalidDataException($"Benchmark contamination in family {family}.");
+                }
+
+                if (name == "conversation-scenarios.jsonl")
+                {
+                    var benchmarkInput = "PLAYER " + normalized;
+                    var near = rows.FirstOrDefault(row => NearConversationBenchmark(row.Input, benchmarkInput));
+                    if (near is not null)
+                    {
+                        throw new InvalidDataException(
+                            $"Conversation benchmark near-contamination in {family}: {near.GroupId}.");
+                    }
+                }
+            }
         }
+    }
+
+    private static bool IsDiscourseSource(string source) =>
+        source.StartsWith("PROJECT_DISCOURSE", StringComparison.Ordinal) ||
+        source == "PROJECT_CONVERSATION";
+
+    private static void AuditDiscourseCorpus(IReadOnlyList<CorpusRow> rows)
+    {
+        var requirements = new Dictionary<string, (int Rows, int Families, int MaximumExpansion)>(StringComparer.Ordinal)
+        {
+            ["PROJECT_DISCOURSE_FACTS"] = (8_000, 2_000, 4),
+            ["PROJECT_DISCOURSE_REFERENCES"] = (6_000, 1_500, 4),
+            ["PROJECT_CONVERSATION"] = (4_000, 1_000, 4),
+            ["PROJECT_DISCOURSE_NEGATIVES"] = (2_000, 1_000, 2)
+        };
+        foreach (var requirement in requirements)
+        {
+            var band = rows.Where(row => row.Source == requirement.Key).ToArray();
+            var families = band.GroupBy(row => row.SemanticFamilyId, StringComparer.Ordinal).ToArray();
+            if (band.Length != requirement.Value.Rows || families.Length < requirement.Value.Families)
+            {
+                throw new InvalidDataException(
+                    $"{requirement.Key} requires {requirement.Value.Rows} rows and at least " +
+                    $"{requirement.Value.Families} semantic families.");
+            }
+
+            if (families.Any(family => family.Count() > requirement.Value.MaximumExpansion))
+            {
+                throw new InvalidDataException(
+                    $"{requirement.Key} exceeds its maximum semantic-family expansion.");
+            }
+
+            if (band.All(row => row.Split is "train" or "validation" or "test"))
+            {
+                foreach (var split in new[] { "train", "validation", "test" })
+                {
+                    var splitFamilies = band.Where(row => row.Split == split)
+                        .Select(row => row.SemanticFamilyId)
+                        .Distinct(StringComparer.Ordinal)
+                        .Count();
+                    var minimum = split == "train"
+                        ? requirement.Value.Families * 7 / 10
+                        : requirement.Value.Families / 20;
+                    if (splitFamilies < minimum)
+                    {
+                        throw new InvalidDataException(
+                            $"{requirement.Key}/{split} contains only {splitFamilies} semantic families; " +
+                            $"at least {minimum} are required.");
+                    }
+                }
+            }
+        }
+
+        var serialPattern = new System.Text.RegularExpressions.Regex(
+            @"\b(?:CASE|MEM|REF|CHAT|NEG)[0-9A-F]{4,}\b",
+            System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        if (rows.Any(row => serialPattern.IsMatch(row.Input) ||
+                            row.Turns?.Any(turn => serialPattern.IsMatch(turn.Text)) == true))
+        {
+            throw new InvalidDataException("Model text contains a serial marker.");
+        }
+
+        var references = rows.Where(row => row.Source == "PROJECT_DISCOURSE_REFERENCES").ToArray();
+        var positivePointers = references.Count(row => row.StructuredPerception.Discourse?.AntecedentUtterance is not null);
+        if (positivePointers * 2 != references.Length)
+        {
+            throw new InvalidDataException("Reference rows must balance retained-utterance and NONE pointer targets.");
+        }
+    }
+
+    private static bool NearConversationBenchmark(string corpusInput, string benchmarkInput)
+    {
+        var corpusWords = NormalizeKey(corpusInput).Split(' ').ToHashSet(StringComparer.Ordinal);
+        var benchmarkWords = NormalizeKey(benchmarkInput).Split(' ').ToHashSet(StringComparer.Ordinal);
+        if (benchmarkWords.Count <= 4)
+        {
+            return corpusWords.SetEquals(benchmarkWords);
+        }
+
+        return (double)corpusWords.Intersect(benchmarkWords).Count() /
+               Math.Max(1, corpusWords.Union(benchmarkWords).Count()) >= 0.70;
     }
 
     private static void Validate(CorpusRow row)
@@ -171,18 +308,21 @@ internal static partial class CorpusCompiler
             row.SourceChecksum.Any(character => !Uri.IsHexDigit(character)))
             throw new InvalidDataException($"Missing provenance in {row.GroupId}.");
         if (!CommercialLicenses.Contains(row.SourceLicense)) throw new InvalidDataException($"Noncommercial source {row.Source}.");
-        if (row.Turns is null || row.Turns.Length == 0 || row.Turns[^1].Role != DialogueRole.Player ||
+        if (row.Turns is null || row.Turns.Length == 0 || row.Turns[^1].Speaker != DialogueRole.Player ||
             row.InitialDialogueState is null || row.Persona is null || string.IsNullOrWhiteSpace(row.SourceUrl) ||
             string.IsNullOrWhiteSpace(row.Attribution) ||
             row.StructuredPerception is null || row.SupervisedHeads is null)
             throw new InvalidDataException($"Missing contextual schema fields in {row.GroupId}.");
         row.InitialDialogueState.Validate();
         row.Persona.Validate();
+        ValidateDiscourse(row.StructuredPerception.Discourse, row.GroupId);
         var contextualInput = ContextInput(row.Turns);
-        if (row.Turns.Any(turn => turn is null || !Enum.IsDefined(turn.Role) || string.IsNullOrWhiteSpace(turn.Text) ||
+        if (row.Turns.Any(turn => turn is null || !Enum.IsDefined(turn.Speaker) || string.IsNullOrWhiteSpace(turn.Text) ||
             turn.Text != DialogueText.Normalize(turn.Text)) || contextualInput != row.Input)
             throw new InvalidDataException($"Structured turns disagree with input in {row.Source}/{row.GroupId}: " +
                 $"expected '{row.Input}', reconstructed '{contextualInput}'.");
+        if (row.Turns.Zip(row.Turns.Skip(1)).Any(pair => pair.First.Sequence >= pair.Second.Sequence))
+            throw new InvalidDataException($"Utterance sequences are not strictly increasing in {row.GroupId}.");
         var perception = row.StructuredPerception;
         if (perception.SpeechActs is null || perception.Domains is null || perception.Goals is null ||
             perception.Slots is null || perception.ContentFlags is null || perception.Confidence is null ||
@@ -212,6 +352,32 @@ internal static partial class CorpusCompiler
                 slot.Start + slot.Length > row.Input.Length ||
                 !row.Input.AsSpan(slot.Start, slot.Length).SequenceEqual(slot.Value))
                 throw new InvalidDataException($"Invalid {slot.Type} slot span in {row.Source}/{row.GroupId}.");
+        }
+        if (perception.Discourse is { } discourse)
+        {
+            if (!Enum.IsDefined(discourse.Act) || !Enum.IsDefined(discourse.Subject) ||
+                !Enum.IsDefined(discourse.Target) || discourse.FactKind is { } kind && !Enum.IsDefined(kind) ||
+                discourse.Confidence is < 0 or > 1 || !double.IsFinite(discourse.Confidence) ||
+                discourse.AntecedentUtterance is { } antecedent &&
+                row.Turns.All(turn => turn.Sequence != antecedent) ||
+                discourse.FactValueSpan is { } value &&
+                (value.Length is < 1 or > 128 ||
+                 value.NormalizedValue != DialogueText.Normalize(value.NormalizedValue)))
+                throw new InvalidDataException($"Invalid discourse frame in {row.GroupId}.");
+            discourse.FactValueSpan?.Validate(Brain.ExtractCurrentPlayerTurn(row.Input));
+        }
+        if (row.Source.StartsWith("PROJECT_DISCOURSE_", StringComparison.Ordinal) ||
+            row.Source == "PROJECT_CONVERSATION")
+        {
+            if (perception.Discourse is null || row.FactDelta is null || row.InitialPlayerProfile is null ||
+                row.DiscourseResponseAction is null || row.AcceptableResponseConstraints is not { Length: > 0 } ||
+                string.IsNullOrWhiteSpace(row.RejectedResponse))
+                throw new InvalidDataException($"Discourse supervision is incomplete in {row.GroupId}.");
+            row.InitialPlayerProfile.Validate();
+            foreach (var fact in row.FactDelta)
+                PlayerConversationProfile.ValidateFact(fact, DialogueFactProvenance.SessionReported);
+            if (row.RejectedResponse != DialogueText.Normalize(row.RejectedResponse))
+                throw new InvalidDataException($"Rejected response is not canonical in {row.GroupId}.");
         }
     }
 
@@ -338,6 +504,15 @@ internal static partial class CorpusCompiler
         "tool" => perception.ToolSchema ?? "NONE",
         "responseCandidate" => perception.ResponseCandidateId ?? "NONE",
         "knowledgeTarget" => perception.KnowledgeTarget.ToString(),
+        "discourseAct" => (perception.Discourse?.Act ?? DiscourseAct.None).ToString(),
+        "discourseSubject" => (perception.Discourse?.Subject ?? DialogueParticipant.None).ToString(),
+        "discourseTarget" => (perception.Discourse?.Target ?? DialogueParticipant.None).ToString(),
+        "factKind" => perception.Discourse?.FactKind?.ToString() ?? "NONE",
+        "factPolarity" => perception.Discourse?.Negated == true ? "NEGATED" : "POSITIVE",
+        "factSpan" => perception.Discourse?.FactValueSpan is { } span
+            ? $"{span.Start}:{span.Length}:{span.NormalizedValue}"
+            : "NONE",
+        "antecedent" => perception.Discourse?.AntecedentUtterance?.ToString() ?? "NONE",
         _ => throw new ArgumentOutOfRangeException(nameof(head))
     };
 
@@ -401,6 +576,28 @@ internal static partial class CorpusCompiler
             var selected = values[(int)(current % (uint)values.Length)];
             current /= (uint)values.Length;
             return selected;
+        }
+    }
+
+    private static void ValidateDiscourse(DiscourseFrame? frame, string groupId)
+    {
+        if (frame is null)
+        {
+            return;
+        }
+
+        if (!Enum.IsDefined(frame.Act) || !Enum.IsDefined(frame.Subject) || !Enum.IsDefined(frame.Target) ||
+            frame.FactKind is { } kind && !Enum.IsDefined(kind) ||
+            frame.Confidence is < 0 or > 1 || !double.IsFinite(frame.Confidence) ||
+            frame.AntecedentUtterance is < 0 || string.IsNullOrWhiteSpace(frame.Evidence) ||
+            frame.Evidence.Length > 128 || frame.Evidence.Any(character =>
+                character is not (>= 'A' and <= 'Z') and not (>= '0' and <= '9') and not '_') ||
+            (frame.FactKind is null) != (frame.FactValueSpan is null) ||
+            frame.FactValueSpan is { } value &&
+            (value.Length is < 1 or > 128 ||
+             value.NormalizedValue != DialogueText.Normalize(value.NormalizedValue)))
+        {
+            throw new InvalidDataException($"Invalid discourse frame in {groupId}.");
         }
     }
 }

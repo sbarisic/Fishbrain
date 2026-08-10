@@ -3,7 +3,19 @@ using System.Collections.ObjectModel;
 namespace Fishbrain;
 
 public enum DialogueRole { Player, Npc }
-public enum ResponseMode { Ranked, GeneratedExperimental }
+public enum ResponseMode { Production, DeterministicOnly }
+public enum DialogueParticipant { Player, Npc, None }
+public enum DiscourseAct { None, Inform, Correct, RejectAssumption, AskExplanation, ReferBack }
+public enum DialogueFactKind
+{
+    Name, Role, Occupation, Origin, Home, Family, Activity, Preference, Dislike, Opinion, Experience
+}
+public enum DialogueFactProvenance { SessionReported, CallerApproved }
+public enum DiscourseResponseAction
+{
+    None, AcknowledgeFact, AcknowledgeCorrection, ExplainPreviousResponse,
+    RepairMisunderstanding, ClarifyReference
+}
 public enum SpeechAct
 {
     Greet, Farewell, Ask, Request, Order, Offer, Inform, Report, Confirm, Correct,
@@ -33,13 +45,13 @@ public enum ContentFlag
 public enum SlotType
 {
     Person, Place, Item, Faction, Quantity, Currency, Time, Direction, Vehicle,
-    System, Credential, Action, Proposition, Other
+    System, Credential, Action, Other
 }
 public enum BioTag { B, I }
 public enum ResponseSource
 {
     RankedCandidate, RankedVariation, ToolTemplate, PersonaTemplate, CapabilityTemplate,
-    ClarificationTemplate, Fallback, GeneratedExperimental
+    ClarificationTemplate, Fallback, ConversationalRepair, ConversationalGenerated
 }
 
 public enum KnowledgeTarget
@@ -59,7 +71,98 @@ public sealed record PerceptionConstraint(
     string Evidence,
     string Reason);
 
-public sealed record DialogueTurn(DialogueRole Role, string Text);
+public sealed record DialogueUtterance(long Sequence, DialogueRole Speaker, string Text);
+
+public sealed record DialogueFact(
+    DialogueParticipant Subject,
+    DialogueFactKind Kind,
+    string Value,
+    bool Negated,
+    long SourceUtterance,
+    double Confidence,
+    DialogueFactProvenance Provenance);
+
+public sealed record DialogueTextSpan(
+    string NormalizedValue,
+    int Start,
+    int Length)
+{
+    public void Validate(string source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        if (string.IsNullOrWhiteSpace(NormalizedValue) ||
+            NormalizedValue != DialogueText.Normalize(NormalizedValue) ||
+            Start < 0 || Length != NormalizedValue.Length ||
+            Start + Length > source.Length ||
+            source.Substring(Start, Length) != NormalizedValue)
+        {
+            throw new ArgumentException("Dialogue text span does not match its normalized source text.", nameof(source));
+        }
+    }
+}
+
+public sealed record PlayerConversationProfile
+{
+    public static PlayerConversationProfile Empty { get; } = new([]);
+
+    public PlayerConversationProfile(IReadOnlyList<DialogueFact> facts)
+    {
+        ArgumentNullException.ThrowIfNull(facts);
+        Facts = Array.AsReadOnly(facts.ToArray());
+        Validate();
+    }
+
+    public IReadOnlyList<DialogueFact> Facts { get; }
+
+    public void Validate()
+    {
+        if (Facts is null || Facts.Count > 32)
+            throw new ArgumentException("A player profile supports at most 32 facts.", nameof(Facts));
+        foreach (var fact in Facts)
+        {
+            ValidateFact(fact, DialogueFactProvenance.CallerApproved);
+            if (fact.Subject != DialogueParticipant.Player)
+                throw new ArgumentException("Player-profile facts must describe the player.", nameof(Facts));
+        }
+    }
+
+    internal static void ValidateFact(DialogueFact fact, DialogueFactProvenance provenance)
+    {
+        ArgumentNullException.ThrowIfNull(fact);
+        if (!Enum.IsDefined(fact.Subject) || fact.Subject == DialogueParticipant.None ||
+            !Enum.IsDefined(fact.Kind) || !Enum.IsDefined(fact.Provenance) || fact.Provenance != provenance ||
+            fact.SourceUtterance < 0 || fact.Confidence is < 0 or > 1 ||
+            string.IsNullOrWhiteSpace(fact.Value) || fact.Value.Length > 128 ||
+            fact.Value != DialogueText.Normalize(fact.Value))
+            throw new ArgumentException("Dialogue fact is invalid.", nameof(fact));
+    }
+}
+
+public sealed record DialogueTopicSummary(long SourceUtterance, string Topic);
+
+public sealed record ResponseSemanticTrace(
+    long UtteranceSequence,
+    DiscourseResponseAction Action,
+    string Topic,
+    IReadOnlyList<DialogueFactKind> ReferencedFacts,
+    string? CandidateId,
+    string? FallbackReason);
+
+public sealed record DiscourseFrame(
+    DiscourseAct Act,
+    DialogueParticipant Subject,
+    DialogueParticipant Target,
+    DialogueFactKind? FactKind,
+    DialogueTextSpan? FactValueSpan,
+    bool Negated,
+    long? AntecedentUtterance,
+    double Confidence,
+    string Evidence)
+{
+    public static DiscourseFrame Empty { get; } = new(
+        DiscourseAct.None, DialogueParticipant.None, DialogueParticipant.None,
+        null, null, false, null, 1.0, "NONE");
+}
 
 public sealed record DialogueSlot(
     SlotType Type,
@@ -81,7 +184,8 @@ public sealed record StructuredPerception(
     string? ToolSchema,
     string? ResponseCandidateId,
     KnowledgeTarget KnowledgeTarget,
-    IReadOnlyDictionary<string, double> Confidence)
+    IReadOnlyDictionary<string, double> Confidence,
+    DiscourseFrame? Discourse = null)
 {
     public static StructuredPerception Empty { get; } = new(
         [], [], [], UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Clarify,
@@ -141,9 +245,10 @@ public sealed record DialogueReferenceState(
     string? Place,
     string? Item,
     string? Vehicle,
-    string? System)
+    string? System,
+    long? UtteranceSequence)
 {
-    public static DialogueReferenceState Empty { get; } = new(null, null, null, null, null);
+    public static DialogueReferenceState Empty { get; } = new(null, null, null, null, null, null);
 }
 
 public sealed record NpcDialogueState(
@@ -165,12 +270,15 @@ public sealed record NpcDialogueState(
     DialogueDomain? PendingTopic,
     KnowledgeTarget PendingKnowledgeTarget,
     string? LastTool,
-    string? LastToolOutcome)
+    string? LastToolOutcome,
+    IReadOnlyList<DialogueFact> SessionFacts,
+    IReadOnlyList<DialogueTopicSummary> TopicSummaries,
+    ResponseSemanticTrace? LastResponseTrace)
 {
     public static NpcDialogueState Initial { get; } = new(
         1, 1, 0, 0, NpcMood.Neutral, [], null, UserAffect.Neutral,
         null, null, [], [], DialogueReferenceState.Empty, 0, 0, null,
-        KnowledgeTarget.None, null, null);
+        KnowledgeTarget.None, null, null, [], [], null);
 
     public void Validate()
     {
@@ -192,6 +300,29 @@ public sealed record NpcDialogueState(
         foreach (var value in new[] { References.Person, References.Place, References.Item, References.Vehicle, References.System })
             if (value is not null && (value.Length is < 1 or > 32 || value != DialogueText.Normalize(value)))
                 throw new ArgumentException("Reference identifiers must be 1-32 normalized characters.", nameof(References));
+        if (References.UtteranceSequence is < 0)
+            throw new ArgumentException("An utterance reference must be non-negative.", nameof(References));
+        if (SessionFacts is null || SessionFacts.Count > 16)
+            throw new ArgumentException("State supports at most 16 session facts.", nameof(SessionFacts));
+        foreach (var fact in SessionFacts)
+            PlayerConversationProfile.ValidateFact(fact, DialogueFactProvenance.SessionReported);
+        if (TopicSummaries is null || TopicSummaries.Count > 8 || TopicSummaries.Any(summary =>
+                summary is null || summary.SourceUtterance < 0 || string.IsNullOrWhiteSpace(summary.Topic) ||
+                summary.Topic.Length > 128 || summary.Topic != DialogueText.Normalize(summary.Topic)))
+            throw new ArgumentException("State supports at most eight valid topic summaries.", nameof(TopicSummaries));
+        if (LastResponseTrace is not null)
+        {
+            if (LastResponseTrace.UtteranceSequence < 0 || !Enum.IsDefined(LastResponseTrace.Action) ||
+                string.IsNullOrWhiteSpace(LastResponseTrace.Topic) || LastResponseTrace.Topic.Length > 128 ||
+                LastResponseTrace.Topic != DialogueText.Normalize(LastResponseTrace.Topic) ||
+                LastResponseTrace.ReferencedFacts is null ||
+                LastResponseTrace.ReferencedFacts.Any(value => !Enum.IsDefined(value)) ||
+                LastResponseTrace.CandidateId is { } candidateId &&
+                (candidateId.Length > 64 || !IsIdentifier(candidateId)) ||
+                LastResponseTrace.FallbackReason is { } fallbackReason &&
+                (fallbackReason.Length > 64 || !IsIdentifier(fallbackReason)))
+                throw new ArgumentException("Last response trace is invalid.", nameof(LastResponseTrace));
+        }
         if (LastBehaviorId is not null && (LastBehaviorId.Length > 64 || !IsIdentifier(LastBehaviorId)))
             throw new ArgumentException("Last behavior ID must be a normalized identifier.", nameof(LastBehaviorId));
         if (PendingTopic is not null && !Enum.IsDefined(PendingTopic.Value))
@@ -248,11 +379,13 @@ public sealed record NpcDialogueState(
 public sealed record ReplyRequest(
     string ConversationId,
     string TurnId,
-    IReadOnlyList<DialogueTurn> Turns,
+    IReadOnlyList<DialogueUtterance> Utterances,
     NpcDialogueState State,
     NpcPersona Persona,
+    PlayerConversationProfile PlayerProfile,
+    long ResponseSequence,
     int Seed,
-    ResponseMode ResponseMode = ResponseMode.Ranked);
+    ResponseMode ResponseMode = ResponseMode.Production);
 
 public sealed record TurnPlan(
     ResponsePolicy Policy,
@@ -261,7 +394,9 @@ public sealed record TurnPlan(
     KnowledgeTarget KnowledgeTarget,
     IReadOnlyList<PendingDialogueAction> PendingActions,
     string? Clarification,
-    IReadOnlyList<string>? MissingSlots = null);
+    IReadOnlyList<string>? MissingSlots = null,
+    DiscourseResponseAction DiscourseAction = DiscourseResponseAction.None,
+    long? AntecedentUtterance = null);
 
 public sealed record ReplyDiagnostics(
     IReadOnlyDictionary<string, double> Confidence,

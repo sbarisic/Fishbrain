@@ -16,8 +16,8 @@ internal static partial class CorpusCompiler
         for (var index = 0; index < count; index++)
         {
             var scenario = scenarios[(index + seed) % scenarios.Length];
-            var serial = $"CASE{seed:X4}{index:D5}";
-            var input = scenario.Input.Replace("{SERIAL}", serial, StringComparison.Ordinal)
+            var input = scenario.Input.Replace(", {SERIAL}", "", StringComparison.Ordinal)
+                .Replace("{SERIAL}", "", StringComparison.Ordinal)
                 .Replace("{PERSON}", People[(index * 7 + seed) % People.Length], StringComparison.Ordinal)
                 .Replace("{PLACE}", Places[(index * 11 + seed) % Places.Length], StringComparison.Ordinal)
                 .Replace("{ITEM}", Items[(index * 13 + seed) % Items.Length], StringComparison.Ordinal);
@@ -35,7 +35,7 @@ internal static partial class CorpusCompiler
             var family = $"{source}:{scenario.Id}:{index / 2:D5}";
             var row = new CorpusRow(normalized, StateFor(index + seed), oldPerception, oldAction,
                 response, source, "UNASSIGNED", family, scenario.Id, family,
-                "PROJECT-OWNED", "WORKTREE", ProjectChecksum(source), structured, AllHeads);
+                "PROJECT-OWNED", "WORKTREE", ProjectChecksum(source), structured, OperationalHeads);
             var currentText = normalized["PLAYER ".Length..];
             var priorPerson = People[index % People.Length];
             var priorPlace = Places[index / People.Length % Places.Length];
@@ -45,9 +45,9 @@ internal static partial class CorpusCompiler
             var memoryVerb = MemoryVerbs[index / (MemoryAdjectives.Length * MemoryOccasions.Length) % MemoryVerbs.Length];
             var turns = new[]
             {
-                new DialogueTurn(DialogueRole.Player, $"EARLIER DURING THE {memoryAdjective} {memoryOccasion} I {memoryVerb} {priorPerson} ABOUT {priorPlace}."),
-                new DialogueTurn(DialogueRole.Npc, $"I REMEMBER THE QUESTION ABOUT {priorItem}."),
-                new DialogueTurn(DialogueRole.Player, currentText)
+                new DialogueUtterance(0, DialogueRole.Player, $"EARLIER DURING THE {memoryAdjective} {memoryOccasion} I {memoryVerb} {priorPerson} ABOUT {priorPlace}."),
+                new DialogueUtterance(1, DialogueRole.Npc, $"I REMEMBER THE QUESTION ABOUT {priorItem}."),
+                new DialogueUtterance(2, DialogueRole.Player, currentText)
             };
             yield return EnrichRow(WithTurns(row, turns), turns, null);
         }
@@ -58,7 +58,7 @@ internal static partial class CorpusCompiler
     private static CorpusRow ExternalRow(
         string input, string? response, string source, string groupId, string family,
         SourceDefinition definition, StructuredPerception structured, string[] supervised,
-        DialogueTurn[]? turns = null)
+        DialogueUtterance[]? turns = null)
     {
         var normalizedInput = DialogueText.Normalize(input);
         if (!normalizedInput.StartsWith("PLAYER ", StringComparison.Ordinal))
@@ -78,7 +78,7 @@ internal static partial class CorpusCompiler
             response is null ? null : DialogueText.Normalize(response), source, "UNASSIGNED", groupId, family,
             source + ":" + groupId, definition.License.ToUpperInvariant(), definition.Revision,
             SourceChecksum(definition), structured, supervised);
-        turns ??= [new DialogueTurn(DialogueRole.Player,
+        turns ??= [new DialogueUtterance(0, DialogueRole.Player,
             normalizedInput[(normalizedInput.LastIndexOf("PLAYER ", StringComparison.Ordinal) + 7)..])];
         return EnrichRow(WithTurns(row, turns), turns, definition);
     }

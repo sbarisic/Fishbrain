@@ -76,7 +76,8 @@ public sealed partial class Brain
             {
                 vectors[index] = ContextVector(examples[index].Context);
                 predictions[index] = _structuredHeads.Predict(
-                    examples[index].Context, [], vectors[index], examples[index].Input);
+                    examples[index].Context, [], vectors[index], examples[index].Input,
+                    examples[index].Turns);
             });
         var contextByExample = Enumerable.Range(0, examples.Count).ToDictionary(
             index => EvaluationExampleKey(examples[index]),
@@ -96,8 +97,39 @@ public sealed partial class Brain
         if (brain._corpusHash != "UNKNOWN" && brain._corpusHash != corpusHash)
             throw new InvalidDataException("Diagnostic corpus hash differs from the checkpoint.");
         var diagnostics = TrainingData.Load(Path.Combine(fullCorpusDirectory, split + ".jsonl"), brain._tokenizer);
-        var examples = diagnostics.StructuredSamples;
+        var examples = FamilyBalancedEvaluationSet(diagnostics.StructuredSamples, brain.Config.Seed);
         var (metrics, predictions) = brain.DebugEvaluateStructuredBatch(examples);
+        var policyConfusions = examples.Select((example, index) => new
+        {
+            Supervised = example.SupervisedHeads.Contains("policy"),
+            Expected = example.Policy,
+            Predicted = predictions[index].Policy
+        })
+            .Where(item => item.Supervised && item.Expected != item.Predicted)
+            .GroupBy(item => new { item.Expected, item.Predicted })
+            .Select(group => new { group.Key.Expected, group.Key.Predicted, Count = group.Count() })
+            .OrderByDescending(item => item.Count).ThenBy(item => item.Expected)
+            .ThenBy(item => item.Predicted).ToArray();
+        var policyConfusionExamples = examples.Select((example, index) => new
+        {
+            Example = example,
+            Prediction = predictions[index]
+        })
+            .Where(item => item.Example.SupervisedHeads.Contains("policy") &&
+                           item.Example.Policy != item.Prediction.Policy)
+            .Select(item => new
+            {
+                item.Example.Source,
+                item.Example.SemanticFamilyId,
+                item.Example.Input,
+                ExpectedPolicy = item.Example.Policy,
+                PredictedPolicy = item.Prediction.Policy,
+                ExpectedTool = item.Example.ToolSchema,
+                PredictedTool = item.Prediction.ToolSchema ?? "NONE",
+                ExpectedDiscourseAct = item.Example.Discourse.Act,
+                PredictedDiscourseAct = item.Prediction.Discourse?.Act ?? DiscourseAct.None
+            })
+            .Take(100).ToArray();
         var toolConfusions = examples.Select((example, index) => new
         {
             Supervised = example.SupervisedHeads.Contains("tool"),
@@ -156,6 +188,8 @@ public sealed partial class Brain
             content = MultiLabelDiagnostics("content", Enum.GetValues<ContentFlag>(),
                 example => example.ContentFlags, prediction => prediction.ContentFlags),
             slots = SlotDiagnostics(),
+            policyConfusions,
+            policyConfusionExamples,
             toolConfusions,
             mutatingFalsePositives,
             responseConfusions

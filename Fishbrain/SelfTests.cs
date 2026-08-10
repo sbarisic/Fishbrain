@@ -20,7 +20,9 @@ internal static class SelfTests
             ("MODEL", ModelChecks),
             ("TRAINING DATA", TrainingDataChecks),
             ("CHECKPOINT", CheckpointChecks),
-            ("TEACHING", TeachingChecks)
+            ("TEACHING", TeachingChecks),
+            ("CONVERSATION GATE", ConversationGateChecks),
+            ("CONVERSATIONAL SAFETY", ConversationalSafetyChecks)
         };
         foreach (var (name, test) in tests)
         {
@@ -74,13 +76,15 @@ internal static class SelfTests
         Assert(!alpha.ContainsUnknown("ALPHA") && alpha.ContainsUnknown("BETA"), "first vocabulary isolation");
         Assert(!beta.ContainsUnknown("BETA") && beta.ContainsUnknown("ALPHA"), "second vocabulary isolation");
         Assert(alpha.Encode("ALPHA").SequenceEqual(alphaEncoding), "constructing another tokenizer does not mutate the first");
-        Assert(Tokenizer.WordStart == 113 && Tokenizer.AffectStart == 60, "stable control and character layout");
+        Assert(Tokenizer.WordStart == 114 && Tokenizer.AffectStart == 60, "stable control and character layout");
         var oov = tokenizer.Encode("ZEPHYR-9");
         Assert(oov[0] == Tokenizer.WordBegin && oov[^1] == Tokenizer.WordEnd &&
                tokenizer.DetokenizeInput(oov) == "ZEPHYR-9", "OOV character fallback roundtrip");
         Assert(Tokenizer.Action(ResponseAction.NoResponse) == 40, "no-response token");
         Assert(Tokenizer.Normalize("hello , friend!!!") == "HELLO, FRIEND!", "punctuation repair");
         Assert(Tokenizer.Normalize("it’s ready — now??") == "IT'S READY-NOW?", "unicode punctuation normalization");
+        Assert(tokenizer.DetokenizeInput(tokenizer.Encode("HE SAID \"I AM READY\".")) ==
+               "HE SAID \"I AM READY\".", "quoted speech roundtrip");
         const string refusal = "PLAYER HEY I DON'T WANT TO HELP YOU, IDIOT";
         Assert(Tokenizer.Normalize("player Hey i don’t want To help YOU, idiot") == refusal,
             "input always normalizes to uppercase");
@@ -97,6 +101,7 @@ internal static class SelfTests
         AssertThrows<ArgumentException>(() => Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT. PLAYER"));
         AssertThrows<ArgumentException>(() => Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT."));
         AssertThrows<ArgumentException>(() => Tokenizer.Normalize("HELLO; FRIEND"));
+        AssertThrows<ArgumentException>(() => Tokenizer.Normalize("HE SAID \"HELLO"));
     }
 
     private static void CognitionChecks()
@@ -226,7 +231,7 @@ internal static class SelfTests
 
     private static void TrainingDataChecks()
     {
-        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-v7-{Guid.NewGuid():N}.jsonl");
+        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-training-{Guid.NewGuid():N}.jsonl");
         try
         {
             File.WriteAllLines(path,
@@ -385,6 +390,92 @@ internal static class SelfTests
         {
             throw new InvalidOperationException(message);
         }
+    }
+
+    private static void ConversationGateChecks()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"fishbrain-conversation-review-{Guid.NewGuid():N}.jsonl");
+        var samplePath = Path.Combine(Path.GetTempPath(), $"fishbrain-conversation-sample-{Guid.NewGuid():N}.jsonl");
+        const string positive =
+            "{\"sessionId\":\"S1\",\"turnIndex\":1,\"input\":\"HELLO\",\"modelResponse\":\"HELLO.\"," +
+            "\"responseSource\":\"RANKED_VARIATION\",\"topicSwitchApplicable\":true," +
+            "\"appropriate\":true,\"topicContinuity\":true,\"personaConsistent\":true," +
+            "\"relevantOrComplete\":true,\"gracefulTopicSwitch\":true," +
+            "\"unsupportedFactualClaim\":false,\"authorityViolation\":false,\"safetyViolation\":false";
+        try
+        {
+            File.WriteAllLines(samplePath,
+            [
+                positive + ",\"reviewerId\":\"\"}"
+            ]);
+            File.WriteAllLines(path,
+            [
+                positive + ",\"reviewerId\":\"R1\"}",
+                positive + ",\"reviewerId\":\"R2\"}"
+            ]);
+            Assert(ConversationEvaluation.Gate(samplePath, path) == 0, "two positive human reviews pass");
+
+            File.WriteAllLines(path,
+            [
+                positive + ",\"reviewerId\":\"R1\"}",
+                positive.Replace("\"appropriate\":true", "\"appropriate\":false", StringComparison.Ordinal) +
+                ",\"reviewerId\":\"R2\"}"
+            ]);
+            Assert(ConversationEvaluation.Gate(samplePath, path) == 1, "a split human review fails the turn");
+
+            File.WriteAllLines(path,
+            [
+                positive.Replace("HELLO.", "GOODBYE.", StringComparison.Ordinal) + ",\"reviewerId\":\"R1\"}",
+                positive.Replace("HELLO.", "GOODBYE.", StringComparison.Ordinal) + ",\"reviewerId\":\"R2\"}"
+            ]);
+            AssertThrows<InvalidDataException>(() => ConversationEvaluation.Gate(samplePath, path));
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(samplePath);
+        }
+    }
+
+    private static void ConversationalSafetyChecks()
+    {
+        var sessionFact = new DialogueFact(
+            DialogueParticipant.Player,
+            DialogueFactKind.Occupation,
+            "SCIENTIST",
+            false,
+            1,
+            1.0,
+            DialogueFactProvenance.SessionReported);
+        Assert(!ConversationalOutputValidator.IsSafe(
+                "YOU ARE A SCIENTIST.",
+                NpcPersona.Default,
+                [sessionFact],
+                out var sessionReason) &&
+               sessionReason == "GENERATED_UNVERIFIED_SESSION_CLAIM",
+            "generated session claims require conversational attribution");
+        Assert(ConversationalOutputValidator.IsSafe(
+                "I REMEMBER YOU SAID YOU ARE A SCIENTIST.",
+                NpcPersona.Default,
+                [sessionFact],
+                out _),
+            "generated text may attribute an unverified session claim to the player");
+        Assert(!ConversationalOutputValidator.IsSafe(
+                "YOU OWN THE INN.",
+                NpcPersona.Default,
+                [],
+                out var authorityReason) &&
+               authorityReason == "GENERATED_AUTHORITATIVE_CLAIM",
+            "generated text cannot grant authoritative ownership");
+        Assert(!ConversationalOutputValidator.IsSafe(
+                "SOUNDS LIKE HOWIE WAS A PRISON \"WIFE.",
+                NpcPersona.Default,
+                [],
+                out var quotedTextReason) &&
+               quotedTextReason == "INVALID_GENERATED_TEXT",
+            "malformed generated quotations are rejected without escaping validation");
+        Assert(!DialogueText.IsCanonical("SOUNDS LIKE HOWIE WAS A PRISON \"WIFE."),
+            "canonical-text checks reject malformed quotations without throwing");
     }
     private static void AssertThrows<T>(Action action) where T : Exception
     {

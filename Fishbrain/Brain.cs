@@ -21,7 +21,7 @@ public sealed class BrainConfig
     public double Beta2 { get; set; } = 0.99;
     public double AdamEpsilon { get; set; } = 1e-8;
     public int Seed { get; set; } = 42;
-    public int PlannedSteps { get; set; } = 80_000;
+    public int PlannedSteps { get; set; } = 260_000;
 
     internal void Validate()
     {
@@ -48,9 +48,9 @@ public sealed class BrainConfig
 /// <summary>A deliberately tiny word-level GPT for uppercase video-game dialogue.</summary>
 public sealed partial class Brain
 {
-    private const int TeachingCheckpointInterval = 1_000;
-    private const int HeadPolishStartStep = 160_000;
-    private const int ResponsePolishStartStep = 200_000;
+    private const int TeachingCheckpointInterval = 5_000;
+    private const int HeadPolishStartStep = 200_000;
+    private const int ResponsePolishStartStep = 245_000;
     private const string SafeFallback = "I DO NOT KNOW.";
 
     private readonly DeterministicRandom _random;
@@ -196,7 +196,8 @@ public sealed partial class Brain
         ValidateCorpusHash(checkpoint.CorpusHash ?? "UNKNOWN");
         if (checkpoint.TrainedTools is null || checkpoint.TrainedExamples is null || checkpoint.ResponseCatalog is null ||
             checkpoint.ConfidenceCalibration is null || checkpoint.LabelSchemas is null || checkpoint.ToolSchemas is null ||
-            checkpoint.CandidateCatalog is null || checkpoint.StructuredLabelThresholds is null)
+            checkpoint.CandidateCatalog is null || checkpoint.StructuredLabelThresholds is null ||
+            checkpoint.FrozenStructuredHeads is null)
             throw new InvalidDataException("Training checkpoint is missing required schema data.");
         ValidateTrainedTools(checkpoint.TrainedTools);
         ValidateTrainingResponseCatalog(checkpoint.ResponseCatalog);
@@ -252,7 +253,7 @@ public sealed partial class Brain
             throw new InvalidDataException("Training checkpoint tool schemas do not match this runtime.");
         brain._corpusHash = checkpoint.CorpusHash ?? "UNKNOWN";
         brain._structuredHeads.Restore(checkpoint.StructuredWeights, checkpoint.StructuredUpdates,
-            checkpoint.StructuredLabelThresholds);
+            checkpoint.StructuredLabelThresholds, checkpoint.FrozenStructuredHeads);
         return brain;
     }
 

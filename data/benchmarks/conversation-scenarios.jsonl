@@ -1,0 +1,26 @@
+{"sessionId":"B01","turnIndex":1,"input":"MORNING. HOW'S YOUR DAY GOING?"}
+{"sessionId":"B01","turnIndex":2,"input":"HONESTLY, THAT SOUNDS LIKE A GOOD IDEA."}
+{"sessionId":"B02","turnIndex":1,"input":"DO YOU PREFER THE CITY OR THE ROAD?"}
+{"sessionId":"B02","turnIndex":2,"input":"EVEN IN WINTER?"}
+{"sessionId":"B03","turnIndex":1,"input":"YOU'D HAGGLE WITH A STATUE IF IT HAD A COIN PURSE."}
+{"sessionId":"B03","turnIndex":2,"input":"SO THAT'S A YES."}
+{"sessionId":"B04","turnIndex":1,"input":"WHY DID THE SKELETON SKIP DINNER? NO STOMACH FOR IT."}
+{"sessionId":"B04","turnIndex":2,"input":"TOUGH CROWD."}
+{"sessionId":"B05","turnIndex":1,"input":"SPONTANEITY IS JUST BAD PLANNING."}
+{"sessionId":"B05","turnIndex":2,"input":"I STILL LIKE A MAP."}
+{"sessionId":"B06","turnIndex":1,"input":"DID YOU EVER GET LOST TRAVELING?"}
+{"sessionId":"B06","turnIndex":2,"input":"WAS SHE RIGHT?"}
+{"sessionId":"B07","turnIndex":1,"input":"ENOUGH ABOUT BOOTS. HAVE YOU SEEN THE SUNSET?","topicSwitchApplicable":true}
+{"sessionId":"B07","turnIndex":2,"input":"THAT'S SURPRISINGLY POETIC."}
+{"sessionId":"B08","turnIndex":1,"input":"THE ROAD WAS MUDDY THIS MORNING."}
+{"sessionId":"B08","turnIndex":2,"input":"DID THE ROAD EVER DRY OUT?"}
+{"sessionId":"B08","turnIndex":3,"input":"THEN I'M STAYING HERE."}
+{"sessionId":"B09","turnIndex":1,"input":"DO YOU THINK THERE'S LIFE ON OTHER WORLDS?"}
+{"sessionId":"B09","turnIndex":2,"input":"WHAT WOULD YOU ASK THEM?"}
+{"sessionId":"B10","turnIndex":1,"input":"IT'S BEEN A TERRIBLE WEEK."}
+{"sessionId":"B10","turnIndex":2,"input":"THANKS. I NEEDED THAT."}
+{"sessionId":"B11","turnIndex":1,"input":"A GUARD AND A BAKER BOTH TOLD ME STORIES."}
+{"sessionId":"B11","turnIndex":2,"input":"HE WAS FUNNY, THOUGH."}
+{"sessionId":"B11","turnIndex":3,"input":"THE BAKER."}
+{"sessionId":"B12","turnIndex":1,"input":"WHAT DO YOU DO WHEN THE SHOP IS EMPTY?"}
+{"sessionId":"B12","turnIndex":2,"input":"YOU DON'T ENJOY IT?"}

@@ -25,7 +25,7 @@ internal static class GeneratorTestSuite
     {
         var defaults = DataGenerator.CliOptions.Parse([]);
 
-        if (defaults.InputPath != Path.Combine("data", "compiled") || defaults.Count != 60_000)
+        if (defaults.InputPath != Path.Combine("data", "compiled") || defaults.Count != 80_000)
         {
             throw new InvalidOperationException("CLI defaults are inconsistent.");
         }

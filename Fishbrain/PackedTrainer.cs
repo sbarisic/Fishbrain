@@ -75,6 +75,18 @@ internal sealed class PackedTrainer
             var target = _tokenizer.OutputId(sample.Tokens[sample.FirstTargetIndex + index]);
             loss += CrossEntropy(_layout.OutputHead, _tokenizer.OutputSize, _config.EmbeddingSize,
                 final.Final, target, 1.0 / targetCount, final.DFinal);
+            if (sample.UnlikelihoodTargetIndex == sample.FirstTargetIndex + index &&
+                sample.UnlikelihoodToken is { } rejectedToken && sample.UnlikelihoodWeight > 0.0)
+            {
+                loss += Unlikelihood(
+                    _layout.OutputHead,
+                    _tokenizer.OutputSize,
+                    _config.EmbeddingSize,
+                    final.Final,
+                    _tokenizer.OutputId(rejectedToken),
+                    sample.UnlikelihoodWeight / targetCount,
+                    final.DFinal) * sample.UnlikelihoodWeight;
+            }
         }
         Backward(sequence);
         return loss / targetCount;
@@ -285,6 +297,44 @@ internal sealed class PackedTrainer
             AddScaled(_weights, matrixOffset + row * columns, gradient, dInput, 0, columns);
         }
         return loss;
+    }
+
+    private double Unlikelihood(
+        int matrixOffset,
+        int rows,
+        int columns,
+        double[] input,
+        int rejected,
+        double gradientScale,
+        double[] dInput)
+    {
+        var probabilities = new double[rows];
+        MatVec(matrixOffset, rows, columns, input, probabilities);
+        var maximum = probabilities.Max();
+        var sum = 0.0;
+        for (var row = 0; row < rows; row++)
+        {
+            probabilities[row] = Math.Exp(probabilities[row] - maximum);
+            sum += probabilities[row];
+        }
+
+        for (var row = 0; row < rows; row++)
+        {
+            probabilities[row] /= sum;
+        }
+
+        var rejectedProbability = Math.Min(1.0 - 1e-12, probabilities[rejected]);
+        for (var row = 0; row < rows; row++)
+        {
+            var derivative = row == rejected
+                ? rejectedProbability
+                : -rejectedProbability * probabilities[row] / (1.0 - rejectedProbability);
+            var gradient = derivative * gradientScale;
+            OuterRowAdd(_gradients, matrixOffset + row * columns, input, gradient);
+            AddScaled(_weights, matrixOffset + row * columns, gradient, dInput, 0, columns);
+        }
+
+        return -Math.Log(1.0 - rejectedProbability);
     }
 
     private void MatVec(int offset, int rows, int columns, double[] input, double[] output)

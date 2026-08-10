@@ -1,4 +1,4 @@
-# Training Data Expansion Plan
+# Fishbrain training datasets
 
 This plan adds game-grounded dialogue, general-purpose banter and small talk, task
 semantics, social goals, and mature language without treating a generic assistant
@@ -18,15 +18,28 @@ Use three kinds of data:
 3. Mature/toxic corpora for recognition and held-out robustness, not automatic
    NPC response imitation.
 
-The next corpus expansion should remain majority project-owned. External assistant
-data may contribute conversational language and preference contrasts, but it must not
-decide game behavior, persona truth, or tool authorization.
+The 80,000-row corpus remains majority project-owned. External assistant data
+contributes conversational language and source-native auxiliary labels, but it does
+not decide game behavior, persona truth, or tool authorization.
 
 ## General banter and small-talk curriculum
 
-The existing 60,000-row corpus is a bounded baseline. Its social examples do not prove
-the breadth or multi-turn quality required for general conversation. Add project-owned
-conversation families that cover:
+The current corpus adds 20,000 reviewed project-owned conversation rows to the earlier
+60,000-row operational base:
+
+- 8,000 introductions, facts, negations, and correction sequences;
+- 6,000 utterance callbacks, antecedents, and explanation sequences;
+- 4,000 general banter and follow-up conversations;
+- 2,000 hard negatives for speaker confusion, quotes, stale references, parroting,
+  unsupported facts, and authority leakage.
+
+The four bands contain at least 2,000, 1,500, 1,000, and 1,000 semantic families,
+respectively. Facts, references, and banter expand to at most four rows per family;
+hard negatives expand to at most two. The compiler rejects serial markers in
+model-visible discourse text and balances reference-pointer targets equally between a
+retained utterance and explicit `NONE`.
+
+These conversation families cover:
 
 - greetings, introductions, farewells, thanks, apologies, and conversational repair;
 - daily routines, food, weather-like observations, travel, work, hobbies, celebrations,
@@ -49,12 +62,11 @@ conversation shutdown. Preserve persona, relationship, mood, topic, and callback
 as explicit supervision. The desired reply may be free-form, but exact world facts and
 tool results must remain structured fields.
 
-Do not copy failed model text into positive targets. Store it as a rejected response with
-a reviewed failure label, then author one or more acceptable constraints or responses.
-Split by conversation and semantic family before expansion. Keep every `B` scenario in
+Failed model text is not copied into positive targets. It is stored as a rejected
+response beside acceptable constraints. Compilation splits by conversation and
+semantic family before expansion. Keep every `B` scenario in
 [GAME_DIALOGUE_SCENARIOS.md](GAME_DIALOGUE_SCENARIOS.md) and its paraphrases out of
-training. Retrain only after the conversational evaluator exists, so improvement is
-measured against held-out sessions instead of the training examples.
+training. `conversation-scenarios.jsonl` is part of the automatic contamination audit.
 
 ## Existing sources
 
@@ -128,10 +140,8 @@ recognized as both hostility and an identity attack.
 
 ## Historical 30,000-row planning mix
 
-This table predates the current 60,000-row corpus. It is retained as source-selection
-history, not as the target size or sufficient coverage for the new conversational
-requirement. Recalculate quotas after the banter/small-talk scenario matrix and evaluator
-are implemented.
+This table predates the current 80,000-row corpus. It is retained only as
+source-selection history and is not the active quota plan.
 
 | Component | Rows | Supervision |
 |---|---:|---|
@@ -211,14 +221,10 @@ from the manifest.
 - Record every generated row's generator revision, prompt hash, reviewer status,
   and parent seed. Generated volume without provenance is not a dataset.
 
-## Import order
+## Further import candidates
 
-1. Fix split leakage and add content-band/schema fields.
-2. Generate project-owned fantasy/science-fiction contrasts from the catalog.
-3. Add Taskmaster-1, SLURP text, and English MASSIVE with pinned licenses.
-4. Add Civil Comments as auxiliary labels with strict quotas.
-5. Verify LIGHT's exact dataset terms; import only after that review passes.
-6. Evaluate SOTOPIA/ProsocialDialog as schema or policy sources before copying
+1. Verify LIGHT's exact dataset terms; import only after that review passes.
+2. Evaluate SOTOPIA/ProsocialDialog as schema or policy sources before copying
    their content.
-7. Retrain only after the held-out scenario benchmark and raw/constrained metric
-   split are implemented.
+3. Preserve current source quotas until a new import passes the same provenance,
+   semantic-family split, benchmark-contamination, and release-gate checks.

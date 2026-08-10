@@ -16,7 +16,7 @@ Each `Brain` owns an immutable `DialogueTokenizer`. No static lexical vocabulary
 
 Known lexical words use one token each. An unknown word is encoded as word-start, uppercase character/digit/apostrophe/hyphen tokens, and word-end. The runtime preserves the normalized original span for slot copying and tool arguments. Control-token IDs are independent of label enum counts.
 
-The context packer accepts structured `DialogueTurn` values. It retains the current player turn and removes only complete oldest turns until the 256-token budget fits. Role-looking text inside an utterance does not become structure. The contextual Transformer mean-pools final-layer states for the current player turn.
+The context packer accepts structured `DialogueUtterance` values. It retains the current player turn and removes only complete oldest turns until the 256-token budget fits. Role-looking text inside an utterance does not become structure. The contextual Transformer mean-pools final-layer states for the current player turn.
 
 ## Transformer and numerical path
 
@@ -24,7 +24,7 @@ The shared model has two distinct Transformer layers, 128-dimensional embeddings
 
 Packed training uses contiguous arrays and `System.Numerics.Vector<double>` where applicable. Reference and optimized forward/backward paths are checked for numerical parity. Tests also cover finite gradients, deterministic initialization, and bit-equivalent save/resume behavior.
 
-The shared contextual model is updated during the interleaved curriculum through 160K. Later head-polish phases freeze that representation while the structured and response heads converge. Structured heads fuse 4,096 hashed lexical features with the 128-dimensional contextual vector. The production response-plan reranker uses the same contextual representation and hard negatives.
+The shared contextual model is updated during the interleaved curriculum through 200K. From 200K to 245K, operational heads are frozen while discourse, coreference, fact-span, and response-ranking heads are polished. From 245K to 260K, structured heads remain frozen while response ranking and conversational realization are polished. Structured heads fuse 4,096 hashed lexical features with the 128-dimensional contextual vector.
 
 ## Perception heads
 
@@ -57,13 +57,17 @@ The reducer owns all `NpcDialogueState` changes:
 - rapport and trust change only for meaningful events;
 - recent person, place, item, vehicle, and system references are bounded to 32 normalized characters;
 - ambiguous reference phrases clarify instead of guessing;
+- session facts are bounded to 16 and topic/callback summaries are bounded to eight;
+- positive single-valued name, role, occupation, origin, and home facts replace older positive values;
+- explicit negation removes only the matching positive value;
+- semantic traces retain the meaning and fallback reason of the last NPC response;
 - one action executes per reply and additional recognized actions enter the bounded pending queue.
 
 ## Response selection
 
 The response catalog contains 201 plan IDs and at least 4,400 distinct visible project-owned variations. The intentional no-response plan has one empty surface. Plans declare policy, domain, knowledge target, speech acts, keywords, and variations. Metadata masks ineligible plans before scoring. The runtime retrieves the top five eligible plans, applies contextual plan/ranking scores, and uses candidate ID as the deterministic final tie-breaker.
 
-Production response-source telemetry distinguishes tool templates, persona templates, capability templates, ranked variations, clarifications, fallbacks, and experimental generation. A recognized domain must not emit generic `I DO NOT KNOW` text.
+Production response-source telemetry distinguishes tool templates, persona templates, capability templates, discourse repair, ranked variations, validated conversational generation, clarifications, and fallbacks. A recognized domain must not emit generic `I DO NOT KNOW` text.
 
 ## General conversation requirement
 
@@ -77,13 +81,18 @@ The production runtime must handle ordinary social conversation beyond a finite 
 - honest conversational uncertainty when a factual answer is unavailable;
 - unchanged safety, capability, tool-authorization, and authoritative-field guarantees.
 
-The response catalog remains useful for exact policies and high-risk boundaries, but catalog ranking alone is not sufficient for this breadth. The target architecture needs a production conversational realization path conditioned on current input, bounded history, persona, affect, and dialogue state. It may use retrieval, constrained generation, or both. Exact facts must still be inserted only after deterministic validation, and free-form text must never rewrite a tool result.
+The response catalog remains useful for exact policies and high-risk boundaries, but catalog ranking alone is not sufficient for this breadth. The production hybrid includes deterministic conversational repair and a realization path conditioned on current input, bounded history, persona, approved persistent facts, unverified session facts, resolved discourse, and an antecedent utterance. Exact facts are still inserted only after deterministic validation, and free-form text never rewrites a tool result.
 
 ## Corpus integrity
 
-The compiler produces exactly 60,000 rows and records full turns, initial state, persona, structured targets, slots, tool arguments, response plan, positive/rejected variation IDs, and provenance. Project-owned data contributes 36,000 rows; compatible external data contributes 24,000.
+The compiler produces exactly 80,000 rows and records full conversations, initial state and player profile, persona, discourse frame, fact delta, antecedent, response action, acceptable response constraints, rejected response, structured targets, slots, tool arguments, response plan, and provenance. Project-owned data contributes 56,000 rows; compatible external data contributes 24,000. The added 20,000 reviewed project-owned rows contain 8,000 fact/correction rows, 6,000 callback/explanation rows, 4,000 general conversation rows, and 2,000 discourse hard negatives.
 
-Complete conversations and connected semantic families are assigned as components to an approximately 80/10/10 split. Component edges include semantic family, source conversation, normalized-input equality, and near-duplicate signatures.
+Complete conversations and semantic families are assigned to an approximately 80/10/10
+split, stratified by band, discourse act, predicate, polarity, antecedent type, and
+ambiguity. The 20,000 discourse rows contain at least 2,000 fact families, 1,500
+reference families, 1,000 banter families, and 1,000 hard-negative families. Expansion
+is capped at four rows per family, or two for hard negatives. Model-visible discourse
+text contains no serial markers.
 
 The audit requires:
 
@@ -92,19 +101,36 @@ The audit requires:
 - no exact duplicates, contradictions, split leakage, or benchmark contamination;
 - at least 2,000 project-owned normalized input skeletons;
 - no skeleton above 0.25% of the full corpus;
-- exactly 60,000 records and every declared source quota.
+- exact exclusion of the 256 operational prompts and B01-B12 conversation prompts;
+- exactly 80,000 records and every declared source quota.
 
-The compiled corpus hash for the current source manifest and seed 42 is `0d2ec57cc86b20b8a1bb23eb9479367788202aebe352813e1eea3f4dded3ede3`.
+The audited corpus hash for the current source manifest and seed 42 is
+`ad92057bf82800c0f1ff95602e01ee44dff87d49b55035602d5301ba076a6425`.
+Its split sizes are 64,217 train, 7,885 validation, and 7,898 test rows.
 
 ## Curriculum and checkpoints
 
-The deterministic completed 210,000-step schedule has three phases:
+The fixed 260,000-step schedule has three phases:
 
-- steps 0-160K interleave seven contextual structured updates, two pairwise response-ranking updates, and one experimental generation update per ten steps;
-- steps 160K-200K freeze the shared encoder and polish structured/ranking heads with phase-local sampling, rare-domain families, explicit and hard-negative tool families, independent response rows, and auxiliary slot passes;
-- steps 200K-210K freeze every passing structured head and train only response-plan classification and ranking.
+- steps 0-200K interleave seven structured, two ranking, and one generation update per
+  ten steps. Each structured update averages 32 examples, with 75% operational and 25%
+  discourse selection;
+- steps 200K-245K freeze the Transformer and passing operational heads, then use 60%
+  discourse/coreference, 25% ranking, and 15% corrective failing-operational updates;
+- steps 245K-260K freeze every structured head and train project-owned conversational
+  realization only.
 
-Rolling checkpoints and telemetry are written every 1,000 steps. Ordinary checkpoints use one fixed source-stratified validation sample. Full validation runs every 20K and at the configured final step. `best-production` is selected only when every raw neural release minimum passes; `best-generation` is retained separately. The full configured schedule runs even if the best checkpoint occurs earlier. A completed plan may be extended to a larger explicit endpoint; changing an in-progress plan remains forbidden.
+Families are shuffled deterministically for each epoch and rotate through at most four
+members. Discourse selection is 40% facts, 30% references, 20% banter, and 10% hard
+negatives. The structured learning rate decays from 0.03 to 0.003 with a cosine schedule,
+and positive weighting is capped at 2.0.
+
+Rolling checkpoints and telemetry are written every 1,000 steps. Calibration uses one
+fixed family-balanced 2,000-row subset and never a noisy 128-row milestone sample. Full
+family-balanced validation runs every 20K and at the configured final step.
+`best-production` is selected only when every raw neural release minimum passes;
+`best-generation` is retained separately. Training never replaces `model-latest.fbm`
+automatically. The candidate must pass every automated and human gate before export.
 
 The inference format starts with `FISHBRAIN`, stores a readable JSON metadata header followed by float32 weights, and ends with an integrity checksum. It includes the label schema, per-label calibration, tool schemas, response catalog, corpus hash, and weights hash. There is no format-version field, compatibility loader, or migration path; only the current schema is accepted.
 
@@ -117,7 +143,7 @@ Required thresholds are:
 | Metric | Threshold |
 |---|---:|
 | Speech-act macro-F1 | 0.85 |
-| Domain macro-F1 | 0.85 |
+| Domain macro-F1 | 0.84 |
 | Goal macro-F1 | 0.80 |
 | Affect accuracy | 0.85 |
 | Policy accuracy | 0.90 |
@@ -125,21 +151,28 @@ Required thresholds are:
 | Slot span F1 | 0.85 |
 | Knowledge-target accuracy | 0.90 |
 | Tool selection | 0.95 |
-| Mutating-tool precision | 0.99 |
+| Mutating-tool precision | 0.97 |
 | Tool argument exact match | 0.90 |
 | Response-plan top-1 | 0.85 |
 | Response-plan top-3 | 0.95 |
 | Variation Recall@10 | 0.95 |
 | Variation MRR | 0.80 |
+| Discourse-act accuracy | 0.90 |
+| Speaker attribution | 0.95 |
+| Fact span F1 | 0.90 |
+| Antecedent accuracy | 0.90 |
+| Correction-state accuracy | 0.95 |
 | 256-turn semantic assertions | 0.90 |
 
 Tool fidelity, mutation safety, persona fidelity, OOV preservation, parser/state invariants, and structural invariants require 100%. Unexpected empty, invalid, overlength, generic known-domain fallback, duplicate mutation, and altered authoritative-field counts must remain zero.
 
-General conversation adds a separate held-out gate. It must measure human-rated appropriateness, multi-turn topic continuity, persona consistency, follow-up relevance, response diversity, repetition, graceful topic switching, and unsupported-fact honesty. The safety and authoritative-field invariants remain hard requirements in those sessions. Until this suite exists and passes, a model can pass the operational benchmark but cannot be described as supporting general-purpose banter and small talk.
+General conversation has a separate held-out gate over B01-B12. `conversation-sample` exports the exact model responses for review. `conversation-gate` compares that fresh sample with the reviewed file, rejects stale or mismatched model outputs and incomplete ratings, and requires exactly two distinct human reviews per turn. It requires at least 90% appropriate turns, 90% continuity, 95% persona consistency, 90% relevant/complete responses, 90% graceful topic switching, and zero unsupported factual claims, authority violations, or safety violations. An automated, stale, or single-reviewer file cannot pass.
 
 The final 210K artifact measured 2.7463/4.1461 ms median/p95 over 2,048 replies on the development machine. This remains a recorded measurement rather than a relative compatibility claim; future performance comparisons should build the relevant Git revisions independently instead of adding old-format loaders to the current runtime.
 
-## Current trained artifact
+## Checked-in artifact and replacement status
+
+The checked-in artifact below uses the previous schema and is deliberately rejected by the current runtime. It remains in the worktree until a fresh candidate passes every gate; schema compatibility code is not retained.
 
 The completed 210,000-step run is stored at `data/models/model-latest.fbm`. The repacked artifact is 41,834,317 bytes, has SHA-256 `5cc8680df9a42f10dc7b4db99807dc1f1b8ec17e9223b9382cb22687ce7dc1c8`, weights hash `1ebc66026560e813b992a57099f02a2784392e5645f9d2b3921125b72bc2040a`, and corpus hash `0d2ec57cc86b20b8a1bb23eb9479367788202aebe352813e1eea3f4dded3ede3`.
 

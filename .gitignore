@@ -6,22 +6,18 @@
 # dotenv files
 .env
 
-# Local training experiments. Historical v4 archives remain tracked in data/models.
+# Local training experiments and generated validation artifacts.
 data/models/model.*.json
-data/models/model-v5-*.json
-data/models/model-v6-*.json
-data/models/model-v7-*.json
-data/models/model-v8-*.json
-data/models/model-v9-*.json
+data/models/model-*.json
 data/logs/
+.artifacts/
 
 # Downloaded and externally-derived teaching corpora stay local.
 data/raw/
 data/compiled/
 data/compiled-*/
 data/training/
-data/telemetry/training-v10.jsonl
-data/telemetry/training-v11.jsonl
+data/telemetry/training*.jsonl
 
 # User-specific files
 *.rsuser

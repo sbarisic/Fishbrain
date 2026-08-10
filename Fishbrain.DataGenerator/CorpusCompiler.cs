@@ -24,7 +24,7 @@ internal sealed record CorpusRow(
     string SourceChecksum,
     StructuredPerception StructuredPerception,
     string[] SupervisedHeads,
-    DialogueTurn[]? Turns = null,
+    DialogueUtterance[]? Turns = null,
     NpcDialogueState? InitialDialogueState = null,
     NpcPersona? Persona = null,
     string? ResponsePlanId = null,
@@ -33,7 +33,12 @@ internal sealed record CorpusRow(
     string? ToolTarget = null,
     Dictionary<string, string>? ToolArguments = null,
     string? SourceUrl = null,
-    string? Attribution = null);
+    string? Attribution = null,
+    DialogueFact[]? FactDelta = null,
+    PlayerConversationProfile? InitialPlayerProfile = null,
+    DiscourseResponseAction? DiscourseResponseAction = null,
+    string[]? AcceptableResponseConstraints = null,
+    string? RejectedResponse = null);
 
 internal static partial class CorpusCompiler
 {
@@ -52,6 +57,10 @@ internal static partial class CorpusCompiler
         ["PROJECT_SCIFI"] = 8_000,
         ["PROJECT_PERSONA_MEMORY"] = 4_000,
         ["PROJECT_TOOL_WORLD"] = 4_000,
+        ["PROJECT_DISCOURSE_FACTS"] = 8_000,
+        ["PROJECT_DISCOURSE_REFERENCES"] = 6_000,
+        ["PROJECT_CONVERSATION"] = 4_000,
+        ["PROJECT_DISCOURSE_NEGATIVES"] = 2_000,
         ["TASKMASTER1"] = 2_000,
         ["TASKMASTER2"] = 1_000,
         ["TASKMASTER3"] = 1_000,
@@ -77,17 +86,21 @@ internal static partial class CorpusCompiler
 
     public static void Compile(CliOptions options)
     {
-        if (options.Count != 60_000) throw new ArgumentException("The corpus must contain exactly 60,000 rows.");
+        if (options.Count != 80_000) throw new ArgumentException("The corpus must contain exactly 80,000 rows.");
         var manifest = ReadManifest(options.ManifestPath);
         VerifyManifestAndRaw(manifest, options.RawPath);
-        var context = new CompilationContext(LoadHeldOutInputs(options.OutputPath));
+        var context = new CompilationContext(LoadHeldOutInputs(options.ManifestPath));
         var definitions = manifest.Sources.ToDictionary(source => source.Name, StringComparer.Ordinal);
-        var rows = new List<CorpusRow>(60_000);
+        var rows = new List<CorpusRow>(80_000);
         rows.AddRange(ProjectRows("PROJECT_CONTRAST", 12_000, "CONTRAST", options.Seed));
         rows.AddRange(ProjectRows("PROJECT_FANTASY", 8_000, "FANTASY", options.Seed + 11));
         rows.AddRange(ProjectRows("PROJECT_SCIFI", 8_000, "SCIFI", options.Seed + 23));
         rows.AddRange(ProjectRows("PROJECT_PERSONA_MEMORY", 4_000, "PERSONA", options.Seed + 37));
         rows.AddRange(ProjectRows("PROJECT_TOOL_WORLD", 4_000, "GAME", options.Seed + 43));
+        rows.AddRange(DiscourseRows("PROJECT_DISCOURSE_FACTS", 8_000, DiscourseCorpusBand.Facts, options.Seed + 47));
+        rows.AddRange(DiscourseRows("PROJECT_DISCOURSE_REFERENCES", 6_000, DiscourseCorpusBand.References, options.Seed + 53));
+        rows.AddRange(DiscourseRows("PROJECT_CONVERSATION", 4_000, DiscourseCorpusBand.Conversation, options.Seed + 59));
+        rows.AddRange(DiscourseRows("PROJECT_DISCOURSE_NEGATIVES", 2_000, DiscourseCorpusBand.HardNegatives, options.Seed + 61));
         rows.AddRange(LoadTaskmaster(Path.Combine(options.RawPath, "taskmaster1-self-dialogs.json"), 2_000, definitions["TASKMASTER1"], context));
         rows.AddRange(LoadTaskmaster(Path.Combine(options.RawPath, "taskmaster2-food.json"), 1_000, definitions["TASKMASTER2"], context));
         rows.AddRange(LoadTaskmaster(Path.Combine(options.RawPath, "taskmaster3-00.json"), 1_000, definitions["TASKMASTER3"], context));
@@ -103,7 +116,7 @@ internal static partial class CorpusCompiler
         rows.AddRange(LoadGoEmotions(options.RawPath, 2_000, definitions["GOEMOTIONS"], context));
         rows.AddRange(LoadCivil(Path.Combine(options.RawPath, "civil-comments-selected.jsonl"), 3_000, definitions["CIVIL_COMMENTS"], context));
         rows.AddRange(LoadHhRlhf(Path.Combine(options.RawPath, "hh-helpful-base-train.jsonl.gz"), 1_000, definitions["HH_RLHF"], context));
-        if (rows.Count != 60_000) throw new InvalidDataException($"Compilation produced {rows.Count} rows.");
+        if (rows.Count != 80_000) throw new InvalidDataException($"Compilation produced {rows.Count} rows.");
 
         EnsureUniqueAndConsistent(rows);
         AuditProjectDiversity(rows);
@@ -112,7 +125,7 @@ internal static partial class CorpusCompiler
         foreach (var split in new[] { "train", "validation", "test" })
             AtomicJsonl(Path.Combine(options.OutputPath, split + ".jsonl"), rows.Where(row => row.Split == split));
         AtomicJsonl(Path.Combine(options.OutputPath, "provenance.jsonl"), BuildProvenance(manifest));
-        Console.WriteLine("COMPILE OK 60000 RECORDS");
+        Console.WriteLine("COMPILE OK 80000 RECORDS");
         Report(rows);
     }
 
@@ -120,7 +133,7 @@ internal static partial class CorpusCompiler
     {
         var manifest = ReadManifest(options.ManifestPath);
         VerifyManifestAndRaw(manifest, options.RawPath);
-        var rows = new List<CorpusRow>(60_000);
+        var rows = new List<CorpusRow>(80_000);
         foreach (var split in new[] { "train", "validation", "test" })
         {
             var path = Path.Combine(options.InputPath, split + ".jsonl");
@@ -133,16 +146,16 @@ internal static partial class CorpusCompiler
                 rows.Add(row);
             }
         }
-        if (rows.Count != 60_000) throw new InvalidDataException($"Corpus contains {rows.Count}, not 60,000 rows.");
+        if (rows.Count != 80_000) throw new InvalidDataException($"Corpus contains {rows.Count}, not 80,000 rows.");
         foreach (var quota in RequiredSources)
             if (rows.Count(row => row.Source == quota.Key) != quota.Value)
                 throw new InvalidDataException($"Source {quota.Key} does not contain exactly {quota.Value} rows.");
         EnsureUniqueAndConsistent(rows);
         AuditProjectDiversity(rows);
         AuditLeakage(rows);
-        AuditBenchmark(rows, options.InputPath);
+        AuditBenchmark(rows, options.ManifestPath);
         AuditProvenance(manifest, options.InputPath);
-        Console.WriteLine("AUDIT OK 60000 RECORDS");
+        Console.WriteLine("AUDIT OK 80000 RECORDS");
         Console.WriteLine($"CORPUS_SHA256 {CorpusHash(options.InputPath)}");
         Report(rows);
     }

@@ -41,6 +41,17 @@ Recommended stable facets:
 | `urgency` | `LOW`, `NORMAL`, `URGENT`, `IMMEDIATE` |
 | `response_policy` | `ANSWER`, `CLARIFY`, `REFUSE`, `CALL_TOOL`, `NO_RESPONSE`, `ACT`, `NEGOTIATE` |
 
+Conversation rows also carry a separate `DiscourseFrame`. Its act is `INFORM`,
+`CORRECT`, `REJECT_ASSUMPTION`, `ASK_EXPLANATION`, `REFER_BACK`, or `NONE`. The
+frame identifies the player, NPC, or no participant as subject and target; one of
+`NAME`, `ROLE`, `OCCUPATION`, `ORIGIN`, `HOME`, `FAMILY`, `ACTIVITY`, `PREFERENCE`,
+`DISLIKE`, `OPINION`, or `EXPERIENCE` as the fact predicate; polarity and fact-value
+span; and a nullable antecedent utterance sequence.
+
+These fields describe conversation, not game authority. A player claim about gold,
+ownership, permission, quests, or inventory can be discussed but cannot select a tool
+or update an authoritative field.
+
 Keep the current operational head small. It can decide a broad runtime route
 such as `SOCIAL`, `INFORMATION`, `TRANSACTION`, `DIRECTIVE`, `THREAT`, `SYSTEM`,
 or `UNKNOWN`. Smaller facet heads and caller-owned game rules can then select

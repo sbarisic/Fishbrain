@@ -5,12 +5,12 @@ Fishbrain is a small, dependency-free .NET dialogue model and runtime for game N
 The production path does not freely generate facts. It routes each reply through:
 
 1. an authoritative game-tool template;
-2. an authoritative persona or capability template;
-3. a ranked project-owned response variation;
-4. a typed clarification;
-5. a domain-specific deterministic fallback.
+2. correction, callback, explanation, or misunderstanding repair;
+3. an authoritative persona or capability template;
+4. a ranked project-owned response or validated conversational realization;
+5. a typed clarification or domain-specific deterministic fallback.
 
-Experimental word generation is available through `ResponseMode.GeneratedExperimental`, but it is not the default and never renders authoritative tool results.
+Conversational generation is part of `ResponseMode.Production`. `DeterministicOnly` disables it. Generated text never renders authoritative tool results and is rejected when it claims a mutation, an authoritative quantity, or an unsupported persona fact.
 
 ## Conversational scope
 
@@ -18,7 +18,7 @@ Fishbrain must support general-purpose banter and small talk, not only commands 
 
 “General-purpose” describes the breadth of social conversation. It does not give the model authority to invent world state, claim unavailable capabilities, or execute unregistered actions. Exact game facts and mutations remain behind persona data and typed game tools. Unknown factual questions should receive an honest, conversational limitation instead of a fabricated answer.
 
-The checked-in model is a bounded baseline and has not yet passed a dedicated general-conversation gate. The corpus, response architecture, held-out scenarios, and evaluation process must be expanded before this requirement can be claimed as implemented.
+The current runtime and corpus implement bounded fact memory, speaker-relative discourse, utterance callbacks, repair, and the production conversational hybrid. The checked-in artifact still uses the previous schema and is rejected until a fresh 260K candidate passes every automated gate and the two-reviewer conversation gate.
 
 ## Requirements
 
@@ -63,15 +63,17 @@ var persona = new NpcPersona(
 var request = new ReplyRequest(
     "conversation-17",
     "turn-4",
-    [new DialogueTurn(DialogueRole.Player, "How much money do I have now?")],
+    [new DialogueUtterance(7, DialogueRole.Player, "How much money do I have now?")],
     NpcDialogueState.Initial,
     persona,
+    PlayerConversationProfile.Empty,
+    8,
     42);
 
 ReplyResult result = brain.Reply(request, DemoGameTools.CreateMerchant());
 ```
 
-The final structured turn must be a player turn. Literal words such as `PLAYER` and `NPC` inside an utterance have no structural meaning. The bounded context packer retains the current player turn and removes only complete oldest turns.
+The final structured utterance must be a player message. Sequence numbers are conversation-local, unique, and strictly increasing. `ResponseSequence` is the caller-reserved sequence for the NPC response and must be greater than the current player sequence. Literal words such as `PLAYER` and `NPC` inside an utterance have no structural meaning. The bounded context packer retains the current player utterance and removes only complete oldest utterances.
 
 `ReplyResult` contains:
 
@@ -86,7 +88,9 @@ Only the current structured runtime and checkpoint schemas are supported. Fishbr
 
 `NpcPersona` owns authored identity facts: name, role, origin, home, family, occupation, faction, and traits. Capabilities are derived only from registered tools.
 
-`NpcDialogueState` owns bounded conversational memory: rapport, trust, familiarity, hostility, mood, threat hysteresis, active domains/goals, pending clarification/action, recent references, and the last tool outcome. The deterministic reducer changes social values only after meaningful events and lowers hostility after three calm turns or accepted repair.
+`NpcDialogueState` owns bounded conversational memory: rapport, trust, familiarity, hostility, mood, threat hysteresis, active domains/goals, pending clarification/action, recent references, at most 16 unverified session facts, eight topic summaries, and the last response semantic trace. `NpcDialogueState.Initial` clears session facts.
+
+`PlayerConversationProfile` contains only facts that the caller explicitly approves for persistence. It is immutable to Fishbrain. The host can construct a new profile from selected session facts; Fishbrain never promotes claims automatically.
 
 World truth does not belong in dialogue state. Inventory, balance, stock, prices, locations, quests, and world facts belong to game tools.
 
@@ -126,13 +130,13 @@ The shared contextual model uses:
 | Response limit | 64 tokens |
 | Training steps | 210,000 |
 
-The final layer is mean-pooled over the current player turn and fused with 4,096 hashed lexical features, state, persona, and tool-availability features. Independent heads predict speech acts, domains, goals, affect, stance, response policy, content flags, BIO slots, knowledge target, tool schema, and one of 201 response plans. The project-owned catalog contains at least 4,400 distinct visible surface variations; the intentional no-response plan has one empty surface.
+The final layer is mean-pooled over the current player utterance and fused with 4,096 hashed lexical features. Independent heads predict speech acts, domains, goals, affect, stance, response policy, content flags, BIO/fact spans, knowledge target, discourse act, subject, target, fact predicate, polarity, dynamic utterance antecedent, tool schema, and one of 201 response plans. The project-owned catalog contains at least 4,400 distinct visible surface variations; the intentional no-response plan has one empty surface.
 
 The checkpoint header includes the model and label schemas, per-label calibration, tool schemas, response plans, corpus hash, and integrity hashes. Full optimizer checkpoints stay under ignored `data/training/`; the compact inference artifact is `data/models/model-latest.fbm`.
 
 ## Corpus
 
-The compiler produces exactly 60,000 contextual rows:
+The compiler produces exactly 80,000 contextual rows:
 
 | Group | Rows |
 |---|---:|
@@ -141,6 +145,10 @@ The compiler produces exactly 60,000 contextual rows:
 | Project science-fiction episodes | 8,000 |
 | Project persona/reference/memory episodes | 4,000 |
 | Project tool/transaction/world-fact episodes | 4,000 |
+| Project introductions, facts, negation, and corrections | 8,000 |
+| Project callbacks, utterance references, and explanations | 6,000 |
+| Project general banter and follow-up conversations | 4,000 |
+| Project discourse and authority hard negatives | 2,000 |
 | Taskmaster 1/2/3 | 4,000 |
 | MultiWOZ 2.4 | 3,000 |
 | ABCD | 3,000 |
@@ -155,7 +163,7 @@ Only project-owned, MIT, Apache-2.0, CC0, and CC BY artifacts are accepted. Ever
 
 Profanity and fictional violence are allowed. Identity attacks, self-harm, sexual violence, and related sensitive bands supervise recognition and policy rather than response imitation. HateCheck is evaluation-only.
 
-The audit rejects missing or changed provenance, exact duplicates, normalized-input leakage, semantic-family leakage, conversation leakage, near-duplicate leakage, benchmark contamination, contradictory labels, and overrepresented project skeletons. The tracked benchmark contains 256 held-out turns.
+The audit rejects missing or changed provenance, exact duplicates, normalized-input leakage, semantic-family leakage, conversation leakage, near-duplicate leakage, benchmark contamination, contradictory labels, and overrepresented project skeletons. It excludes both the 256 operational turns and the B01-B12 conversation scenarios.
 
 ## Compile and audit data
 
@@ -164,20 +172,50 @@ Downloaded raw artifacts remain ignored under `data/raw`. After placing the pinn
 ```powershell
 ./scripts/prepare-civil-comments.ps1
 ./scripts/build-benchmark.ps1
-dotnet run -c Release --project Fishbrain.DataGenerator -- compile --count 60000 --seed 42 --raw data/raw --output data/compiled --manifest data/sources.json
+dotnet run -c Release --project Fishbrain.DataGenerator -- compile --count 80000 --seed 42 --raw data/raw --output data/compiled --manifest data/sources.json
 dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled --raw data/raw --manifest data/sources.json
 ```
 
 ## Train, evaluate, and inspect
 
 ```powershell
-dotnet run -c Release --project Fishbrain -- teach data/compiled data/training/model-training.json --planned 210000 --until 210000
+dotnet run -c Release --project Fishbrain -- teach data/compiled data/training/model-training.fbm --planned 260000 --until 260000
 dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-latest.fbm --gate release
 dotnet run -c Release --project Fishbrain -- inspect data/models/model-latest.fbm
 dotnet run -c Release --project Fishbrain -- latency data/models/model-latest.fbm 2048
+dotnet run -c Release --project Fishbrain -- conversation-sample data/models/model-latest.fbm data/benchmarks/conversation-scenarios.jsonl data/reviews/conversation-review.jsonl
+dotnet run -c Release --project Fishbrain -- conversation-gate data/reviews/conversation-sample.jsonl data/reviews/conversation-reviewed.jsonl
 ```
 
-The completed curriculum interleaves contextual structured, ranking, and experimental-generation updates through 160K. From 160K through 200K it freezes the shared encoder and polishes the structured and ranking heads with deterministic rare-domain, tool, response, and slot sampling. The final 10K freezes every passing head and trains only response-plan classification and ranking. It checkpoints every 1,000 steps and performs full validation every 20K and at the configured final step. Resume restores optimizer, scheduler, sampler, vocabulary, and RNG state exactly. A completed curriculum can be extended explicitly with a larger `--planned` and `--until`; an in-progress plan cannot be changed.
+After two humans complete the exported review rows, the fail-closed release sequence is:
+
+```powershell
+./scripts/validate-discourse-release.ps1 `
+    -TrainingCheckpoint data/training/model-training.fbm `
+    -ReviewedConversationFile data/reviews/conversation-reviewed.jsonl `
+    -CorpusDirectory data/compiled
+```
+
+The script regenerates the candidate sample and rejects reviews from a different model
+before it runs the human thresholds. It does not replace `model-latest.fbm`.
+
+Through 200K the curriculum uses 70% structured, 20% ranking, and 10% generation
+updates. Each structured update averages 32 examples: 75% operational families and 25%
+discourse families. Discourse sampling is 40% facts, 30% references, 20% banter, and
+10% hard negatives. Families shuffle deterministically per epoch and rotate through
+their members.
+
+From 200K through 245K the Transformer and passing operational heads are frozen. This
+phase uses 60% discourse/coreference, 25% ranking, and 15% corrective updates for
+operational heads that still fail. The final 15K freezes every structured head and
+trains project-owned conversational realization only. Structured learning uses a
+cosine-decayed rate from 0.03 to 0.003 and caps positive weighting at 2.0.
+
+Training checkpoints every 1,000 steps. Calibration always uses the same
+family-balanced 2,000-row subset; full family-balanced validation runs every 20K and at
+the configured final step. Resume restores optimizer, sampler, frozen-head state,
+vocabulary, and RNG state exactly. Training produces a candidate but never replaces
+`model-latest.fbm`; export remains an explicit post-gate action.
 
 Fantasy and science-fiction smoke sessions can be run non-interactively from the repository root:
 
@@ -195,9 +233,11 @@ dotnet run -c Release --project Fishbrain.Tests
 dotnet run -c Release --project Fishbrain.DataGenerator.Tests
 ```
 
-The 32 runtime tests cover two-layer optimized/reference numerical parity, bit-equivalent resume, vocabulary isolation, concurrent deterministic replies, bounded histories, role structure, OOV slot copying, lexical-boundary reference isolation, checked-in-model dialogue smoke cases, persona fidelity, reference resolution, hostility hysteresis, schema validation, atomic/idempotent mutations, tool exceptions, corrupt checkpoints, and the reported transcript regressions.
+The runtime tests cover two-layer optimized/reference numerical parity, bit-equivalent resume, vocabulary isolation, concurrent deterministic replies, bounded histories, role structure, all conversational fact predicates, speaker-relative corrections, profile immutability, explicit and ambiguous utterance callbacks, reported speech, authority isolation, OOV slot copying, persona fidelity, hostility hysteresis, schema validation, atomic/idempotent mutations, tool exceptions, corrupt checkpoints, and reported transcript regressions.
 
-See [INFO.md](INFO.md) for implementation boundaries and release gates.
+See [INFO.md](INFO.md) for implementation boundaries and release gates, and
+[AI_MODEL.md](AI_MODEL.md) for the complete input, layer, head, memory, and training
+structure.
 
 ## Current model status
 

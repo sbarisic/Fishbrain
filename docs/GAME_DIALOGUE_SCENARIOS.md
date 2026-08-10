@@ -1,14 +1,15 @@
 # Fishbrain Dialogue Scenarios
 
 This document contains 64 simulated fantasy/science-fiction scenarios and 128 player
-turns in the current operational benchmark, plus 12 proposed general-conversation
-scenarios and 24 additional turns. They are authored benchmark seeds, not training
+turns in the current operational benchmark, plus 12 general-conversation scenarios.
+They are authored benchmark seeds, not training
 rows. Generate training paraphrases from separate seeds so these exact utterances stay
 held out.
 
-The existing benchmark builder consumes the `F` and `S` scenarios. The `B` scenarios
-define the new banter and small-talk acceptance surface and are not evidence of current
-model support until they are represented in a separate held-out evaluator.
+The operational benchmark builder consumes the `F` and `S` scenarios. The exact `B`
+turns are tracked in `data/benchmarks/conversation-scenarios.jsonl`, excluded from
+corpus compilation by exact and near-match checks, exported with `conversation-sample`,
+and accepted only through two complete human reviews per turn.
 
 All dialogue is uppercase to match normalization. Violence and profanity are
 intentional parts of the mature-game test surface. Identity attacks should be

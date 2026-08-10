@@ -23,7 +23,7 @@ internal static class Program
             {
                 case "train":
                     Count(args, 3, 4);
-                    Brain.TrainNew(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 80_000);
+                    Brain.TrainNew(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 260_000);
                     break;
                 case "resume":
                     Count(args, 3, 4);
@@ -65,6 +65,13 @@ internal static class Program
                     Count(args, 2, 2);
                     Console.WriteLine(Brain.InspectInferenceCheckpoint(args[1]));
                     break;
+                case "conversation-sample":
+                    Count(args, 4, 4);
+                    ConversationEvaluation.Export(args[1], args[2], args[3]);
+                    break;
+                case "conversation-gate":
+                    Count(args, 3, 3);
+                    return ConversationEvaluation.Gate(args[1], args[2]);
                 case "selftest":
                     Count(args, 1, 1);
                     SelfTests.Run();
@@ -86,19 +93,21 @@ internal static class Program
     {
         var brain = Brain.Load(checkpoint);
         var state = NpcDialogueState.Initial;
-        var history = new List<DialogueTurn>();
+        var history = new List<DialogueUtterance>();
         var tools = DemoGameTools.CreateMerchant();
         var conversationId = "CLI-" + Guid.NewGuid().ToString("N");
         var turn = 0;
+        long sequence = 0;
         Console.WriteLine("ENTER DIALOGUE OR AN EMPTY LINE TO QUIT");
         while (true)
         {
             Console.Write("> ");
             var input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input)) return;
-            history.Add(new DialogueTurn(DialogueRole.Player, input));
+            history.Add(new DialogueUtterance(++sequence, DialogueRole.Player, input));
             var result = brain.Reply(new ReplyRequest(conversationId,
-                (++turn).ToString(CultureInfo.InvariantCulture), history, state, NpcPersona.Default, turn), tools);
+                (++turn).ToString(CultureInfo.InvariantCulture), history, state, NpcPersona.Default,
+                PlayerConversationProfile.Empty, sequence + 1, turn), tools);
             state = result.State;
             Console.WriteLine(result.Text.Length == 0 ? "[NO RESPONSE]" : result.Text);
             Console.WriteLine(
@@ -107,7 +116,8 @@ internal static class Program
                 $"DOMAINS={string.Join(',', result.Perception.Domains.Select(Upper))} " +
                 $"AFFECT={Upper(result.Perception.Affect)} POLICY={Upper(result.Perception.Policy)} " +
                 $"SOURCE={Upper(result.Diagnostics.ResponseSource)} TONE={Upper(result.Tone)}");
-            if (result.Text.Length > 0) history.Add(new DialogueTurn(DialogueRole.Npc, result.Text));
+            if (result.Text.Length > 0)
+                history.Add(new DialogueUtterance(++sequence, DialogueRole.Npc, result.Text));
             while (history.Count > 64) history.RemoveRange(0, Math.Min(2, history.Count));
         }
     }
@@ -119,8 +129,8 @@ internal static class Program
         var inputs = new[] { "HELLO", "WHERE IS THE CASTLE?", "WHAT CAN YOU DO?", "I NEED A SWORD",
             "SHOW ME YOUR WARES", "HOW MUCH GOLD DO I HAVE?", "THE ROAD IS QUIET", "WHERE IS THE INN?" };
         ReplyResult Run(int index) => brain.Reply(new ReplyRequest("LATENCY", index.ToString(CultureInfo.InvariantCulture),
-            [new DialogueTurn(DialogueRole.Player, inputs[index % inputs.Length])], NpcDialogueState.Initial,
-            NpcPersona.Default, index), tools);
+            [new DialogueUtterance(0, DialogueRole.Player, inputs[index % inputs.Length])], NpcDialogueState.Initial,
+            NpcPersona.Default, PlayerConversationProfile.Empty, 1, index), tools);
         for (var index = 0; index < 32; index++) _ = Run(index);
         var samples = new double[iterations];
         for (var index = 0; index < iterations; index++)
@@ -152,12 +162,14 @@ internal static class Program
         Console.WriteLine("  resume DATA.jsonl CHECKPOINT.json [TOTAL_STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
-        Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|stage|release]");
+        Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|pilot|stage|release]");
         Console.WriteLine("  diagnose-teaching CORPUS_DIRECTORY TRAINING_CHECKPOINT.json [validation|test]");
         Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-latest.fbm)");
         Console.WriteLine("  latency [CHECKPOINT] [ITERATIONS]");
         Console.WriteLine("  export TRAINING_CHECKPOINT.json OUTPUT.fbm [CORPUS_DIRECTORY]");
         Console.WriteLine("  inspect MODEL.fbm");
+        Console.WriteLine("  conversation-sample MODEL.fbm SCENARIOS.jsonl REVIEW.jsonl");
+        Console.WriteLine("  conversation-gate SAMPLE.jsonl REVIEWED.jsonl");
         Console.WriteLine("  selftest");
     }
 

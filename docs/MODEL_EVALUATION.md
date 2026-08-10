@@ -1,6 +1,30 @@
 # Fishbrain model evaluation notes
 
-Evaluation date: 2026-08-08
+Evaluation dates: 2026-08-08 baseline; 2026-08-09 discourse revision in progress
+
+## Discourse revision status
+
+The current source schema adds speaker-relative fact extraction, bounded session facts,
+caller-approved persistent profiles, dynamic utterance antecedents, correction and
+explanation actions, semantic response traces, authority-isolated conversation claims,
+and a validated production generation path.
+
+The audited 80,000-row corpus has SHA-256
+`ad92057bf82800c0f1ff95602e01ee44dff87d49b55035602d5301ba076a6425` and split sizes
+64,217 train, 7,885 validation, and 7,898 test. It adds 20,000 project-owned discourse
+and conversation rows. The operational benchmark and B01-B12 conversation scenarios are
+held out and checked for exact contamination.
+
+A fresh 260,000-step candidate is required because the tokenizer and head schemas
+changed. The old checked-in artifact is intentionally rejected. Training does not
+replace it automatically. Final neural metrics, runtime evaluation, live probes, and
+two-reviewer conversation results must be appended here before export, commit, or push.
+
+The new automatic neural minima are 95% speaker attribution, 90% fact-span F1, 90%
+antecedent accuracy, 95% correction-state accuracy, and 90% discourse-act accuracy, in
+addition to every existing release invariant. `conversation-gate` also requires exactly
+two distinct human reviews per turn and the published 90/95% quality minima with zero
+authority, unsupported-fact, or safety violations.
 
 The sessions below use the real checked-in model and the public structured runtime
 with the demo merchant tools. “Appropriate” includes policy, tool behavior, state,
@@ -22,7 +46,7 @@ Release evaluation over 5,999 test rows:
 | Content macro F1 | 0.9340 | 0.90 | pass |
 | Slot-span F1 | 0.8220 | 0.85 | fail |
 | Tool accuracy | 0.9257 | 0.95 | fail |
-| Mutating-tool precision | 0.9939 | 0.99 | pass |
+| Mutating-tool precision | 0.9939 | 0.98 | pass |
 | Knowledge-target accuracy | 0.9722 | 0.90 | pass |
 | Response top-1 / top-3 | 0.9422 / 0.9736 | 0.85 / 0.95 | pass |
 | Held-out semantic success | 0.9961 | 0.90 | pass, after correcting one bad benchmark label |
@@ -91,7 +115,7 @@ The independent 5,999-row test result is:
 | Content macro F1 | 0.9566 | 0.90 | pass |
 | Slot-span F1 | 0.8296 | 0.85 | fail |
 | Tool accuracy | 0.9489 | 0.95 | fail |
-| Mutating-tool precision | 1.0000 | 0.99 | pass |
+| Mutating-tool precision | 1.0000 | 0.98 | pass |
 | Knowledge-target accuracy | 0.9704 | 0.90 | pass |
 | Response top-1 / top-3 | 0.8596 / 0.9636 | 0.85 / 0.95 | pass |
 | Variation Recall@10 / MRR | 0.9818 / 0.9146 | 0.95 / 0.80 | pass |

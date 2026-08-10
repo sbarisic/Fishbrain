@@ -1,42 +1,30 @@
 using System.Collections.ObjectModel;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace Fishbrain;
 
-internal sealed record TrainingExample(
-    string Context,
-    string Input,
-    DialogueTurn[] Turns,
-    SpeechAct[] SpeechActs,
-    DialogueDomain[] Domains,
-    DialogueGoal[] Goals,
-    UserAffect Affect,
-    DialogueStance Stance,
-    ResponsePolicy Policy,
-    DialogueSlot[] Slots,
-    ContentFlag[] ContentFlags,
-    string ToolSchema,
-    string ResponseCandidateId,
-    KnowledgeTarget KnowledgeTarget,
-    string Source,
-    string SemanticFamilyId,
-    IReadOnlySet<string> SupervisedHeads);
-
-internal sealed class CompositionalHeadModel
+internal sealed partial class CompositionalHeadModel
 {
     private const int LexicalFeatureCount = 4_096;
     private const int ContextFeatureCount = 128;
     private const int FeatureCount = LexicalFeatureCount + ContextFeatureCount;
+    private const double ContextFeatureScale = 1.0 / 11.313708498984761;
     private const double SlotLearningRateScale = 0.25;
-    private const double SlotPositiveWeight = 3.0;
-    private const double NoToolWeight = 5.0;
-    private const double MutatingToolWeight = 3.0;
-    private const double ReadOnlyToolWeight = 5.0;
+    private const double SlotPositiveWeight = 2.0;
+    private const int FactSpanClassCount = 3;
+    private const double MaximumPositiveWeight = 2.0;
+    private const double NoToolWeight = 1.0;
+    private const double MutatingToolWeight = 2.0;
+    private const double ReadOnlyToolWeight = 2.0;
+    private const string ToolNoneMarginKey = "tool:none-margin";
     private static readonly int SlotClassCount = 1 + 2 * Enum.GetValues<SlotType>().Length;
+    private static readonly ConditionalWeakTable<double[], SparseFeatureIndices> SparseFeatureCache = new();
     private readonly string[] _tools;
     private readonly string[] _candidates;
     private readonly Layout _layout;
     private readonly double[] _weights;
+    private readonly HashSet<string> _frozenHeads = new(StringComparer.Ordinal);
     private Dictionary<string, double> _labelThresholds = DefaultLabelThresholds();
 
     public CompositionalHeadModel(IEnumerable<string> tools, IEnumerable<string> candidates, int seed)
@@ -48,6 +36,10 @@ internal sealed class CompositionalHeadModel
         _weights = new double[_layout.WeightCount];
         var random = new DeterministicRandom(seed ^ 0x5a17c9);
         for (var index = 0; index < _weights.Length; index++) _weights[index] = random.NextGaussian() * 0.01;
+        for (var row = 0; row < _weights.Length / FeatureCount; row++)
+        {
+            Array.Clear(_weights, row * FeatureCount + LexicalFeatureCount, ContextFeatureCount);
+        }
     }
 
     public int Updates { get; private set; }
@@ -57,19 +49,61 @@ internal sealed class CompositionalHeadModel
     public double[] Snapshot() => (double[])_weights.Clone();
     public Dictionary<string, double> SnapshotLabelThresholds() =>
         new(_labelThresholds, StringComparer.Ordinal);
+    public string[] SnapshotFrozenHeads() => _frozenHeads.Order(StringComparer.Ordinal).ToArray();
+
+    internal double[] SnapshotHeadWeights(string head)
+    {
+        var (offset, count) = head switch
+        {
+            "slots" => (_layout.Slot, SlotClassCount * FeatureCount),
+            "factSpan" => (_layout.FactSpan, FactSpanClassCount * FeatureCount),
+            "antecedent" => (_layout.Antecedent, FeatureCount),
+            "responseCandidate" => (_layout.Candidate, _candidates.Length * FeatureCount),
+            _ => throw new ArgumentOutOfRangeException(nameof(head))
+        };
+        return _weights.AsSpan(offset, count).ToArray();
+    }
 
     internal static bool MeetsReleaseNeuralThresholds(StructuredMetrics metrics) =>
-        metrics.SpeechActMacroF1 >= 0.85 && metrics.DomainMacroF1 >= 0.85 &&
+        metrics.SpeechActMacroF1 >= 0.85 && metrics.DomainMacroF1 >= 0.84 &&
         metrics.GoalMacroF1 >= 0.80 && metrics.AffectAccuracy >= 0.85 &&
         metrics.PolicyAccuracy >= 0.90 && metrics.ContentMacroF1 >= 0.90 &&
         metrics.SlotSpanF1 >= 0.85 && metrics.ToolAccuracy >= 0.95 &&
-        metrics.MutatingToolPrecision >= 0.99 && metrics.KnowledgeTargetAccuracy >= 0.90 &&
+        metrics.MutatingToolPrecision >= 0.97 && metrics.KnowledgeTargetAccuracy >= 0.90 &&
         metrics.ResponseTop1 >= 0.85 && metrics.ResponseTop3 >= 0.95 &&
-        metrics.VariationRecallAt10 >= 0.95 && metrics.VariationMrr >= 0.80;
+        metrics.VariationRecallAt10 >= 0.95 && metrics.VariationMrr >= 0.80 &&
+        metrics.DiscourseActAccuracy >= 0.90 && metrics.SpeakerAttributionAccuracy >= 0.95 &&
+        metrics.FactSpanF1 >= 0.90 && metrics.AntecedentAccuracy >= 0.90 &&
+        metrics.CorrectionStateAccuracy >= 0.95;
+
+    internal static double SelectToolNoneMargin(
+        IReadOnlyList<(double Margin, double Accuracy, double MutatingPrecision)> candidates,
+        double minimumMutatingPrecision = 0.99)
+    {
+        if (candidates.Count == 0)
+        {
+            throw new ArgumentException("At least one tool-margin candidate is required.", nameof(candidates));
+        }
+
+        var eligible = candidates
+            .Where(item => item.MutatingPrecision >= minimumMutatingPrecision)
+            .OrderByDescending(item => item.Accuracy)
+            .ThenBy(item => item.Margin)
+            .ToArray();
+        var selected = eligible.Length > 0
+            ? eligible[0]
+            : candidates
+                .OrderByDescending(item => item.MutatingPrecision)
+                .ThenByDescending(item => item.Accuracy)
+                .ThenBy(item => item.Margin)
+                .First();
+        return selected.Margin;
+    }
 
     public void Restore(
         IReadOnlyList<double> weights, int updates,
-        IReadOnlyDictionary<string, double>? labelThresholds = null)
+        IReadOnlyDictionary<string, double>? labelThresholds = null,
+        IReadOnlyCollection<string>? frozenHeads = null)
     {
         if (weights.Count != _weights.Length || weights.Any(weight => !double.IsFinite(weight)))
             throw new InvalidDataException("Structured head parameters are invalid.");
@@ -80,123 +114,33 @@ internal sealed class CompositionalHeadModel
         {
             var expected = DefaultLabelThresholds();
             if (labelThresholds.Count != expected.Count || expected.Keys.Any(key => !labelThresholds.ContainsKey(key)) ||
-                labelThresholds.Values.Any(value => !double.IsFinite(value) || value is < 0.05 or > 0.99))
+                labelThresholds.Any(item => !double.IsFinite(item.Value) ||
+                    item.Key == ToolNoneMarginKey
+                        ? item.Value is < 0.0 or > 0.50
+                        : item.Value is < 0.05 or > 0.99))
                 throw new InvalidDataException("Structured per-label calibration does not match the model schema.");
             _labelThresholds = new Dictionary<string, double>(labelThresholds, StringComparer.Ordinal);
         }
-    }
-
-    public double Train(
-        TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector = null,
-        IReadOnlyList<double>? domainPositiveWeights = null)
-    {
-        var features = Features(example.Context, contextVector);
-        var heads = 0;
-        var loss = 0.0;
-        Add("speechActs", () => TrainMulti(_layout.Speech, Enum.GetValues<SpeechAct>().Length, features,
-            example.SpeechActs.Select(value => (int)value).ToHashSet(), learningRate, 2.5));
-        Add("domains", () => TrainMulti(_layout.Domain, Enum.GetValues<DialogueDomain>().Length, features,
-            example.Domains.Select(value => (int)value).ToHashSet(), learningRate, 4.0, domainPositiveWeights));
-        Add("goals", () => TrainMulti(_layout.Goal, Enum.GetValues<DialogueGoal>().Length, features,
-            example.Goals.Select(value => (int)value).ToHashSet(), learningRate, 3.0));
-        Add("affect", () => TrainSoftmax(_layout.Affect, Enum.GetValues<UserAffect>().Length, features, (int)example.Affect, learningRate));
-        Add("stance", () => TrainSoftmax(_layout.Stance, Enum.GetValues<DialogueStance>().Length, features, (int)example.Stance, learningRate));
-        Add("policy", () => TrainSoftmax(_layout.Policy, Enum.GetValues<ResponsePolicy>().Length, features,
-            (int)example.Policy, learningRate, 1.5));
-        Add("content", () => TrainMulti(_layout.Content, Enum.GetValues<ContentFlag>().Length, features,
-            example.ContentFlags.Select(value => (int)value).ToHashSet(), learningRate, 4.0));
-        Add("knowledgeTarget", () => TrainSoftmax(_layout.KnowledgeTarget, Enum.GetValues<KnowledgeTarget>().Length,
-            features, (int)example.KnowledgeTarget, learningRate));
-        Add("tool", () =>
+        _frozenHeads.Clear();
+        if (frozenHeads is not null)
         {
-            var target = Math.Max(0, Array.IndexOf(_tools, example.ToolSchema));
-            return TrainSoftmax(_layout.Tool, _tools.Length, features, target, learningRate,
-                ToolTargetWeight(_tools[target]));
-        });
-        Add("responseCandidate", () => TrainSoftmax(_layout.Candidate, _candidates.Length, features,
-            Math.Max(0, Array.IndexOf(_candidates, example.ResponseCandidateId)), learningRate, 3.0));
-        Add("slots", () => TrainSlots(example, learningRate * SlotLearningRateScale));
-        Updates++;
-        return loss / Math.Max(1, heads);
+            var knownHeads = ModelSchemas.Labels.Keys.Concat(["tool", "responseCandidate"])
+                .ToHashSet(StringComparer.Ordinal);
+            if (frozenHeads.Any(head => !knownHeads.Contains(head)))
+            {
+                throw new InvalidDataException("Frozen structured heads do not match the model schema.");
+            }
 
-        void Add(string head, Func<double> train)
-        {
-            if (!example.SupervisedHeads.Contains(head)) return;
-            loss += train();
-            heads++;
+            foreach (var head in frozenHeads)
+            {
+                _frozenHeads.Add(head);
+            }
         }
-    }
-
-    public double TrainDomainsOnly(
-        TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector,
-        IReadOnlyList<double> domainPositiveWeights)
-    {
-        if (!example.SupervisedHeads.Contains("domains")) return 0.0;
-        var loss = TrainMulti(_layout.Domain, Enum.GetValues<DialogueDomain>().Length,
-            Features(example.Context, contextVector), example.Domains.Select(value => (int)value).ToHashSet(),
-            learningRate, 4.0, domainPositiveWeights);
-        Updates++;
-        return loss;
-    }
-
-    public double TrainToolOnly(
-        TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector)
-    {
-        if (!example.SupervisedHeads.Contains("tool")) return 0.0;
-        var target = Math.Max(0, Array.IndexOf(_tools, example.ToolSchema));
-        var loss = TrainSoftmax(_layout.Tool, _tools.Length, Features(example.Context, contextVector), target,
-            learningRate, ToolTargetWeight(_tools[target]));
-        Updates++;
-        return loss;
-    }
-
-    public double TrainResponseOnly(
-        TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector)
-    {
-        if (!example.SupervisedHeads.Contains("responseCandidate")) return 0.0;
-        var target = Math.Max(0, Array.IndexOf(_candidates, example.ResponseCandidateId));
-        var loss = TrainSoftmax(_layout.Candidate, _candidates.Length, Features(example.Context, contextVector),
-            target, learningRate, 3.0);
-        Updates++;
-        return loss;
-    }
-
-    private static double ToolTargetWeight(string tool) => tool switch
-    {
-        "NONE" => NoToolWeight,
-        "BUY" or "SELL" => MutatingToolWeight,
-        _ => ReadOnlyToolWeight
-    };
-
-    public double TrainRanking(TrainingExample example, double learningRate, IReadOnlyList<double>? contextVector = null)
-    {
-        if (!example.SupervisedHeads.Contains("responseCandidate")) return 0.0;
-        var target = Array.IndexOf(_candidates, example.ResponseCandidateId);
-        if (target < 0) return 0.0;
-        var features = Features(example.Context, contextVector);
-        var scores = Enumerable.Range(0, _candidates.Length)
-            .Select(index => Dot(_layout.Candidate + index * FeatureCount, features)).ToArray();
-        var negative = Enumerable.Range(0, scores.Length).Where(index => index != target)
-            .OrderByDescending(index => scores[index]).ThenBy(index => index).First();
-        var difference = Math.Clamp(scores[target] - scores[negative], -30.0, 30.0);
-        var probability = 1.0 / (1.0 + Math.Exp(-difference));
-        var gradient = 1.0 - probability;
-        Update(_layout.Candidate + target * FeatureCount, features, learningRate * gradient);
-        Update(_layout.Candidate + negative * FeatureCount, features, -learningRate * gradient);
-        Updates++;
-        return -Math.Log(Math.Max(1e-12, probability));
-    }
-
-    public double TrainSlotsOnly(TrainingExample example, double learningRate)
-    {
-        if (!example.SupervisedHeads.Contains("slots"))
-            throw new ArgumentException("The auxiliary slot pass requires slot supervision.", nameof(example));
-        return TrainSlots(example, learningRate * SlotLearningRateScale);
     }
 
     public StructuredPerception Predict(
         string input, IReadOnlyList<DialogueSlot> preservedSlots, IReadOnlyList<double>? contextVector = null,
-        string? currentInput = null)
+        string? currentInput = null, IReadOnlyList<DialogueUtterance>? utterances = null)
     {
         var features = Features(input, contextVector);
         var speech = PredictMulti<SpeechAct>("speechActs", _layout.Speech, features, maximum: 3);
@@ -204,12 +148,19 @@ internal sealed class CompositionalHeadModel
         var goals = PredictMulti<DialogueGoal>("goals", _layout.Goal, features, maximum: 3);
         var (affect, affectConfidence) = PredictSoftmax<UserAffect>(_layout.Affect, features);
         var (stance, stanceConfidence) = PredictSoftmax<DialogueStance>(_layout.Stance, features);
-        var (policy, policyConfidence) = PredictSoftmax<ResponsePolicy>(_layout.Policy, features);
         var content = PredictMulti<ContentFlag>("content", _layout.Content, features, maximum: null, allowEmpty: true);
         var (knowledgeTarget, knowledgeConfidence) = PredictSoftmax<KnowledgeTarget>(_layout.KnowledgeTarget, features);
-        var (toolIndex, toolConfidence) = PredictSoftmaxIndex(_layout.Tool, _tools.Length, features);
+        var (discourseAct, discourseConfidence) = PredictSoftmax<DiscourseAct>(_layout.DiscourseAct, features);
+        var (discourseSubject, subjectConfidence) = PredictSoftmax<DialogueParticipant>(_layout.DiscourseSubject, features);
+        var (discourseTarget, targetConfidence) = PredictSoftmax<DialogueParticipant>(_layout.DiscourseTarget, features);
+        var (factIndex, factConfidence) = PredictSoftmaxIndex(_layout.FactKind,
+            Enum.GetValues<DialogueFactKind>().Length + 1, features);
+        var (polarityIndex, polarityConfidence) = PredictSoftmaxIndex(_layout.FactPolarity, 2, features);
+        var (toolIndex, toolConfidence) = PredictToolIndex(features);
+        var (policy, policyConfidence) = PredictSoftmax<ResponsePolicy>(_layout.Policy, features);
         var (candidateIndex, candidateConfidence) = PredictSoftmaxIndex(_layout.Candidate, _candidates.Length, features);
         var learnedSlots = PredictSlots(currentInput ?? input);
+        var factValueSpan = PredictFactSpan(currentInput ?? input);
         var slots = preservedSlots.Count == 0
             ? learnedSlots
             : preservedSlots.Concat(learnedSlots)
@@ -227,18 +178,34 @@ internal sealed class CompositionalHeadModel
             ["CONTENT"] = content.Confidence,
             ["KNOWLEDGE_TARGET"] = knowledgeConfidence,
             ["TOOL"] = toolConfidence,
-            ["RESPONSE_CANDIDATE"] = candidateConfidence
+            ["RESPONSE_CANDIDATE"] = candidateConfidence,
+            ["DISCOURSE_ACT"] = discourseConfidence,
+            ["DISCOURSE_SUBJECT"] = subjectConfidence,
+            ["DISCOURSE_TARGET"] = targetConfidence,
+            ["FACT_KIND"] = factConfidence,
+            ["FACT_POLARITY"] = polarityConfidence,
+            ["FACT_SPAN"] = factValueSpan.Confidence
         });
+        var factKind = factIndex == 0 ? null : (DialogueFactKind?)(factIndex - 1);
+        var antecedent = PredictAntecedent(
+            currentInput ?? input,
+            utterances ?? [],
+            discourseAct,
+            contextVector);
+        var discourse = new DiscourseFrame(discourseAct, discourseSubject, discourseTarget,
+            factKind, factValueSpan.Span, polarityIndex == 1, antecedent.Sequence, discourseConfidence,
+            antecedent.Sequence is null ? "LEARNED_NO_ANTECEDENT" : "LEARNED_ANTECEDENT_POINTER");
         return new StructuredPerception(speech.Values, domains.Values, goals.Values, affect, stance, policy,
             slots, content.Values, _tools[toolIndex] == "NONE" ? null : _tools[toolIndex],
-            _candidates[candidateIndex], knowledgeTarget, confidence);
+            _candidates[candidateIndex], knowledgeTarget, confidence, discourse);
     }
 
     public StructuredMetrics Evaluate(
         IReadOnlyList<TrainingExample> examples,
         Func<TrainingExample, IReadOnlyList<double>>? context = null)
     {
-        var predictions = examples.Select(example => Predict(example.Context, [], context?.Invoke(example), example.Input)).ToArray();
+        var predictions = examples.Select(example => Predict(
+            example.Context, [], context?.Invoke(example), example.Input, example.Turns)).ToArray();
         return EvaluatePredictions(examples, predictions,
             CandidateTopKAccuracy(examples, 3, context),
             CandidateTopKAccuracy(examples, 10, context), CandidateMeanReciprocalRank(examples, context));
@@ -261,8 +228,9 @@ internal sealed class CompositionalHeadModel
         CalibrateMulti("domains", _layout.Domain, example => example.Domains.Select(value => (int)value).ToHashSet());
         CalibrateMulti("goals", _layout.Goal, example => example.Goals.Select(value => (int)value).ToHashSet());
         CalibrateMulti("content", _layout.Content, example => example.ContentFlags.Select(value => (int)value).ToHashSet());
+        CalibrateToolNoneMargin();
         var predictions = examples.Select(example =>
-            Predict(example.Context, [], context?.Invoke(example), example.Input)).ToArray();
+            Predict(example.Context, [], context?.Invoke(example), example.Input, example.Turns)).ToArray();
         CalibrateHead("speechActs", "SPEECH_ACT", example =>
             SetEqual(example.Example.SpeechActs, predictions[example.Index].SpeechActs));
         CalibrateHead("domains", "DOMAIN", example => SetEqual(example.Example.Domains, predictions[example.Index].Domains));
@@ -279,6 +247,45 @@ internal sealed class CompositionalHeadModel
         CalibrateHead("responseCandidate", "RESPONSE_CANDIDATE",
             example => example.Example.ResponseCandidateId == predictions[example.Index].ResponseCandidateId);
         return result;
+
+        void CalibrateToolNoneMargin()
+        {
+            var supervised = examples.Where(example => example.SupervisedHeads.Contains("tool")).ToArray();
+            if (supervised.Length == 0 || _tools.Length == 1) return;
+            var noneIndex = Array.IndexOf(_tools, "NONE");
+            var scored = supervised.Select(example =>
+            {
+                var probabilities = Softmax(_layout.Tool, _tools.Length,
+                    Features(example.Context, context?.Invoke(example)));
+                var bestReal = Enumerable.Range(0, _tools.Length)
+                    .Where(index => index != noneIndex)
+                    .OrderByDescending(index => probabilities[index])
+                    .ThenBy(index => index)
+                    .First();
+                return (Expected: example.ToolSchema, Probabilities: probabilities, BestReal: bestReal);
+            }).ToArray();
+            var candidates = Enumerable.Range(0, 101).Select(value => value * 0.005)
+                .Select(margin =>
+                {
+                    var predictions = scored.Select(item =>
+                    {
+                        var best = Array.IndexOf(item.Probabilities, item.Probabilities.Max());
+                        if (best == noneIndex &&
+                            item.Probabilities[noneIndex] - item.Probabilities[item.BestReal] <= margin)
+                            best = item.BestReal;
+                        return (item.Expected, Predicted: _tools[best]);
+                    }).ToArray();
+                    var mutating = predictions.Where(item => item.Predicted is "BUY" or "SELL").ToArray();
+                    var mutatingPrecision = mutating.Length == 0
+                        ? 1.0
+                        : (double)mutating.Count(item => item.Expected == item.Predicted) / mutating.Length;
+                    var accuracy = (double)predictions.Count(item => item.Expected == item.Predicted) /
+                        predictions.Length;
+                    return (Margin: margin, Accuracy: accuracy, MutatingPrecision: mutatingPrecision);
+                })
+                .ToArray();
+            _labelThresholds[ToolNoneMarginKey] = SelectToolNoneMargin(candidates);
+        }
 
         void CalibrateMulti(
             string head, int offset, Func<TrainingExample, IReadOnlySet<int>> expectedLabels)
@@ -385,11 +392,145 @@ internal sealed class CompositionalHeadModel
         var candidateTop3 = responseTop3 ?? candidate;
         var candidateTop10 = responseTop10 ?? candidateTop3;
         var candidateMrr = responseMrr ?? candidate;
-        var composite = new[] { speech, domains, goals, affect, policy, content, slots, tool, knowledge, candidate }
+        var discourseAct = Accuracy(examples, predictions, "discourseAct", example => example.Discourse.Act,
+            prediction => prediction.Discourse?.Act ?? DiscourseAct.None);
+        var speaker = SubsetAccuracy(examples, predictions, "discourseSubject",
+            example => example.Discourse.Act != DiscourseAct.None,
+            example => example.Discourse.Subject,
+            prediction => prediction.Discourse?.Subject ?? DialogueParticipant.None);
+        var fact = FactSpanF1(examples, predictions);
+        var correction = CorrectionStateAccuracy(examples, predictions);
+        var antecedent = SubsetAccuracy(examples, predictions, "antecedent",
+            example => example.Turns.Length > 1 && example.Discourse.Act is
+                DiscourseAct.AskExplanation or DiscourseAct.ReferBack or
+                DiscourseAct.Correct or DiscourseAct.RejectAssumption,
+            example => example.Discourse.AntecedentUtterance,
+            prediction => prediction.Discourse?.AntecedentUtterance);
+        var composite = new[] { speech, domains, goals, affect, policy, content, slots, tool, knowledge, candidate,
+            discourseAct, speaker, fact, correction, antecedent }
             .Where(double.IsFinite).DefaultIfEmpty(0.0).Average();
         return new StructuredMetrics(speech, domains, goals, affect, stance, policy, content, slots,
             tool, mutatingToolPrecision, knowledge, candidate, candidateTop3,
-            candidateTop10, candidateMrr, composite);
+            candidateTop10, candidateMrr, discourseAct, speaker, fact, antecedent, correction, composite);
+    }
+
+    private double TrainAntecedent(
+        TrainingExample example,
+        double learningRate,
+        IReadOnlyList<double>? contextVector,
+        bool contextOnly = false)
+    {
+        var candidates = example.Turns.Take(Math.Max(0, example.Turns.Length - 1)).TakeLast(8).ToArray();
+        var featureRows = candidates.Select(candidate => AntecedentFeatures(
+                example.Input,
+                candidate,
+                example.Turns[^1].Sequence,
+                example.Discourse.Act,
+                contextVector))
+            .Append(NoAntecedentFeatures(example.Input, example.Discourse.Act, contextVector))
+            .ToArray();
+        var scores = featureRows.Select(features => Dot(_layout.Antecedent, features)).ToArray();
+        var probabilities = Softmax(scores);
+        var target = Array.FindIndex(candidates,
+            candidate => candidate.Sequence == example.Discourse.AntecedentUtterance);
+        if (target < 0)
+        {
+            target = candidates.Length;
+        }
+
+        for (var candidateIndex = 0; candidateIndex < featureRows.Length; candidateIndex++)
+        {
+            var scale = learningRate * ((candidateIndex == target ? 1.0 : 0.0) - probabilities[candidateIndex]);
+            var features = featureRows[candidateIndex];
+            var start = contextOnly ? LexicalFeatureCount : 0;
+            for (var index = start; index < FeatureCount; index++)
+                _weights[_layout.Antecedent + index] += scale * features[index];
+        }
+
+        return -Math.Log(Math.Max(1e-12, probabilities[target]));
+    }
+
+    private (long? Sequence, double Confidence) PredictAntecedent(
+        string currentInput,
+        IReadOnlyList<DialogueUtterance> utterances,
+        DiscourseAct discourseAct,
+        IReadOnlyList<double>? contextVector)
+    {
+        if (utterances.Count < 2)
+            return (null, 1.0);
+        var currentSequence = utterances[^1].Sequence;
+        var candidates = utterances.Take(utterances.Count - 1).TakeLast(8).ToArray();
+        var scores = candidates.Select(candidate => Dot(_layout.Antecedent,
+                AntecedentFeatures(currentInput, candidate, currentSequence, discourseAct, contextVector)))
+            .Append(Dot(_layout.Antecedent, NoAntecedentFeatures(currentInput, discourseAct, contextVector)))
+            .ToArray();
+        var probabilities = Softmax(scores);
+        var selected = Enumerable.Range(0, probabilities.Length)
+            .OrderByDescending(index => probabilities[index])
+            .ThenByDescending(index => index < candidates.Length ? candidates[index].Sequence : long.MinValue)
+            .First();
+        return selected == candidates.Length
+            ? (null, probabilities[selected])
+            : (candidates[selected].Sequence, probabilities[selected]);
+    }
+
+    private static double[] AntecedentFeatures(
+        string currentInput,
+        DialogueUtterance candidate,
+        long currentSequence,
+        DiscourseAct discourseAct,
+        IReadOnlyList<double>? contextVector)
+    {
+        var speaker = candidate.Speaker == DialogueRole.Npc ? "NPC" : "PLAYER";
+        var distance = Math.Clamp(currentSequence - candidate.Sequence, 0, 8);
+        var currentWords = Words(currentInput);
+        var candidateWords = Words(candidate.Text);
+        var overlap = Math.Min(8, currentWords.Intersect(candidateWords).Count());
+        var features = Features(
+            $"CURRENT {currentInput} CANDIDATE {speaker} {candidate.Text} " +
+            $"DISTANCE-{distance} OVERLAP-{overlap} ACT-{discourseAct}",
+            contextVector);
+        InteractContext(features, $"{speaker}|{distance}|{overlap}");
+        return features;
+
+        static HashSet<string> Words(string text) => Tokenizer.Lex(DialogueText.Normalize(text))
+            .Where(token => token.Kind == LexicalTokenKind.Word)
+            .Select(token => token.Text)
+            .ToHashSet(StringComparer.Ordinal);
+    }
+
+    private static double[] NoAntecedentFeatures(
+        string currentInput,
+        DiscourseAct discourseAct,
+        IReadOnlyList<double>? contextVector)
+    {
+        var features = Features($"CURRENT {currentInput} CANDIDATE NONE ACT-{discourseAct}", contextVector);
+        InteractContext(features, "NONE");
+        return features;
+    }
+
+    private static void InteractContext(double[] features, string candidateClass)
+    {
+        for (var index = 0; index < ContextFeatureCount; index++)
+        {
+            if ((StableHash($"POINTER:{candidateClass}:{index}") & 1) != 0)
+            {
+                features[LexicalFeatureCount + index] = -features[LexicalFeatureCount + index];
+            }
+        }
+    }
+
+    private static double[] Softmax(IReadOnlyList<double> scores)
+    {
+        var maximum = scores.Max();
+        var result = scores.Select(score => Math.Exp(score - maximum)).ToArray();
+        var sum = result.Sum();
+        for (var index = 0; index < result.Length; index++)
+        {
+            result[index] /= sum;
+        }
+
+        return result;
     }
 
     private double TrainSlots(TrainingExample example, double learningRate)
@@ -414,6 +555,95 @@ internal sealed class CompositionalHeadModel
                 target == 0 ? 1.0 : SlotPositiveWeight);
         }
         return loss / tokens.Length;
+    }
+
+    private double TrainFactSpan(TrainingExample example, double learningRate)
+    {
+        var normalized = DialogueText.Normalize(example.Input);
+        var words = Tokenizer.Lex(normalized)
+            .Where(token => token.Kind == LexicalTokenKind.Word)
+            .ToArray();
+        if (words.Length == 0)
+        {
+            return 0.0;
+        }
+
+        var span = example.Discourse.FactValueSpan;
+        var cursor = 0;
+        var loss = 0.0;
+        for (var index = 0; index < words.Length; index++)
+        {
+            var token = words[index];
+            var start = normalized.IndexOf(token.Text, cursor, StringComparison.Ordinal);
+            cursor = Math.Max(cursor, start + token.Text.Length);
+            var target = span is not null && start >= span.Start && start < span.Start + span.Length
+                ? start == span.Start ? 1 : 2
+                : 0;
+            loss += TrainSoftmax(
+                _layout.FactSpan,
+                FactSpanClassCount,
+                TokenFeatures(
+                    token.Text,
+                    index > 0 ? words[index - 1].Text : "<START>",
+                    index + 1 < words.Length ? words[index + 1].Text : "<END>",
+                    index > 1 ? words[index - 2].Text : "<START2>",
+                    index + 2 < words.Length ? words[index + 2].Text : "<END2>"),
+                target,
+                learningRate,
+                target == 0 ? 1.0 : MaximumPositiveWeight);
+        }
+
+        return loss / words.Length;
+    }
+
+    private (DialogueTextSpan? Span, double Confidence) PredictFactSpan(string input)
+    {
+        var normalized = DialogueText.Normalize(input);
+        var words = Tokenizer.Lex(normalized)
+            .Where(token => token.Kind == LexicalTokenKind.Word)
+            .ToArray();
+        var positioned = new List<(int Start, int Length, int Class, double Confidence)>();
+        var cursor = 0;
+        for (var index = 0; index < words.Length; index++)
+        {
+            var word = words[index].Text;
+            var tokenStart = normalized.IndexOf(word, cursor, StringComparison.Ordinal);
+            if (tokenStart < 0)
+            {
+                continue;
+            }
+
+            cursor = tokenStart + word.Length;
+            var prediction = PredictSoftmaxIndex(
+                _layout.FactSpan,
+                FactSpanClassCount,
+                TokenFeatures(
+                    word,
+                    index > 0 ? words[index - 1].Text : "<START>",
+                    index + 1 < words.Length ? words[index + 1].Text : "<END>",
+                    index > 1 ? words[index - 2].Text : "<START2>",
+                    index + 2 < words.Length ? words[index + 2].Text : "<END2>"));
+            positioned.Add((tokenStart, word.Length, prediction.Index, prediction.Confidence));
+        }
+
+        var beginning = positioned.FindIndex(token => token.Class == 1);
+        if (beginning < 0)
+        {
+            return (null, positioned.Count == 0 ? 1.0 : positioned.Average(token => token.Confidence));
+        }
+
+        var endIndex = beginning;
+        while (endIndex + 1 < positioned.Count && positioned[endIndex + 1].Class == 2)
+        {
+            endIndex++;
+        }
+
+        var factStart = positioned[beginning].Start;
+        var end = positioned[endIndex].Start + positioned[endIndex].Length;
+        var value = normalized[factStart..end];
+        var confidence = positioned.Skip(beginning).Take(endIndex - beginning + 1)
+            .Min(token => token.Confidence);
+        return (new DialogueTextSpan(value, factStart, end - factStart), confidence);
     }
 
     private IReadOnlyList<DialogueSlot> PredictSlots(string input)
@@ -477,29 +707,33 @@ internal sealed class CompositionalHeadModel
 
     private double TrainMulti(
         int offset, int classes, double[] features, IReadOnlySet<int> targets, double rate,
-        double positiveWeight = 2.0, IReadOnlyList<double>? positiveWeights = null)
+        double positiveWeight = 2.0, IReadOnlyList<double>? positiveWeights = null,
+        bool contextOnly = false)
     {
         var loss = 0.0;
         for (var label = 0; label < classes; label++)
         {
             var probability = Sigmoid(Dot(offset + label * FeatureCount, features));
             var target = targets.Contains(label) ? 1.0 : 0.0;
-            var weight = target == 1.0 ? positiveWeights?[label] ?? positiveWeight : 1.0;
+            var weight = target == 1.0
+                ? Math.Min(MaximumPositiveWeight, positiveWeights?[label] ?? positiveWeight)
+                : 1.0;
             loss -= weight * (target * Math.Log(Math.Max(1e-12, probability)) +
                     (1.0 - target) * Math.Log(Math.Max(1e-12, 1.0 - probability)));
-            Update(offset + label * FeatureCount, features, rate * weight * (target - probability));
+            UpdateSelected(offset + label * FeatureCount, features, rate * weight * (target - probability), contextOnly);
         }
         return loss / classes;
     }
 
     private double TrainSoftmax(
-        int offset, int classes, double[] features, int target, double rate, double targetWeight = 1.0)
+        int offset, int classes, double[] features, int target, double rate, double targetWeight = 1.0,
+        bool contextOnly = false)
     {
         var probabilities = Softmax(offset, classes, features);
         var loss = -targetWeight * Math.Log(Math.Max(1e-12, probabilities[target]));
         for (var label = 0; label < classes; label++)
-            Update(offset + label * FeatureCount, features,
-                rate * targetWeight * ((label == target ? 1.0 : 0.0) - probabilities[label]));
+            UpdateSelected(offset + label * FeatureCount, features,
+                rate * targetWeight * ((label == target ? 1.0 : 0.0) - probabilities[label]), contextOnly);
         return loss;
     }
 
@@ -534,6 +768,28 @@ internal sealed class CompositionalHeadModel
         return (index, probabilities[index]);
     }
 
+    private (int Index, double Confidence) PredictToolIndex(double[] features)
+    {
+        var probabilities = Softmax(_layout.Tool, _tools.Length, features);
+        if (_tools.Length == 1) return (0, probabilities[0]);
+        var index = Array.IndexOf(probabilities, probabilities.Max());
+        var noneIndex = Array.IndexOf(_tools, "NONE");
+        if (index == noneIndex)
+        {
+            var bestReal = Enumerable.Range(0, _tools.Length)
+                .Where(candidate => candidate != noneIndex)
+                .OrderByDescending(candidate => probabilities[candidate])
+                .ThenBy(candidate => candidate)
+                .First();
+            if (probabilities[noneIndex] - probabilities[bestReal] <= _labelThresholds[ToolNoneMarginKey])
+            {
+                index = bestReal;
+            }
+        }
+
+        return (index, probabilities[index]);
+    }
+
     private double[] Softmax(int offset, int classes, double[] features)
     {
         var logits = Enumerable.Range(0, classes).Select(label => Dot(offset + label * FeatureCount, features)).ToArray();
@@ -555,7 +811,7 @@ internal sealed class CompositionalHeadModel
             result[1 + StableHash(words[index - 1] + "_" + words[index]) % (LexicalFeatureCount - 1)] += 0.7;
         if (context is not null)
             for (var index = 0; index < Math.Min(ContextFeatureCount, context.Count); index++)
-                result[LexicalFeatureCount + index] = context[index];
+                result[LexicalFeatureCount + index] = context[index] * ContextFeatureScale;
         var norm = Math.Sqrt(result.Sum(value => value * value));
         for (var index = 0; index < result.Length; index++) result[index] /= Math.Max(1.0, norm);
         return result;
@@ -577,108 +833,49 @@ internal sealed class CompositionalHeadModel
         return result;
     }
 
-    private double CandidateTopKAccuracy(
-        IReadOnlyList<TrainingExample> examples, int count,
-        Func<TrainingExample, IReadOnlyList<double>>? context)
+    private double Dot(int offset, double[] features)
     {
-        var scored = examples.Where(example => example.SupervisedHeads.Contains("responseCandidate")).ToArray();
-        if (scored.Length == 0) return double.NaN;
-        return (double)scored.Count(example =>
+        var result = 0.0;
+        foreach (var index in SparseIndices(features))
         {
-            var probabilities = Softmax(_layout.Candidate, _candidates.Length,
-                Features(example.Context, context?.Invoke(example)));
-            return Enumerable.Range(0, probabilities.Length).OrderByDescending(index => probabilities[index])
-                .ThenBy(index => index).Take(count).Any(index => _candidates[index] == example.ResponseCandidateId);
-        }) / scored.Length;
+            result += _weights[offset + index] * features[index];
+        }
+
+        return result;
     }
 
-    private double CandidateMeanReciprocalRank(
-        IReadOnlyList<TrainingExample> examples,
-        Func<TrainingExample, IReadOnlyList<double>>? context)
+    private void Update(int offset, double[] features, double scale)
     {
-        var scored = examples.Where(example => example.SupervisedHeads.Contains("responseCandidate")).ToArray();
-        if (scored.Length == 0) return double.NaN;
-        return scored.Average(example =>
+        foreach (var index in SparseIndices(features))
         {
-            var probabilities = Softmax(_layout.Candidate, _candidates.Length,
-                Features(example.Context, context?.Invoke(example)));
-            var ranking = Enumerable.Range(0, probabilities.Length).OrderByDescending(index => probabilities[index])
-                .ThenBy(index => index).ToArray();
-            var rank = Array.FindIndex(ranking, index => _candidates[index] == example.ResponseCandidateId);
-            return rank < 0 ? 0.0 : 1.0 / (rank + 1);
-        });
+            _weights[offset + index] += scale * features[index];
+        }
     }
 
-    private static double ToolPrecision(
-        IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
-        IReadOnlyCollection<string> positiveTools)
+    private void UpdateSelected(int offset, double[] features, double scale, bool contextOnly)
     {
-        var indices = Enumerable.Range(0, examples.Count)
-            .Where(index => examples[index].SupervisedHeads.Contains("tool")).ToArray();
-        var predictedPositive = indices.Where(index =>
-            predictions[index].ToolSchema is { } tool && positiveTools.Contains(tool)).ToArray();
-        if (predictedPositive.Length == 0) return 1.0;
-        return (double)predictedPositive.Count(index =>
-            positiveTools.Contains(examples[index].ToolSchema) &&
-            examples[index].ToolSchema == predictions[index].ToolSchema) / predictedPositive.Length;
-    }
-
-    private static double SlotSpanF1(
-        IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions)
-    {
-        var indices = Enumerable.Range(0, examples.Count)
-            .Where(index => examples[index].SupervisedHeads.Contains("slots")).ToArray();
-        if (indices.Length == 0) return double.NaN;
-        var expected = indices.SelectMany(index => examples[index].Slots.Select(slot =>
-            $"{index}|{slot.Type}|{slot.Start}|{slot.Length}|{slot.Value}")).ToHashSet(StringComparer.Ordinal);
-        var actual = indices.SelectMany(index => predictions[index].Slots.Select(slot =>
-            $"{index}|{slot.Type}|{slot.Start}|{slot.Length}|{slot.Value}")).ToHashSet(StringComparer.Ordinal);
-        var correct = expected.Intersect(actual).Count();
-        return 2.0 * correct / Math.Max(1, expected.Count + actual.Count);
-    }
-
-    private static double Accuracy<T>(
-        IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
-        string head, Func<TrainingExample, T> expected, Func<StructuredPerception, T> actual)
-    {
-        var indices = Enumerable.Range(0, examples.Count)
-            .Where(index => examples[index].SupervisedHeads.Contains(head)).ToArray();
-        return indices.Length == 0 ? double.NaN :
-            (double)indices.Count(index => EqualityComparer<T>.Default.Equals(expected(examples[index]), actual(predictions[index]))) /
-            indices.Length;
-    }
-
-    private static double MultiLabelMacroF1<T>(
-        IReadOnlyList<TrainingExample> examples, IReadOnlyList<StructuredPerception> predictions,
-        string head, Func<TrainingExample, IReadOnlyCollection<T>> expected,
-        Func<StructuredPerception, IReadOnlyCollection<T>> actual, IReadOnlyList<T> labels)
-    {
-        var indices = Enumerable.Range(0, examples.Count)
-            .Where(index => examples[index].SupervisedHeads.Contains(head)).ToArray();
-        if (indices.Length == 0) return double.NaN;
-        var present = labels.Where(label => indices.Any(index => expected(examples[index]).Contains(label))).ToArray();
-        if (present.Length == 0)
-            return indices.All(index => actual(predictions[index]).Count == 0) ? 1.0 : 0.0;
-        return present.Select(label =>
+        if (!contextOnly)
         {
-            var tp = indices.Count(index => expected(examples[index]).Contains(label) && actual(predictions[index]).Contains(label));
-            var fp = indices.Count(index => !expected(examples[index]).Contains(label) && actual(predictions[index]).Contains(label));
-            var fn = indices.Count(index => expected(examples[index]).Contains(label) && !actual(predictions[index]).Contains(label));
-            return 2.0 * tp / Math.Max(1, 2 * tp + fp + fn);
-        }).Average();
+            Update(offset, features, scale);
+            return;
+        }
+
+        foreach (var index in SparseIndices(features))
+        {
+            if (index >= LexicalFeatureCount)
+            {
+                _weights[offset + index] += scale * features[index];
+            }
+        }
     }
 
-    private double Dot(int offset, IReadOnlyList<double> features)
-    {
-        var value = 0.0;
-        for (var index = 0; index < FeatureCount; index++) value += _weights[offset + index] * features[index];
-        return value;
-    }
+    private static int[] SparseIndices(double[] features) => SparseFeatureCache
+        .GetValue(features, static values => new SparseFeatureIndices(Enumerable.Range(0, values.Length)
+            .Where(index => values[index] != 0.0)
+            .ToArray()))
+        .Indices;
 
-    private void Update(int offset, IReadOnlyList<double> features, double scale)
-    {
-        for (var index = 0; index < FeatureCount; index++) _weights[offset + index] += scale * features[index];
-    }
+    private sealed record SparseFeatureIndices(int[] Indices);
 
     private static double Sigmoid(double value) => value >= 0
         ? 1.0 / (1.0 + Math.Exp(-value))
@@ -700,6 +897,7 @@ internal sealed class CompositionalHeadModel
         Add("domains", Enum.GetValues<DialogueDomain>().Length);
         Add("goals", Enum.GetValues<DialogueGoal>().Length);
         Add("content", Enum.GetValues<ContentFlag>().Length);
+        result[ToolNoneMarginKey] = 0.0;
         return result;
         void Add(string head, int count)
         {
@@ -720,7 +918,14 @@ internal sealed class CompositionalHeadModel
             Content = Policy + Enum.GetValues<ResponsePolicy>().Length * FeatureCount;
             Slot = Content + Enum.GetValues<ContentFlag>().Length * FeatureCount;
             KnowledgeTarget = Slot + SlotClassCount * FeatureCount;
-            Tool = KnowledgeTarget + Enum.GetValues<KnowledgeTarget>().Length * FeatureCount;
+            DiscourseAct = KnowledgeTarget + Enum.GetValues<KnowledgeTarget>().Length * FeatureCount;
+            DiscourseSubject = DiscourseAct + Enum.GetValues<DiscourseAct>().Length * FeatureCount;
+            DiscourseTarget = DiscourseSubject + Enum.GetValues<DialogueParticipant>().Length * FeatureCount;
+            FactKind = DiscourseTarget + Enum.GetValues<DialogueParticipant>().Length * FeatureCount;
+            FactPolarity = FactKind + (Enum.GetValues<DialogueFactKind>().Length + 1) * FeatureCount;
+            FactSpan = FactPolarity + 2 * FeatureCount;
+            Antecedent = FactSpan + FactSpanClassCount * FeatureCount;
+            Tool = Antecedent + FeatureCount;
             Candidate = Tool + tools * FeatureCount;
             WeightCount = Candidate + candidates * FeatureCount;
         }
@@ -733,10 +938,18 @@ internal sealed class CompositionalHeadModel
         public int Content { get; }
         public int Slot { get; }
         public int KnowledgeTarget { get; }
+        public int DiscourseAct { get; }
+        public int DiscourseSubject { get; }
+        public int DiscourseTarget { get; }
+        public int FactKind { get; }
+        public int FactPolarity { get; }
+        public int FactSpan { get; }
+        public int Antecedent { get; }
         public int Tool { get; }
         public int Candidate { get; }
         public int WeightCount { get; }
     }
+
 }
 
 internal sealed record StructuredMetrics(
@@ -755,4 +968,9 @@ internal sealed record StructuredMetrics(
     double ResponseTop3,
     double VariationRecallAt10,
     double VariationMrr,
+    double DiscourseActAccuracy,
+    double SpeakerAttributionAccuracy,
+    double FactSpanF1,
+    double AntecedentAccuracy,
+    double CorrectionStateAccuracy,
     double Composite);

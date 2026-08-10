@@ -42,17 +42,19 @@ internal static partial class CorpusCompiler
                 var slots = TaskmasterSlots(user, text);
                 var structured = Structured([SpeechAct.Request], domains, [DialogueGoal.Transaction],
                     UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Answer, slots, [], null, "ACKNOWLEDGE");
-                var context = new List<DialogueTurn>();
+                var context = new List<DialogueUtterance>();
                 foreach (var item in utterances.Where(item => item.GetProperty("index").GetInt32() <= userIndex))
                 {
                     var speaker = item.GetProperty("speaker").GetString();
                     if (!speaker!.Equals("USER", StringComparison.OrdinalIgnoreCase) &&
                         !speaker.Equals("ASSISTANT", StringComparison.OrdinalIgnoreCase) ||
                         !TryNormalizeExternal(item.GetProperty("text").GetString(), out var contextText)) continue;
-                    context.Add(new DialogueTurn(speaker.Equals("USER", StringComparison.OrdinalIgnoreCase) ? DialogueRole.Player : DialogueRole.Npc, contextText));
+                    context.Add(new DialogueUtterance(context.Count,
+                        speaker.Equals("USER", StringComparison.OrdinalIgnoreCase) ? DialogueRole.Player : DialogueRole.Npc,
+                        contextText));
                 }
                 var contextTurns = context.TakeLast(5).ToArray();
-                if (contextTurns.Length == 0 || contextTurns[^1].Role != DialogueRole.Player) continue;
+                if (contextTurns.Length == 0 || contextTurns[^1].Speaker != DialogueRole.Player) continue;
                 selected.Add(ExternalRow(ContextInput(contextTurns), response, definition.Name, conversationId,
                     "TASKMASTER_" + instruction, definition, structured, ["domains", "goals", "slots"], contextTurns));
             }
@@ -79,13 +81,14 @@ internal static partial class CorpusCompiler
             var position = userPositions[StableNumber(conversation.Name) % userPositions.Length];
             if (!TryNormalizeExternal(log[position].GetProperty("text").GetString(), out var current) || compilation.IsHeldOut(current)) continue;
             if (!used.Add(NormalizeKey(current)) || !compilation.ExternalInputs.Add(NormalizeKey(current))) continue;
-            var turns = new List<DialogueTurn>();
+            var turns = new List<DialogueUtterance>();
             for (var index = Math.Max(0, position - 4); index <= position; index++)
             {
                 if (!TryNormalizeExternal(log[index].GetProperty("text").GetString(), out var text)) continue;
-                turns.Add(new DialogueTurn(index % 2 == 0 ? DialogueRole.Player : DialogueRole.Npc, text));
+                turns.Add(new DialogueUtterance(index,
+                    index % 2 == 0 ? DialogueRole.Player : DialogueRole.Npc, text));
             }
-            if (turns.Count == 0 || turns[^1].Role != DialogueRole.Player) continue;
+            if (turns.Count == 0 || turns[^1].Speaker != DialogueRole.Player) continue;
             var response = position + 1 < log.Length && TryNormalizeExternal(log[position + 1].GetProperty("text").GetString(), out var answer)
                 ? answer : null;
             var domainName = conversation.Value.GetProperty("goal").EnumerateObject()
@@ -132,15 +135,16 @@ internal static partial class CorpusCompiler
                 var position = customerPositions[StableNumber(conversationId) % customerPositions.Length];
                 if (!TryNormalizeExternal(original[position][1].GetString(), out var current) || compilation.IsHeldOut(current)) continue;
                 if (!used.Add(NormalizeKey(current)) || !compilation.ExternalInputs.Add(NormalizeKey(current))) continue;
-                var turns = new List<DialogueTurn>();
+                var turns = new List<DialogueUtterance>();
                 for (var index = Math.Max(0, position - 6); index <= position; index++)
                 {
                     var speaker = original[index][0].GetString();
                     if (speaker is not ("customer" or "agent") ||
                         !TryNormalizeExternal(original[index][1].GetString(), out var text)) continue;
-                    turns.Add(new DialogueTurn(speaker == "customer" ? DialogueRole.Player : DialogueRole.Npc, text));
+                    turns.Add(new DialogueUtterance(index,
+                        speaker == "customer" ? DialogueRole.Player : DialogueRole.Npc, text));
                 }
-                if (turns.Count == 0 || turns[^1].Role != DialogueRole.Player) continue;
+                if (turns.Count == 0 || turns[^1].Speaker != DialogueRole.Player) continue;
                 string? response = null;
                 for (var index = position + 1; index < original.Length; index++)
                     if (original[index][0].GetString() == "agent" &&
@@ -237,7 +241,7 @@ internal static partial class CorpusCompiler
             var chosen = ParsePreferenceDialogue(document.RootElement.GetProperty("chosen").GetString()!);
             var rejected = ParsePreferenceDialogue(document.RootElement.GetProperty("rejected").GetString()!);
             if (chosen.Turns.Length == 0 || chosen.Response is null || rejected.Response is null ||
-                chosen.Turns[^1].Role != DialogueRole.Player || compilation.IsHeldOut(chosen.Turns[^1].Text)) continue;
+                chosen.Turns[^1].Speaker != DialogueRole.Player || compilation.IsHeldOut(chosen.Turns[^1].Text)) continue;
             var structured = Structured([ExternalSpeech(chosen.Turns[^1].Text)], [DialogueDomain.Social],
                 [DialogueGoal.InformationExchange], UserAffect.Neutral, DialogueStance.Neutral,
                 ResponsePolicy.Answer, [], [], null, "ACKNOWLEDGE");

@@ -300,7 +300,14 @@ internal static class ModelSchemas
         ["policy"] = Enum.GetNames<ResponsePolicy>(),
         ["slots"] = Enum.GetNames<SlotType>(),
         ["content"] = Enum.GetNames<ContentFlag>(),
-        ["knowledgeTarget"] = Enum.GetNames<KnowledgeTarget>()
+        ["knowledgeTarget"] = Enum.GetNames<KnowledgeTarget>(),
+        ["discourseAct"] = Enum.GetNames<DiscourseAct>(),
+        ["discourseSubject"] = Enum.GetNames<DialogueParticipant>(),
+        ["discourseTarget"] = Enum.GetNames<DialogueParticipant>(),
+        ["factKind"] = new[] { "NONE" }.Concat(Enum.GetNames<DialogueFactKind>()).ToArray(),
+        ["factPolarity"] = ["POSITIVE", "NEGATED"],
+        ["factSpan"] = ["O", "B", "I"],
+        ["antecedent"] = ["NONE", "RETAINED_UTTERANCE"]
     };
 
     public static Dictionary<string, ConfidenceThreshold> DefaultCalibration => new(StringComparer.Ordinal)
@@ -313,6 +320,13 @@ internal static class ModelSchemas
         ["policy"] = new(0.75, 0.15),
         ["slots"] = new(0.80, 0.10),
         ["content"] = new(0.50, 0.10),
+        ["discourseAct"] = new(0.65, 0.12),
+        ["discourseSubject"] = new(0.65, 0.12),
+        ["discourseTarget"] = new(0.65, 0.12),
+        ["factKind"] = new(0.65, 0.12),
+        ["factPolarity"] = new(0.65, 0.12),
+        ["factSpan"] = new(0.65, 0.12),
+        ["antecedent"] = new(0.65, 0.12),
         ["toolReadOnly"] = new(0.95, 0.05),
         ["toolMutating"] = new(0.99, 0.01),
         ["responseCandidate"] = new(0.70, 0.10),

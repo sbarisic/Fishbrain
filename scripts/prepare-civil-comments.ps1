@@ -43,8 +43,10 @@ bands = [
     (frame[frame.threat >= 0.5], 100),
     (frame[frame.sexual_explicit >= 0.5], 100),
     (frame[(frame.obscene >= 0.5) | (frame.insult >= 0.5)], 300),
+    # Keep a deterministic reserve because corpus-wide deduplication and held-out
+    # benchmark filtering happen after this source-specific selection.
     (frame[(frame.obscene < 0.5) & (frame.threat < 0.5) & (frame.insult < 0.5) &
-           (frame.identity_attack < 0.5) & (frame.sexual_explicit < 0.5)], 2420),
+           (frame.identity_attack < 0.5) & (frame.sexual_explicit < 0.5)], 2920),
 ]
 for band, quota in bands:
     added = 0

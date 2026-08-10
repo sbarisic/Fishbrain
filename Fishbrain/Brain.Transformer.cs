@@ -536,6 +536,7 @@ public sealed partial class Brain
         public double[] StructuredWeights { get; set; } = [];
         public int StructuredUpdates { get; set; }
         public Dictionary<string, double>? StructuredLabelThresholds { get; set; }
+        public string[]? FrozenStructuredHeads { get; set; }
         public Dictionary<string, ModelSchemas.ConfidenceThreshold>? ConfidenceCalibration { get; set; }
         public Dictionary<string, string[]>? LabelSchemas { get; set; }
         public ToolSchema[]? ToolSchemas { get; set; }

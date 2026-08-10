@@ -504,7 +504,7 @@ public sealed partial class Brain
             if (transactionPhrase && match.Success)
                 slots.Add(new DialogueSlot(SlotType.Quantity, BioTag.B, value, match.Index, match.Length, 1.0));
         }
-        const string end = "(?=, CASE[0-9A-F]+[?.!]|[?.!]|$)";
+        const string end = "(?=[?.!]|$)";
         AddCapture(SlotType.Place, "\\bWHERE (?:IS|ARE) (?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)" + end, 0.99);
         AddCapture(SlotType.Place, "\\bWHERE CAN I FIND (?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)" + end, 0.99);
         AddCapture(SlotType.Place, "\\b(?:LOCATE|FIND|POINT OUT|SHOW ME) (?:THE )?(?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)(?: FOR ME)?" + end, 0.98);

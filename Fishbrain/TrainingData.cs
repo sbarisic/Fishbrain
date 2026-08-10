@@ -155,20 +155,48 @@ internal sealed class TrainingData
             var currentTurn = Brain.ExtractCurrentPlayerTurn(input);
             var currentOffset = input.LastIndexOf(currentTurn, StringComparison.Ordinal);
             var normalizedSlots = structured.Slots.Select(slot => NormalizeSlot(slot, currentTurn, currentOffset)).ToArray();
+            structured.Discourse?.FactValueSpan?.Validate(currentTurn);
             var turns = row.Turns is { Length: > 0 }
                 ? row.Turns.Select(turn => turn is null
                     ? throw new InvalidDataException("Structured turns cannot contain null entries.")
-                    : new DialogueTurn(turn.Role, DialogueText.Normalize(turn.Text))).ToArray()
-                : new[] { new DialogueTurn(DialogueRole.Player, currentTurn) };
-            if (turns.Any(turn => !Enum.IsDefined(turn.Role) || string.IsNullOrWhiteSpace(turn.Text)) ||
-                turns[^1].Role != DialogueRole.Player)
-                throw new InvalidDataException("Structured turns must end with a player turn.");
+                    : new DialogueUtterance(turn.Sequence, turn.Speaker, DialogueText.Normalize(turn.Text))).ToArray()
+                : new[] { new DialogueUtterance(0, DialogueRole.Player, currentTurn) };
+            if (turns.Any(turn => !Enum.IsDefined(turn.Speaker) || string.IsNullOrWhiteSpace(turn.Text)) ||
+                turns.Zip(turns.Skip(1)).Any(pair => pair.First.Sequence >= pair.Second.Sequence) ||
+                turns[^1].Speaker != DialogueRole.Player)
+                throw new InvalidDataException(
+                    "Structured turns must have increasing sequences and end with a player turn.");
+            var initialState = row.InitialDialogueState ?? NpcDialogueState.Initial;
+            initialState.Validate();
+            var initialProfile = row.InitialPlayerProfile ?? PlayerConversationProfile.Empty;
+            initialProfile.Validate();
+            var responseAction = row.DiscourseResponseAction ?? DiscourseResponseAction.None;
+            if (!Enum.IsDefined(responseAction) || row.AcceptableResponseConstraints is { } constraints &&
+                (constraints.Length > 8 || constraints.Any(constraint =>
+                    string.IsNullOrWhiteSpace(constraint) || constraint.Length > 128 ||
+                    constraint != DialogueText.Normalize(constraint))))
+            {
+                throw new InvalidDataException("Conversational response supervision is invalid.");
+            }
+            if (row.RejectedResponse is { } rejected &&
+                (rejected.Length > 256 || rejected != DialogueText.Normalize(rejected) || rejected == response))
+            {
+                throw new InvalidDataException("Rejected conversational response is invalid.");
+            }
+            var expectedFactState = row.FactDelta ?? initialState.SessionFacts.ToArray();
+            foreach (var fact in expectedFactState)
+            {
+                PlayerConversationProfile.ValidateFact(fact, DialogueFactProvenance.SessionReported);
+            }
+
             structuredSamples.Add(new TrainingExample(
                 input, currentTurn, turns, structured.SpeechActs.ToArray(), structured.Domains.ToArray(),
                 structured.Goals.ToArray(), structured.Affect, structured.Stance, structured.Policy,
                 normalizedSlots, structured.ContentFlags.ToArray(), toolName,
                 candidateName, structured.KnowledgeTarget,
-                source, row.SemanticFamilyId, supervised));
+                source, row.SemanticFamilyId, supervised, structured.Discourse ?? DiscourseFrame.Empty,
+                initialState.SessionFacts.ToArray(), expectedFactState, responseAction,
+                row.AcceptableResponseConstraints ?? [], row.RejectedResponse));
         }
 
         var transition = Cognition.Apply(row.State, perception, decision, hasAllTool);
@@ -184,7 +212,18 @@ internal sealed class TrainingData
                         responseCatalog.Add(catalogKey, responses = new HashSet<string>(StringComparer.Ordinal));
                     responses.Add(response);
                 }
-                AddSamples(SerializeResponse(input, transition.State, perception, decision, transition.Tone, response, tokenizer),
+                var conditioned = row.Turns is { Length: > 0 } && row.Persona is not null
+                    ? ConversationConditioning.Build(
+                        row.Persona,
+                        row.InitialPlayerProfile ?? PlayerConversationProfile.Empty,
+                        row.InitialDialogueState ?? NpcDialogueState.Initial,
+                        row.StructuredPerception?.Discourse,
+                        row.Turns,
+                        row.DiscourseResponseAction ?? DiscourseResponseAction.None,
+                        row.AcceptableResponseConstraints ?? [])
+                    : input;
+                AddSamples(SerializeResponse(conditioned, transition.State, perception, decision, transition.Tone,
+                        response, row.RejectedResponse, tokenizer),
                     samples, TrainingTask.Language, bucket, source);
             }
             return;
@@ -248,7 +287,7 @@ internal sealed class TrainingData
 
     private static SerializedStream SerializeResponse(
         string input, NpcState state, TurnPerception perception, TurnDecision decision,
-        ResponseTone tone, string response, DialogueTokenizer tokenizer)
+        ResponseTone tone, string response, string? rejectedResponse, DialogueTokenizer tokenizer)
     {
         var tokens = Start(input, tokenizer);
         Brain.AppendState(tokens, state);
@@ -257,9 +296,24 @@ internal sealed class TrainingData
         tokens.Add(Tokenizer.Tone(tone));
         var target = tokens.Count;
         tokens.Add(Tokenizer.Text);
-        tokens.AddRange(tokenizer.Encode(response));
+        var accepted = tokenizer.Encode(response);
+        tokens.AddRange(accepted);
         tokens.Add(Tokenizer.Eos);
-        return new(tokens.ToArray(), target);
+        if (string.IsNullOrWhiteSpace(rejectedResponse))
+        {
+            return new(tokens.ToArray(), target);
+        }
+
+        var rejected = tokenizer.Encode(rejectedResponse);
+        var divergence = 0;
+        while (divergence < accepted.Length && divergence < rejected.Length &&
+               accepted[divergence] == rejected[divergence])
+        {
+            divergence++;
+        }
+
+        var rejectedToken = divergence < rejected.Length ? rejected[divergence] : Tokenizer.Eos;
+        return new(tokens.ToArray(), target, target + 1 + divergence, rejectedToken);
     }
 
     private static SerializedStream SerializeToolCall(
@@ -334,12 +388,23 @@ internal sealed class TrainingData
         {
             var start = Math.Max(0, targetStart - ConditioningLength);
             var end = Math.Min(stream.Tokens.Length, targetStart + TargetChunkLength);
+            int? unlikelihoodIndex = stream.UnlikelihoodIndex is { } absolute &&
+                                    absolute >= targetStart && absolute < end
+                ? absolute - start
+                : null;
             samples.Add(new TrainingSample(
-                stream.Tokens[start..end], start, targetStart - start, task, bucket, source));
+                stream.Tokens[start..end], start, targetStart - start, task, bucket, source,
+                UnlikelihoodTargetIndex: unlikelihoodIndex,
+                UnlikelihoodToken: unlikelihoodIndex is null ? null : stream.UnlikelihoodToken,
+                UnlikelihoodWeight: unlikelihoodIndex is null ? 0.0 : 0.2));
         }
     }
 
-    private sealed record SerializedStream(int[] Tokens, int FirstTargetIndex);
+    private sealed record SerializedStream(
+        int[] Tokens,
+        int FirstTargetIndex,
+        int? UnlikelihoodIndex = null,
+        int? UnlikelihoodToken = null);
     private sealed class TrainingRow
     {
         public string? Input { get; set; }
@@ -352,8 +417,15 @@ internal sealed class TrainingData
         public string? GroupId { get; set; }
         public string? Family { get; set; }
         public string? SemanticFamilyId { get; set; }
-        public DialogueTurn[]? Turns { get; set; }
+        public DialogueUtterance[]? Turns { get; set; }
         public StructuredPerception? StructuredPerception { get; set; }
+        public NpcDialogueState? InitialDialogueState { get; set; }
+        public NpcPersona? Persona { get; set; }
+        public PlayerConversationProfile? InitialPlayerProfile { get; set; }
+        public DialogueFact[]? FactDelta { get; set; }
+        public DiscourseResponseAction? DiscourseResponseAction { get; set; }
+        public string[]? AcceptableResponseConstraints { get; set; }
+        public string? RejectedResponse { get; set; }
         public string[]? SupervisedHeads { get; set; }
         public string? Tool { get; set; }
         public string[]? Arguments { get; set; }

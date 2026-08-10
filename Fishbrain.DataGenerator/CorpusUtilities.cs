@@ -19,20 +19,21 @@ internal static partial class CorpusCompiler
         return UserAffect.Neutral;
     }
 
-    private static string ContextInput(IReadOnlyList<DialogueTurn> sourceTurns)
+    private static string ContextInput(IReadOnlyList<DialogueUtterance> sourceTurns)
     {
-        if (sourceTurns.Count == 0 || sourceTurns[^1].Role != DialogueRole.Player)
+        if (sourceTurns.Count == 0 || sourceTurns[^1].Speaker != DialogueRole.Player)
             throw new InvalidDataException("A contextual corpus row must end with a player turn.");
-        var turns = sourceTurns.Select(turn => new DialogueTurn(turn.Role, DialogueText.Normalize(turn.Text))).ToList();
-        while (turns.Count > 1 && turns[0].Role != DialogueRole.Player) turns.RemoveAt(0);
+        var turns = sourceTurns.Select(turn => new DialogueUtterance(
+            turn.Sequence, turn.Speaker, DialogueText.Normalize(turn.Text))).ToList();
+        while (turns.Count > 1 && turns[0].Speaker != DialogueRole.Player) turns.RemoveAt(0);
         while (turns.Count > 1 && string.Join(' ', turns.Select(Render)).Length > 1000) turns.RemoveAt(0);
         return string.Join(' ', turns.Select(Render));
 
-        static string Render(DialogueTurn turn) =>
-            (turn.Role == DialogueRole.Player ? "PLAYER " : "NPC ") + DialogueText.TerminateTurn(turn.Text);
+        static string Render(DialogueUtterance turn) =>
+            (turn.Speaker == DialogueRole.Player ? "PLAYER " : "NPC ") + DialogueText.TerminateTurn(turn.Text);
     }
 
-    private static CorpusRow WithTurns(CorpusRow row, DialogueTurn[] turns)
+    private static CorpusRow WithTurns(CorpusRow row, DialogueUtterance[] turns)
     {
         var input = ContextInput(turns);
         var oldOffset = row.Input.LastIndexOf("PLAYER ", StringComparison.Ordinal) + 7;
@@ -49,7 +50,7 @@ internal static partial class CorpusCompiler
     }
 
     private static CorpusRow EnrichRow(
-        CorpusRow row, DialogueTurn[] turns, SourceDefinition? definition)
+        CorpusRow row, DialogueUtterance[] turns, SourceDefinition? definition)
     {
         var projectOwned = row.SourceLicense.Equals("PROJECT-OWNED", StringComparison.OrdinalIgnoreCase);
         var candidate = row.StructuredPerception.ResponseCandidateId ?? "ACKNOWLEDGE";
@@ -122,21 +123,23 @@ internal static partial class CorpusCompiler
     private static PreferenceDialogue ParsePreferenceDialogue(string raw)
     {
         var pieces = raw.Split("\n\n", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var turns = new List<DialogueTurn>();
+        var turns = new List<DialogueUtterance>();
         foreach (var piece in pieces)
         {
             var separator = piece.IndexOf(':');
             if (separator <= 0 || !TryNormalizeExternal(piece[(separator + 1)..], out var text)) continue;
-            if (piece.StartsWith("Human:", StringComparison.Ordinal)) turns.Add(new DialogueTurn(DialogueRole.Player, text));
-            else if (piece.StartsWith("Assistant:", StringComparison.Ordinal)) turns.Add(new DialogueTurn(DialogueRole.Npc, text));
+            if (piece.StartsWith("Human:", StringComparison.Ordinal))
+                turns.Add(new DialogueUtterance(turns.Count, DialogueRole.Player, text));
+            else if (piece.StartsWith("Assistant:", StringComparison.Ordinal))
+                turns.Add(new DialogueUtterance(turns.Count, DialogueRole.Npc, text));
         }
-        if (turns.Count == 0 || turns[^1].Role != DialogueRole.Npc) return new([], null);
+        if (turns.Count == 0 || turns[^1].Speaker != DialogueRole.Npc) return new([], null);
         var response = turns[^1].Text;
         turns.RemoveAt(turns.Count - 1);
         return new(turns.TakeLast(5).ToArray(), response);
     }
 
-    private sealed record PreferenceDialogue(DialogueTurn[] Turns, string? Response);
+    private sealed record PreferenceDialogue(DialogueUtterance[] Turns, string? Response);
 
     private static bool TryNormalizeExternal(string? raw, out string normalized)
     {
@@ -145,10 +148,27 @@ internal static partial class CorpusCompiler
         var builder = new StringBuilder(Math.Min(raw.Length, 256));
         foreach (var original in raw.Normalize(NormalizationForm.FormD))
         {
-            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(original) == System.Globalization.UnicodeCategory.NonSpacingMark) continue;
-            var value = original switch { '\u2018' or '\u2019' => '\'', '\u2010' or '\u2011' or '\u2012' or '\u2013' or '\u2014' => '-', _ => char.ToUpperInvariant(original) };
-            if (value is >= 'A' and <= 'Z' or >= '0' and <= '9' or ' ' or '.' or ',' or '?' or '!' or '\'' or '-' or ':') builder.Append(value);
-            else if (char.IsWhiteSpace(value)) builder.Append(' ');
+            if (System.Globalization.CharUnicodeInfo.GetUnicodeCategory(original) ==
+                System.Globalization.UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            var value = original switch
+            {
+                '\u2018' or '\u2019' => '\'',
+                '\u201C' or '\u201D' => '"',
+                '\u2010' or '\u2011' or '\u2012' or '\u2013' or '\u2014' => '-',
+                _ => char.ToUpperInvariant(original)
+            };
+            if (value is >= 'A' and <= 'Z' or >= '0' and <= '9' or ' ' or '.' or ',' or '?' or '!' or '\'' or '"' or '-' or ':')
+            {
+                builder.Append(value);
+            }
+            else if (char.IsWhiteSpace(value))
+            {
+                builder.Append(' ');
+            }
         }
         try
         {
@@ -170,32 +190,65 @@ internal static partial class CorpusCompiler
         return new[] { " FUCK ", " NIGGER ", " FAGGOT ", " RAPE ", " SUICIDE ", " KILL " }.Any(padded.Contains);
     }
 
-    private static HashSet<string> LoadHeldOutInputs(string outputPath)
+    private static HeldOutInputs LoadHeldOutInputs(string manifestPath)
     {
-        var path = Path.GetFullPath(Path.Combine(outputPath, "..", "benchmarks", "benchmark-256.jsonl"));
-        var result = new HashSet<string>(StringComparer.Ordinal);
-        if (!File.Exists(path)) return result;
-        foreach (var line in File.ReadLines(path, Utf8))
+        var exact = new HashSet<string>(StringComparer.Ordinal);
+        var conversation = new List<string>();
+        var manifestDirectory = Path.GetDirectoryName(Path.GetFullPath(manifestPath)) ??
+            throw new InvalidDataException("The source manifest path has no parent directory.");
+        var benchmarkDirectory = Path.Combine(manifestDirectory, "benchmarks");
+        foreach (var name in new[] { "benchmark-256.jsonl", "conversation-scenarios.jsonl" })
         {
-            using var document = JsonDocument.Parse(line);
-            if (TryNormalizeExternal(document.RootElement.GetProperty("text").GetString(), out var text))
-                result.Add(NormalizeKey("PLAYER " + text));
+            var path = Path.Combine(benchmarkDirectory, name);
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException($"Mandatory held-out benchmark '{name}' was not found.", path);
+            }
+
+            foreach (var line in File.ReadLines(path, Utf8))
+            {
+                using var document = JsonDocument.Parse(line);
+                var root = document.RootElement;
+                var property = root.TryGetProperty("text", out var benchmarkText)
+                    ? benchmarkText
+                    : root.GetProperty("input");
+                if (TryNormalizeExternal(property.GetString(), out var text))
+                {
+                    var input = "PLAYER " + text;
+                    exact.Add(NormalizeKey(input));
+                    if (name == "conversation-scenarios.jsonl")
+                    {
+                        conversation.Add(input);
+                    }
+                }
+            }
         }
-        return result;
+
+        return new HeldOutInputs(exact, conversation.ToArray());
     }
 
-    private sealed class CompilationContext(HashSet<string> heldOutInputs)
+    private sealed record HeldOutInputs(
+        HashSet<string> Exact,
+        IReadOnlyList<string> Conversation);
+
+    private sealed class CompilationContext(HeldOutInputs heldOutInputs)
     {
         public HashSet<string> ExternalInputs { get; } = new(StringComparer.Ordinal);
 
         public bool IsHeldOut(string text)
         {
-            return heldOutInputs.Contains(NormalizeKey("PLAYER " + text));
+            var input = "PLAYER " + text;
+            return heldOutInputs.Exact.Contains(NormalizeKey(input)) ||
+                   heldOutInputs.Conversation.Any(benchmark =>
+                       NearConversationBenchmark(input, benchmark));
         }
     }
 
-    private static readonly string[] AllHeads =
-    ["speechActs", "domains", "goals", "affect", "stance", "policy", "slots", "content", "tool", "responseCandidate", "knowledgeTarget"];
+    private static readonly string[] OperationalHeads =
+    ["speechActs", "domains", "goals", "affect", "stance", "policy", "slots", "content", "tool",
+        "responseCandidate", "knowledgeTarget"];
+    private static readonly string[] AllHeads = OperationalHeads.Concat(
+        ["discourseAct", "discourseSubject", "discourseTarget", "factKind", "factPolarity", "factSpan", "antecedent"]).ToArray();
     private static readonly string[] People = ["ARIN", "BELA", "CYRA", "DAREN", "ELARA", "FEN", "GARRICK", "HANA", "IVOR", "JORA", "KAEL", "LYRA", "MIRA", "NYX", "ORIN", "PAVA"];
     private static readonly string[] Places = ["THE INN", "THE MARKET", "IRON GATE", "MOON SHRINE", "NORTH ROAD", "EMBER KEEP", "ORBITAL DOCK", "REACTOR BAY", "CRYSTAL CAVE", "SOUTH TOWER", "STAR PORT", "OLD BRIDGE"];
     private static readonly string[] Items = ["IRON SWORD", "HEALTH POTION", "ROPE", "PLASMA CELL", "MANA CRYSTAL", "STAR MAP", "LOCKPICK", "DRAGON SCALE", "REPAIR KIT", "LASER RIFLE", "RATIONS", "SILVER KEY"];

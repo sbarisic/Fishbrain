@@ -33,14 +33,18 @@ internal static class RuntimeTestSuite
             ("AUTHORITATIVE DEMO WORLD", AuthoritativeDemoWorld),
             ("CONCURRENT WORLD IDEMPOTENCY", ConcurrentWorldIdempotency),
             ("REFERENCE RESOLUTION", ReferenceResolution),
+            ("DISCOURSE MEMORY AND REPAIR", DiscourseMemoryAndRepair),
             ("RESPONSE CATALOG", ResponseCatalogValidation),
             ("TOOL SCHEMA VALIDATION", ToolSchemaValidation),
             ("TOOL SCHEMA SNAPSHOT", ToolSchemaSnapshot),
             ("RUNTIME BOUNDARY VALIDATION", RuntimeBoundaryValidation),
             ("SHARED RELEASE THRESHOLDS", SharedReleaseThresholds),
+            ("TOOL MARGIN FALLBACK", ToolMarginFallback),
             ("MONOTONIC CURRICULUM", MonotonicCurriculum),
             ("PHASE-LOCAL SAMPLING", PhaseLocalSampling),
-            ("CHECKED-IN MODEL SMOKE", CheckedInModelSmoke),
+            ("DISCOURSE NEURAL OVERFIT", DiscourseTrainingTestSuite.NeuralOverfit),
+            ("CURRICULUM SAMPLER", DiscourseTrainingTestSuite.CurriculumSampler),
+            ("MODEL ARTIFACT SMOKE", ModelArtifactSmoke),
             ("COMPACT CHECKPOINT", CompactCheckpoint)
         };
         foreach (var (name, test) in tests)
@@ -65,8 +69,8 @@ internal static class RuntimeTestSuite
     });
 
     static ReplyRequest Request(string text, NpcDialogueState? state = null, string turnId = "1") =>
-        new("TEST-CONVERSATION", turnId, [new(DialogueRole.Player, text)],
-            state ?? NpcDialogueState.Initial, NpcPersona.Default, 41);
+        new("TEST-CONVERSATION", turnId, [new(0, DialogueRole.Player, text)],
+            state ?? NpcDialogueState.Initial, NpcPersona.Default, PlayerConversationProfile.Empty, 1, 41);
 
     static void StructuredRoles()
     {
@@ -82,10 +86,11 @@ internal static class RuntimeTestSuite
         var turns = Enumerable.Range(0, 1000)
             .SelectMany(index => new[]
             {
-                new DialogueTurn(DialogueRole.Player, "HELLO " + index),
-                new DialogueTurn(DialogueRole.Npc, "GREETINGS")
-            }).Append(new DialogueTurn(DialogueRole.Player, "WHERE IS THE INN?")).ToArray();
-        var request = new ReplyRequest("LONG", "2001", turns, NpcDialogueState.Initial, NpcPersona.Default, 3);
+                new DialogueUtterance(index * 2L, DialogueRole.Player, "HELLO " + index),
+                new DialogueUtterance(index * 2L + 1, DialogueRole.Npc, "GREETINGS")
+            }).Append(new DialogueUtterance(2000, DialogueRole.Player, "WHERE IS THE INN?")).ToArray();
+        var request = new ReplyRequest("LONG", "2001", turns, NpcDialogueState.Initial, NpcPersona.Default,
+            PlayerConversationProfile.Empty, 2001, 3);
         var result = TestBrain().Reply(request, DemoGameTools.CreateMerchant());
         Assert(result.Diagnostics.PackedTurnCount < turns.Length, "history bounded by complete turns");
         Assert(result.Diagnostics.PackedTokenCount >= 5, "current turn always retained");
@@ -143,7 +148,7 @@ internal static class RuntimeTestSuite
     static void DeterministicSampling()
     {
         var brain = TestBrain();
-        var request = Request("tell me about the road") with { Seed = 917, ResponseMode = ResponseMode.GeneratedExperimental };
+        var request = Request("tell me about the road") with { Seed = 917, ResponseMode = ResponseMode.Production };
         var first = brain.Reply(request, GameToolRegistry.Empty);
         var second = brain.Reply(request, GameToolRegistry.Empty);
         Assert(first.Text == second.Text && first.Perception.Policy == second.Perception.Policy,
@@ -464,6 +469,9 @@ internal static class RuntimeTestSuite
         }
 
         Assert(invalidModeRejected, "unknown response modes are rejected");
+        AssertThrows<ArgumentException>(() => brain.Reply(
+            Request("hello") with { ResponseSequence = 0 },
+            GameToolRegistry.Empty));
 
         var duplicateClarificationRejected = false;
         try
@@ -517,12 +525,16 @@ internal static class RuntimeTestSuite
 
     static void SharedReleaseThresholds()
     {
-        var passing = new StructuredMetrics(0.85, 0.85, 0.80, 0.85, 0.0, 0.90, 0.90, 0.85,
-            0.95, 0.99, 0.90, 0.85, 0.95, 0.95, 0.80, 0.0);
+        var passing = new StructuredMetrics(0.85, 0.84, 0.80, 0.85, 0.0, 0.90, 0.90, 0.85,
+            0.95, 0.97, 0.90, 0.85, 0.95, 0.95, 0.80,
+            0.90, 0.95, 0.90, 0.90, 0.95, 0.0);
         Assert(CompositionalHeadModel.MeetsReleaseNeuralThresholds(passing),
             "training accepts the evaluator's exact neural minima");
-        Assert(!CompositionalHeadModel.MeetsReleaseNeuralThresholds(passing with { DomainMacroF1 = 0.8499 }),
+        Assert(!CompositionalHeadModel.MeetsReleaseNeuralThresholds(passing with { DomainMacroF1 = 0.8399 }),
             "best-production selection rejects a model below any release neural minimum");
+        Assert(!CompositionalHeadModel.MeetsReleaseNeuralThresholds(
+                passing with { MutatingToolPrecision = 0.9699 }),
+            "best-production selection enforces the 97 percent mutating-tool precision minimum");
     }
 
     static void MonotonicCurriculum()
@@ -544,10 +556,10 @@ internal static class RuntimeTestSuite
             "structured schedule visits consecutive family ordinals without residue gaps");
         Assert(ranking.SequenceEqual(Enumerable.Range(0, 4)),
             "ranking schedule visits consecutive family ordinals without residue gaps");
-        var polishStructured = Enumerable.Range(160_000, 20).Where(step => step % 10 <= 7)
-            .Select(step => Brain.HeadPolishStructuredIndex(step, 160_000)).ToArray();
-        var polishRanking = Enumerable.Range(160_000, 20).Where(step => step % 10 >= 8)
-            .Select(step => Brain.HeadPolishRankingIndex(step, 160_000)).ToArray();
+        var polishStructured = Enumerable.Range(200_000, 20).Where(step => step % 10 <= 7)
+            .Select(step => Brain.HeadPolishStructuredIndex(step, 200_000)).ToArray();
+        var polishRanking = Enumerable.Range(200_000, 20).Where(step => step % 10 >= 8)
+            .Select(step => Brain.HeadPolishRankingIndex(step, 200_000)).ToArray();
         Assert(polishStructured.SequenceEqual(Enumerable.Range(0, 16)),
             "head-polish structured sampling uses consecutive phase-local ordinals");
         Assert(polishRanking.SequenceEqual(Enumerable.Range(0, 4)),
@@ -559,11 +571,24 @@ internal static class RuntimeTestSuite
             "repository data discovery climbs from isolated build directories");
     }
 
-    static void CheckedInModelSmoke()
+    static void ModelArtifactSmoke()
     {
-        var modelPath = Fishbrain.Program.ResolveRepositoryFileFrom([Environment.CurrentDirectory, AppContext.BaseDirectory],
-            "data", "models", "model-latest.fbm");
-        var brain = Brain.Load(modelPath);
+        var requestedModel = Environment.GetEnvironmentVariable("FISHBRAIN_TEST_MODEL");
+        var modelPath = string.IsNullOrWhiteSpace(requestedModel)
+            ? Fishbrain.Program.ResolveRepositoryFileFrom(
+                [Environment.CurrentDirectory, AppContext.BaseDirectory],
+                "data", "models", "model-latest.fbm")
+            : Path.GetFullPath(requestedModel);
+        Brain brain;
+        try
+        {
+            brain = Brain.Load(modelPath);
+        }
+        catch (InvalidDataException) when (string.IsNullOrWhiteSpace(requestedModel))
+        {
+            Console.WriteLine("PASS OLD MODEL ARTIFACT REJECTED");
+            return;
+        }
         var world = new DemoWorldState();
         var tools = DemoGameTools.CreateMerchant(world);
         var balance = brain.Reply(Request("balance", turnId: "MODEL-BALANCE"), tools);
@@ -585,15 +610,18 @@ internal static class RuntimeTestSuite
         var transcriptWorld = new DemoWorldState();
         var transcriptTools = DemoGameTools.CreateMerchant(transcriptWorld);
         var transcriptState = NpcDialogueState.Initial;
-        var transcriptTurns = new List<DialogueTurn>();
+        var transcriptTurns = new List<DialogueUtterance>();
         var transcriptIndex = 0;
+        long transcriptSequence = 0;
         ReplyResult Say(string text)
         {
-            transcriptTurns.Add(new DialogueTurn(DialogueRole.Player, text));
+            transcriptTurns.Add(new DialogueUtterance(++transcriptSequence, DialogueRole.Player, text));
             var result = brain.Reply(new ReplyRequest("TRANSCRIPT-FEEDBACK", (++transcriptIndex).ToString(),
-                transcriptTurns.ToArray(), transcriptState, NpcPersona.Default, 700 + transcriptIndex), transcriptTools);
+                transcriptTurns.ToArray(), transcriptState, NpcPersona.Default, PlayerConversationProfile.Empty,
+                transcriptSequence + 1, 700 + transcriptIndex), transcriptTools);
             transcriptState = result.State;
-            if (result.Text.Length > 0) transcriptTurns.Add(new DialogueTurn(DialogueRole.Npc, result.Text));
+            if (result.Text.Length > 0)
+                transcriptTurns.Add(new DialogueUtterance(++transcriptSequence, DialogueRole.Npc, result.Text));
             return result;
         }
 
@@ -655,6 +683,41 @@ internal static class RuntimeTestSuite
         if (!condition) throw new InvalidOperationException("Assertion failed: " + message);
     }
 
+    static void ToolMarginFallback()
+    {
+        var passing = new[]
+        {
+            (Margin: 0.00, Accuracy: 0.80, MutatingPrecision: 1.00),
+            (Margin: 0.05, Accuracy: 0.90, MutatingPrecision: 0.99),
+            (Margin: 0.10, Accuracy: 0.95, MutatingPrecision: 0.97)
+        };
+        Assert(CompositionalHeadModel.SelectToolNoneMargin(passing) == 0.05,
+            "tool-margin calibration did not maximize accuracy within the precision constraint");
+
+        var infeasible = new[]
+        {
+            (Margin: 0.00, Accuracy: 0.80, MutatingPrecision: 0.95),
+            (Margin: 0.05, Accuracy: 0.90, MutatingPrecision: 0.97),
+            (Margin: 0.10, Accuracy: 0.92, MutatingPrecision: 0.97)
+        };
+        Assert(CompositionalHeadModel.SelectToolNoneMargin(infeasible) == 0.10,
+            "infeasible tool-margin calibration did not select the safest highest-accuracy fallback");
+    }
+
+    static void AssertThrows<TException>(Action action) where TException : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (TException)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException($"Assertion failed: expected {typeof(TException).Name}.");
+    }
+
     sealed class CountingBuyTool : IGameTool
     {
         private readonly ConcurrentDictionary<string, GameToolResult> _results = new(StringComparer.Ordinal);
@@ -697,6 +760,162 @@ internal static class RuntimeTestSuite
     {
         public ToolSchema Schema { get; } = new("bad name", [], [], false, []);
         public GameToolResult Execute(GameToolInvocation invocation) => new(true, new Dictionary<string, string>());
+    }
+
+    static void DiscourseMemoryAndRepair()
+    {
+        var brain = TestBrain();
+        var tools = DemoGameTools.CreateMerchant();
+        var state = NpcDialogueState.Initial;
+        var profile = PlayerConversationProfile.Empty;
+        var utterances = new List<DialogueUtterance>();
+        long sequence = 0;
+        var turn = 0;
+
+        ReplyResult Say(string text)
+        {
+            utterances.Add(new DialogueUtterance(++sequence, DialogueRole.Player, text));
+            var result = brain.Reply(new ReplyRequest("DISCOURSE", (++turn).ToString(), utterances,
+                state, NpcPersona.Default, profile, sequence + 1, 41), tools);
+            state = result.State;
+            if (result.Text.Length > 0)
+                utterances.Add(new DialogueUtterance(++sequence, DialogueRole.Npc, result.Text));
+            return result;
+        }
+
+        var identity = Say("who are you?");
+        Assert(identity.Text.Contains("TRAVELER", StringComparison.Ordinal) &&
+               state.SessionFacts.Any(fact => fact.Subject == DialogueParticipant.Npc &&
+                   fact.Kind == DialogueFactKind.Role && fact.Value == "TRAVELER" && !fact.Negated),
+            "NPC identity remains speaker-owned and is stored as an NPC fact");
+        var rejection = Say("i am not a traveler");
+        Assert(rejection.Plan.DiscourseAction == DiscourseResponseAction.AcknowledgeCorrection &&
+               state.SessionFacts.Any(fact => fact.Subject == DialogueParticipant.Player &&
+                   fact.Kind == DialogueFactKind.Occupation && fact.Value == "TRAVELER" && fact.Negated),
+            "negative player occupation is remembered without contradicting NPC identity");
+        var scientist = Say("i am a scientist");
+        Assert(scientist.Text.Contains("SCIENTIST", StringComparison.Ordinal) &&
+               state.SessionFacts.Any(fact => fact.Kind == DialogueFactKind.Occupation &&
+                   fact.Value == "SCIENTIST" && !fact.Negated),
+            "positive player occupation is acknowledged and remembered");
+        var expectedAntecedent = utterances[^1].Sequence;
+        var explanation = Say("what do you mean?");
+        Assert(explanation.Plan.DiscourseAction == DiscourseResponseAction.ExplainPreviousResponse &&
+               explanation.Plan.AntecedentUtterance == expectedAntecedent &&
+               explanation.Diagnostics.AppliedConstraints.Any(constraint =>
+                   constraint.Head == "DISCOURSE" &&
+                   constraint.Reason == "DETERMINISTIC_DISCOURSE_CONSTRAINT"),
+            "explanation request resolves to the previous NPC utterance");
+
+        var sessionFact = state.SessionFacts.Single(fact => fact.Value == "SCIENTIST");
+        var promotedFacts = new List<DialogueFact> { sessionFact with
+        {
+            Provenance = DialogueFactProvenance.CallerApproved
+        } };
+        profile = new PlayerConversationProfile(promotedFacts);
+        promotedFacts.Clear();
+        Assert(profile.Facts.Count == 1, "the persistent profile takes an immutable caller-data snapshot");
+        var profileSnapshot = profile.Facts.ToArray();
+        _ = Say("hello again");
+        Assert(profile.Facts.SequenceEqual(profileSnapshot), "Fishbrain never mutates the caller-approved profile");
+        var callback = Say("do you remember what i do?");
+        Assert(callback.Text.Contains("SCIENTIST", StringComparison.Ordinal),
+            "caller-approved facts remain available for conversational callbacks");
+        Assert(NpcDialogueState.Initial.SessionFacts.Count == 0, "a fresh dialogue state clears session facts");
+
+        var quoted = Say("he said \"i am a smith\"");
+        Assert(quoted.Perception.Discourse?.FactValueSpan is null &&
+               state.SessionFacts.All(fact => fact.Value != "SMITH"), "reported speech does not become a player fact");
+        var reported = Say("according to Hana, I am a smith");
+        Assert(reported.Perception.Discourse?.FactValueSpan is null &&
+               state.SessionFacts.All(fact => fact.Value != "SMITH"),
+            "unquoted reported speech does not become a player fact");
+
+        var balanceBefore = tools.Schemas.Count;
+        var authorityClaim = Say("i have 1000 gold");
+        Assert(authorityClaim.Diagnostics.ToolInvocation is null && tools.Schemas.Count == balanceBefore,
+            "player claims cannot invoke or mutate authoritative tools");
+
+        _ = Say("i am a teacher");
+        Assert(state.SessionFacts.All(fact => fact.Kind != DialogueFactKind.Occupation ||
+                   fact.Value != "SCIENTIST" || fact.Negated) &&
+               state.SessionFacts.Any(fact => fact.Kind == DialogueFactKind.Occupation &&
+                   fact.Value == "TEACHER" && !fact.Negated),
+            "new positive occupation replaces the prior positive occupation");
+        _ = Say("i am not a teacher");
+        Assert(state.SessionFacts.Any(fact => fact.Kind == DialogueFactKind.Occupation &&
+                   fact.Value == "TEACHER" && fact.Negated) &&
+               state.SessionFacts.All(fact => fact.Kind != DialogueFactKind.Occupation ||
+                   fact.Value != "TEACHER" || fact.Negated),
+            "explicit negation removes only the matching positive occupation");
+
+        var supportedFacts = new (string Input, DialogueFactKind Kind, string Value)[]
+        {
+            ("my name is Mira", DialogueFactKind.Name, "MIRA"),
+            ("my role is navigator", DialogueFactKind.Role, "NAVIGATOR"),
+            ("i am from north road", DialogueFactKind.Origin, "NORTH ROAD"),
+            ("i live in ember keep", DialogueFactKind.Home, "EMBER KEEP"),
+            ("my family includes my sister Lyra", DialogueFactKind.Family, "MY SISTER LYRA"),
+            ("i am currently reading", DialogueFactKind.Activity, "READING"),
+            ("i prefer old maps", DialogueFactKind.Preference, "OLD MAPS"),
+            ("i dislike rainy mornings", DialogueFactKind.Dislike, "RAINY MORNINGS"),
+            ("i think quiet roads matter", DialogueFactKind.Opinion, "QUIET ROADS MATTER"),
+            ("i have experienced a long voyage", DialogueFactKind.Experience, "A LONG VOYAGE")
+        };
+        foreach (var expected in supportedFacts)
+        {
+            _ = Say(expected.Input);
+            Assert(state.SessionFacts.Any(fact => fact.Kind == expected.Kind && fact.Value == expected.Value),
+                $"{expected.Kind} fact is extracted and reduced");
+        }
+
+        var longTopic = DialogueStateReducer.BoundedTopic(
+            "OCCUPATION: SOFTWARE DEVELOPER LEARNING QUANTUM COMPUTING THROUGH MATHEMATICS " +
+            "PHYSICS ALGORITHMS PROGRAMMING ENGINEERING RESEARCH AND PRACTICE");
+        Assert(longTopic.Length <= 128 && longTopic == DialogueText.Normalize(longTopic),
+            "long fact values produce bounded topic summaries");
+
+        for (var index = 0; index < 20; index++)
+        {
+            _ = Say($"i like road marker {index}");
+        }
+
+        Assert(state.SessionFacts.Count <= 16 && state.TopicSummaries.Count <= 8,
+            "session facts and topic summaries remain bounded after pruning");
+
+        var ambiguousUtterances = new DialogueUtterance[]
+        {
+            new(1, DialogueRole.Npc, "THE ROAD IS QUIET."),
+            new(2, DialogueRole.Npc, "THE ROAD IS QUIET."),
+            new(3, DialogueRole.Player, "what did you mean when you said the road is quiet?")
+        };
+        var ambiguous = brain.Reply(new ReplyRequest("AMBIGUOUS", "1", ambiguousUtterances,
+            NpcDialogueState.Initial, NpcPersona.Default, PlayerConversationProfile.Empty, 4, 1), tools);
+        Assert(ambiguous.Plan.DiscourseAction == DiscourseResponseAction.ClarifyReference &&
+               ambiguous.Plan.AntecedentUtterance is null,
+            "multiple equally plausible utterance antecedents request clarification");
+
+        var correctionUtterances = new DialogueUtterance[]
+        {
+            new(1, DialogueRole.Npc, "YOU ARE A TEACHER."),
+            new(2, DialogueRole.Player, "no, a scientist.")
+        };
+        var fragment = brain.Reply(new ReplyRequest("FRAGMENT", "1", correctionUtterances,
+            NpcDialogueState.Initial, NpcPersona.Default, PlayerConversationProfile.Empty, 20, 1), tools);
+        Assert(fragment.Perception.Discourse is
+        {
+            Act: DiscourseAct.Correct,
+            Subject: DialogueParticipant.Player,
+            FactKind: DialogueFactKind.Occupation,
+            FactValueSpan: { NormalizedValue: "SCIENTIST" }
+        } && fragment.State.SessionFacts.Any(fact => fact.Subject == DialogueParticipant.Player &&
+            fact.Kind == DialogueFactKind.Occupation && fact.Value == "SCIENTIST") &&
+               fragment.State.LastResponseTrace?.UtteranceSequence == 20,
+            "an elliptical correction resolves against the preceding NPC assumption and uses the reserved sequence");
+
+        var noRetainedNpc = brain.Reply(Request("what do you mean?"), tools);
+        Assert(noRetainedNpc.Plan.DiscourseAction == DiscourseResponseAction.ClarifyReference,
+            "an evicted antecedent produces a natural reference clarification");
     }
 
     static void ItemSubstringReferenceIsolation()

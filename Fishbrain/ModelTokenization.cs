@@ -49,9 +49,10 @@ internal static class Tokenizer
     public const int Exclamation = 70;
     public const int Colon = 71;
     public const int ArgumentSeparator = 72;
-    public const int WordBegin = 73;
-    public const int WordEnd = 74;
-    public const int CharacterStart = 75;
+    public const int Quote = 73;
+    public const int WordBegin = 74;
+    public const int WordEnd = 75;
+    public const int CharacterStart = 76;
     public const int CharacterCount = 38;
     public const int WordStart = CharacterStart + CharacterCount;
     public const int Unknown = WordBegin;
@@ -61,6 +62,7 @@ internal static class Tokenizer
         ArgumentNullException.ThrowIfNull(text);
         var output = new StringBuilder(text.Length);
         var pendingSpace = false;
+        var inQuote = false;
 
         foreach (var original in text)
         {
@@ -73,12 +75,13 @@ internal static class Tokenizer
             var character = original switch
             {
                 '\u2018' or '\u2019' => '\'',
+                '\u201c' or '\u201d' => '"',
                 '\u2010' or '\u2011' or '\u2012' or '\u2013' or '\u2014' => '-',
                 _ => char.ToUpperInvariant(original)
             };
             if (!IsVisibleCharacter(character))
                 throw new ArgumentException(
-                    $"Unsupported character '{original}'. Only A-Z, 0-9, whitespace, and . , ? ! ' - : are allowed.");
+                    $"Unsupported character '{original}'. Only A-Z, 0-9, whitespace, and . , ? ! ' \" - : are allowed.");
 
             if (character is '.' or '?' or '!')
             {
@@ -99,6 +102,16 @@ internal static class Tokenizer
                 continue;
             }
 
+            if (character == '"')
+            {
+                if (!inQuote && pendingSpace && output.Length > 0) output.Append(' ');
+                else if (inQuote) TrimTrailingSpace(output);
+                output.Append(character);
+                inQuote = !inQuote;
+                pendingSpace = !inQuote;
+                continue;
+            }
+
             if (character is '\'' or '-')
             {
                 TrimTrailingSpace(output);
@@ -112,6 +125,7 @@ internal static class Tokenizer
             pendingSpace = false;
         }
 
+        if (inQuote) throw new ArgumentException("Quoted text must contain a closing quote.", nameof(text));
         return output.ToString();
     }
 
@@ -143,7 +157,7 @@ internal static class Tokenizer
                 continue;
             }
             FlushWord();
-            if (character is '.' or ',' or '?' or '!' or ':')
+            if (character is '.' or ',' or '?' or '!' or ':' or '"')
                 result.Add(new LexicalToken(LexicalTokenKind.Punctuation, character.ToString()));
         }
         FlushWord();
@@ -160,7 +174,7 @@ internal static class Tokenizer
     }
 
     public static bool IsVisibleCharacter(char character) =>
-        IsIdentifierCharacter(character) || character is ' ' or '.' or ',' or '?' or '!' or '\'' or '-' or ':';
+        IsIdentifierCharacter(character) || character is ' ' or '.' or ',' or '?' or '!' or '\'' or '-' or ':' or '"';
 
     public static bool IsIdentifierCharacter(char character) =>
         character is >= 'A' and <= 'Z' or >= '0' and <= '9';
@@ -246,6 +260,7 @@ internal sealed class DialogueTokenizer
                 '?' => Tokenizer.Question,
                 '!' => Tokenizer.Exclamation,
                 ':' => Tokenizer.Colon,
+                '"' => Tokenizer.Quote,
                 _ => throw new InvalidDataException($"Unsupported punctuation token '{token.Text}'.")
             });
         }
@@ -259,6 +274,7 @@ internal sealed class DialogueTokenizer
         Tokenizer.Question => "?",
         Tokenizer.Exclamation => "!",
         Tokenizer.Colon => ":",
+        Tokenizer.Quote => "\"",
         Tokenizer.WordBegin => "<WORD_BEGIN>",
         Tokenizer.WordEnd => "<WORD_END>",
         _ when token >= Tokenizer.CharacterStart && token < Tokenizer.WordStart => Tokenizer.DecodeCharacter(token).ToString(),
@@ -274,6 +290,7 @@ internal sealed class DialogueTokenizer
         var text = new StringBuilder();
         var oov = new StringBuilder();
         var inOov = false;
+        var inQuote = false;
         foreach (var inputToken in inputTokens)
         {
             if (inputToken == Tokenizer.Eos) break;
@@ -287,7 +304,7 @@ internal sealed class DialogueTokenizer
             if (inputToken == Tokenizer.WordEnd)
             {
                 if (!inOov || oov.Length == 0) throw new InvalidDataException("Invalid OOV word boundary.");
-                if (text.Length > 0) text.Append(' ');
+                if (text.Length > 0 && !(inQuote && text[^1] == '"')) text.Append(' ');
                 text.Append(oov);
                 inOov = false;
                 continue;
@@ -295,6 +312,14 @@ internal sealed class DialogueTokenizer
             if (inOov)
             {
                 oov.Append(Tokenizer.DecodeCharacter(inputToken));
+                continue;
+            }
+            if (inputToken == Tokenizer.Quote)
+            {
+                if (!inQuote && text.Length > 0 && text[^1] != ' ') text.Append(' ');
+                else if (inQuote && text.Length > 0 && text[^1] == ' ') text.Length--;
+                text.Append('"');
+                inQuote = !inQuote;
                 continue;
             }
             if (inputToken is Tokenizer.Period or Tokenizer.Comma or Tokenizer.Question or
@@ -305,10 +330,11 @@ internal sealed class DialogueTokenizer
                 continue;
             }
             if (!_vocabulary.IsWord(inputToken)) continue;
-            if (text.Length > 0) text.Append(' ');
+            if (text.Length > 0 && !(inQuote && text[^1] == '"')) text.Append(' ');
             text.Append(_vocabulary.WordForInput(inputToken));
         }
         if (inOov) throw new InvalidDataException("Unterminated OOV word.");
+        if (inQuote) throw new InvalidDataException("Unterminated quoted text.");
         return text.ToString();
     }
 
@@ -333,7 +359,10 @@ internal sealed record TrainingSample(
     string Source = "synthetic",
     TurnPerception? PerceptionTarget = null,
     string Family = "",
-    PerceptionFields TargetFields = PerceptionFields.All);
+    PerceptionFields TargetFields = PerceptionFields.All,
+    int? UnlikelihoodTargetIndex = null,
+    int? UnlikelihoodToken = null,
+    double UnlikelihoodWeight = 0.0);
 
 
 internal static class DialogueKeys

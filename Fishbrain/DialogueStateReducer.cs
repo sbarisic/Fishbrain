@@ -7,9 +7,18 @@ namespace Fishbrain;
 internal static class DialogueStateReducer
 {
     public static NpcDialogueState Apply(
-        NpcDialogueState state, StructuredPerception perception, TurnPlan plan, GameToolResult? toolResult)
+        NpcDialogueState state,
+        PlayerConversationProfile playerProfile,
+        DialogueUtterance currentUtterance,
+        long responseSequence,
+        StructuredPerception perception,
+        TurnPlan plan,
+        GameToolResult? toolResult,
+        string responseText,
+        string? fallbackReason)
     {
         state.Validate();
+        playerProfile.Validate();
         var hostileEvent = perception.Stance == DialogueStance.Hostile ||
             perception.SpeechActs.Contains(SpeechAct.Threaten) || perception.ContentFlags.Contains(ContentFlag.Threat);
         var repairEvent = perception.SpeechActs.Contains(SpeechAct.Apologize);
@@ -55,13 +64,33 @@ internal static class DialogueStateReducer
             authoritativePlace ?? Latest(SlotType.Place) ?? contextualPlace ?? state.References.Place,
             Latest(SlotType.Item) ?? state.References.Item,
             Latest(SlotType.Vehicle) ?? state.References.Vehicle,
-            Latest(SlotType.System) ?? state.References.System);
+            Latest(SlotType.System) ?? state.References.System,
+            perception.Discourse?.AntecedentUtterance ?? state.References.UtteranceSequence);
+        var facts = ReduceFacts(state.SessionFacts, perception.Discourse, currentUtterance.Sequence);
+        var npcFrame = DiscourseResolver.ExtractNpcFact(responseText);
+        facts = ReduceFacts(facts, npcFrame, responseSequence);
+        var topic = TopicFor(perception);
+        var topics = topic is null
+            ? state.TopicSummaries
+            : state.TopicSummaries.Where(value => value.Topic != topic)
+                .Append(new DialogueTopicSummary(currentUtterance.Sequence, topic)).TakeLast(8).ToArray();
+        var trace = responseText.Length == 0
+            ? state.LastResponseTrace
+            : new ResponseSemanticTrace(responseSequence, plan.DiscourseAction,
+                topic ?? "GENERAL CONVERSATION",
+                new[] { perception.Discourse?.FactKind, npcFrame?.FactKind }
+                    .OfType<DialogueFactKind>()
+                    .Distinct()
+                    .ToArray(),
+                plan.ResponseCandidateId,
+                fallbackReason);
         var result = new NpcDialogueState((byte)rapport, (byte)trust, (byte)familiarity, hostility,
             mood, domains, perception.ResponseCandidateId, perception.Affect, clarification, transaction,
             goals, plan.PendingActions.Take(3).ToArray(), references, (byte)threat, (byte)calmTurns,
             perception.Domains.Count == 0 ? null : perception.Domains[0], perception.KnowledgeTarget,
             toolResult is null ? state.LastTool : plan.ToolSchema,
-            toolResult is null ? state.LastToolOutcome : toolResult.Success ? "SUCCESS" : toolResult.ErrorCode ?? "FAILED");
+            toolResult is null ? state.LastToolOutcome : toolResult.Success ? "SUCCESS" : toolResult.ErrorCode ?? "FAILED",
+            facts, topics, trace);
         result.Validate();
         return result;
 
@@ -70,5 +99,42 @@ internal static class DialogueStateReducer
         string? ToolField(string name) => toolResult?.Fields.TryGetValue(name, out var value) == true
             ? value.Length <= 32 ? value : value[..32]
             : null;
+    }
+
+    internal static IReadOnlyList<DialogueFact> ReduceFacts(
+        IReadOnlyList<DialogueFact> current,
+        DiscourseFrame? frame,
+        long sourceUtterance)
+    {
+        if (frame is not { Subject: not DialogueParticipant.None, FactKind: { } kind, FactValueSpan: { } span } ||
+            frame.Act is not (DiscourseAct.Inform or DiscourseAct.Correct or DiscourseAct.RejectAssumption))
+            return current;
+
+        var value = span.NormalizedValue;
+
+        var facts = current.Where(fact => !(fact.Subject == frame.Subject && fact.Kind == kind &&
+            (fact.Value == value || !frame.Negated && IsSingleValued(kind) && !fact.Negated))).ToList();
+        facts.Add(new DialogueFact(frame.Subject, kind, value, frame.Negated, sourceUtterance,
+            frame.Confidence, DialogueFactProvenance.SessionReported));
+        return facts.TakeLast(16).ToArray();
+    }
+
+    private static bool IsSingleValued(DialogueFactKind kind) => kind is
+        DialogueFactKind.Name or DialogueFactKind.Role or DialogueFactKind.Occupation or
+        DialogueFactKind.Origin or DialogueFactKind.Home;
+
+    private static string? TopicFor(StructuredPerception perception)
+    {
+        if (perception.Discourse?.FactKind is { } kind && perception.Discourse.FactValueSpan is { } value)
+            return BoundedTopic($"{kind.ToString().ToUpperInvariant()}: {value.NormalizedValue}");
+        if (perception.Domains.Count > 0)
+            return perception.Domains[0].ToString().ToUpperInvariant();
+        return null;
+    }
+
+    internal static string BoundedTopic(string value)
+    {
+        var normalized = DialogueText.Normalize(value);
+        return normalized.Length <= 128 ? normalized : normalized[..128].TrimEnd();
     }
 }
