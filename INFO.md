@@ -125,7 +125,7 @@ members. Discourse selection is 40% facts, 30% references, 20% banter, and 10% h
 negatives. The structured learning rate decays from 0.03 to 0.003 with a cosine schedule,
 and positive weighting is capped at 2.0.
 
-Rolling checkpoints and telemetry are written every 1,000 steps. Calibration uses one
+Rolling checkpoints and telemetry are written every 5,000 steps. Calibration uses one
 fixed family-balanced 2,000-row subset and never a noisy 128-row milestone sample. Full
 family-balanced validation runs every 20K and at the configured final step.
 `best-production` is selected only when every raw neural release minimum passes;

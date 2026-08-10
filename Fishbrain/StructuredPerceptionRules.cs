@@ -450,6 +450,7 @@ public sealed partial class Brain
     {
         var bare = text.Trim().TrimEnd('.', '?', '!');
         if (IsClassificationQuestion(bare)) return KnowledgeTarget.None;
+        if (DiscourseResolver.PlayerFactQuestionKind(bare) is not null) return KnowledgeTarget.None;
         if (ContainsAny(bare, "WHAT IS YOUR NAME", "YOUR NAME", "WHO ARE YOU CALLED", "WHAT NAME DO YOU ANSWER TO", "WHAT DO PEOPLE CALL YOU")) return KnowledgeTarget.Name;
         if (ContainsAny(bare, "WHO ARE YOU", "WHAT ARE YOU", "YOUR ROLE")) return KnowledgeTarget.Role;
         if (ContainsAny(bare, "WHERE ARE YOU FROM", "YOUR ORIGIN", "WHERE DID YOU COME FROM", "WHERE WERE YOU BORN")) return KnowledgeTarget.Origin;
@@ -463,8 +464,10 @@ public sealed partial class Brain
                 "DID MY BALANCE CHANGE", "CHECK BALANCE"))
             return KnowledgeTarget.Balance;
         if (ContainsAny(bare, "MY INVENTORY", "WHAT DO I CARRY", "WHAT ITEMS DO I HAVE", "ITEMS ARE IN MY PACK",
-            "LIST EVERYTHING IN MY INVENTORY", "CHECK WHETHER WE HAVE")) return KnowledgeTarget.Inventory;
-        if (ContainsAny(bare, "WHERE AM I", "CURRENT LOCATION")) return KnowledgeTarget.CurrentLocation;
+            "LIST EVERYTHING IN MY INVENTORY", "CHECK WHETHER WE HAVE", "WHAT DO I OWN", "WHAT BELONGS TO ME"))
+            return KnowledgeTarget.Inventory;
+        if (ContainsAny(bare, "WHERE AM I", "WHERE ARE WE", "WHERE ARE YOU", "WHERE IS THIS PLACE",
+            "WERE AM I", "WERE ARE WE", "WERE ARE YOU", "CURRENT LOCATION")) return KnowledgeTarget.CurrentLocation;
         if (ContainsAny(bare, "WHAT WORLD FACTS DO YOU KNOW", "WHICH WORLD FACTS DO YOU KNOW", "WHAT FACTS DO YOU KNOW"))
             return KnowledgeTarget.WorldFact;
         var knownItemDescription = StartsWithAny(bare, "TELL ME ABOUT ", "WHAT DO YOU KNOW ABOUT ") &&
@@ -497,7 +500,9 @@ public sealed partial class Brain
     {
         var slots = new List<DialogueSlot>();
         AddMatches(SlotType.Quantity, "\\b[0-9]+\\b", 1.0);
-        var transactionPhrase = ContainsAny(text, "BUY ", "SELL ", "PURCHASE ");
+        var waresQuestion = IsWaresAvailabilityQuestion(text);
+        var transactionPhrase = !waresQuestion &&
+            ContainsAny(text, "BUY ", "SELL ", "PURCHASE ", "GIVE ME ", "HAND ME ");
         foreach (var (word, value) in new[] { ("ONE", "1"), ("TWO", "2"), ("THREE", "3"), ("FOUR", "4"), ("FIVE", "5") })
         {
             var match = Regex.Match(text, $"\\b{word}\\b", RegexOptions.CultureInvariant);
@@ -509,9 +514,11 @@ public sealed partial class Brain
         AddCapture(SlotType.Place, "\\bWHERE CAN I FIND (?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)" + end, 0.99);
         AddCapture(SlotType.Place, "\\b(?:LOCATE|FIND|POINT OUT|SHOW ME) (?:THE )?(?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)(?: FOR ME)?" + end, 0.98);
         AddCapture(SlotType.Item, "\\b(?:PRICE|COST) (?:OF )?(?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)" + end, 0.99);
-        AddCapture(SlotType.Item, "\\b(?:BUY|SELL|PURCHASE) (?:ME )?(?:(?:[0-9]+|ONE|TWO|THREE|FOUR|FIVE|A|SOME) )?(?<VALUE>[A-Z][A-Z '\\-]{0,31}?)" + end, 0.98);
+        if (!waresQuestion)
+            AddCapture(SlotType.Item, "\\b(?:BUY|SELL|PURCHASE) (?:ME )?(?:(?:[0-9]+|ONE|TWO|THREE|FOUR|FIVE|A|SOME) )?(?<VALUE>[A-Z][A-Z '\\-]{0,31}?)" + end, 0.98);
         AddCapture(SlotType.Other, "\\b(?:TELL ME ABOUT|TELL ME A FACT ABOUT|WHAT DO YOU KNOW ABOUT|WHAT IS KNOWN ABOUT|WHAT IS|CHECK THE WORLD RECORD FOR) (?<VALUE>[A-Z0-9][A-Z0-9 '\\-]{0,31}?)" + end, 0.96);
-        if (Regex.IsMatch(text, "\\b(?:BUY|SELL|PURCHASE) (?:ME )?(?:A|AN) ", RegexOptions.CultureInvariant) &&
+        if (Regex.IsMatch(text, "\\b(?:(?:BUY|SELL|PURCHASE) (?:ME )?|(?:GIVE|HAND) ME )(?:A|AN) ",
+                RegexOptions.CultureInvariant) &&
             slots.All(slot => slot.Type != SlotType.Quantity))
             slots.Add(new DialogueSlot(SlotType.Quantity, BioTag.B, "1", 0, 1, 1.0));
         foreach (var item in new[] { "IRON SWORD", "HEALTH POTION", "ROPE", "SWORD", "POTION" })

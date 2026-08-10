@@ -10,8 +10,8 @@ explanation actions, semantic response traces, authority-isolated conversation c
 and a validated production generation path.
 
 The audited 80,000-row corpus has SHA-256
-`ad92057bf82800c0f1ff95602e01ee44dff87d49b55035602d5301ba076a6425` and split sizes
-64,217 train, 7,885 validation, and 7,898 test. It adds 20,000 project-owned discourse
+`e171d1545451040776a3e3417cb7f47b7bca06361cfde1655968e01121418161` and split sizes
+64,226 train, 7,891 validation, and 7,883 test. It adds 20,000 project-owned discourse
 and conversation rows. The operational benchmark and B01-B12 conversation scenarios are
 held out and checked for exact contamination.
 
@@ -29,6 +29,33 @@ authority, unsupported-fact, or safety violations.
 The sessions below use the real checked-in model and the public structured runtime
 with the demo merchant tools. “Appropriate” includes policy, tool behavior, state,
 and visible text; a plausible sentence with an unsafe policy or mutation is not a pass.
+
+## 260K live conversation repair
+
+The completed 260K candidate exposed deterministic runtime defects that aggregate neural
+metrics did not detect. Before repair, the runtime forgot the subject of `MY OCCUPATION`,
+looked up `WE` as a place, treated `DO YOU SELL ANYTHING?` as a mutating sale, failed to
+route authoritative inventory questions, and rendered unlabelled stock counts. The
+speaker-relative correction and immediate antecedent pointer were already correct.
+
+The repaired runtime now produces the following behavior with the same candidate:
+
+| Input | Repaired result |
+|---|---|
+| `ALSO A FELLOW TRAVELER?` | Confirms the NPC role through an utterance callback. |
+| `I STUDY COMPUTER SCIENCE` | Stores a player activity and asks a relevant follow-up. |
+| `WHAT DO YOU MEAN?` | Explains that activity acknowledgment and invitation. |
+| `WHAT IS MY OCCUPATION?` | Recalls `SCIENTIST` without a tool call. |
+| `WHERE ARE WE?` / `WERE ARE YOU?` | Uses `GET_CURRENT_LOCATION` with `WE` / `I` perspective. |
+| `DO YOU SELL ANYTHING?` | Uses `LIST_WARES`; no `SELL` transaction is created. |
+| `WHAT DO I OWN?` | Uses authoritative `LIST_INVENTORY`. |
+| `GIVE ME ONE IRON SWORD` | Requests purchase confirmation and performs no mutation. |
+| `YES` | Executes the pending purchase once; balance and inventory remain authoritative. |
+| `WHAT DO YOU HAVE FOR SALE?` | Labels each quantity as `IN STOCK`. |
+
+The exact sequence passes the stateful deterministic and loaded-artifact regression. The
+formal two-reviewer B01-B12 gate remains pending and is not inferred from this developer
+test.
 
 ## Baseline model and runtime
 

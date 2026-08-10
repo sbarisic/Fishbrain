@@ -25,8 +25,10 @@ public sealed partial class Brain
         var classificationQuestion = IsClassificationQuestion(current);
         var unsupportedActivity = UnsupportedActivityCommand(current, tools);
         var slots = ExtractSlots(current).ToList();
+        slots.RemoveAll(slot => slot.Type == SlotType.Place && IsDeicticPlace(slot.Value));
         CompleteClarificationSlots(current, request.State, slots);
         ResolveReferences(current, request.State, slots);
+        slots.RemoveAll(slot => slot.Type == SlotType.Place && IsDeicticPlace(slot.Value));
 
         var learned = _structuredHeads.Updates > 0
             ? _structuredHeads.Predict(packed.Text, slots, ContextVector(packed.Text), current, packed.Utterances)
@@ -105,9 +107,14 @@ public sealed partial class Brain
         string? fallbackReason = null;
         ResponseSource source;
         var discourseAction = DiscourseResponseAction.None;
-        var pendingActions = toolDecision.Name is null
-            ? request.State.PendingActions.ToList()
-            : toolDecision.AdditionalActions.ToList();
+        var pendingActions = toolDecision.Reasons.Contains("CONFIRM_PURCHASE") && toolDecision.Name is { } pendingTool
+            ? new List<PendingDialogueAction>
+            {
+                new("EXECUTE_TOOL", pendingTool, toolDecision.Arguments)
+            }
+            : toolDecision.Name is null
+                ? request.State.PendingActions.ToList()
+                : toolDecision.AdditionalActions.ToList();
 
         if (perception.Policy == ResponsePolicy.ExecuteTool && toolDecision.Name is not null)
         {
@@ -117,6 +124,7 @@ public sealed partial class Brain
                 GameToolRegistry.IdempotencyKey(request.ConversationId, request.TurnId));
             toolResult = GameToolRegistry.InvokeValidated(tool, invocation);
             text = GameToolRegistry.Render(tool.Schema, toolResult);
+            text = ContextualizeCurrentLocation(text, current, toolDecision.Name, toolResult);
             source = ResponseSource.ToolTemplate;
         }
         else if (perception.Policy is not (ResponsePolicy.Refuse or ResponsePolicy.Defer) &&
@@ -246,7 +254,36 @@ public sealed partial class Brain
         perception.Policy is ResponsePolicy.Answer or ResponsePolicy.Acknowledge &&
         perception.ToolSchema is null && perception.KnowledgeTarget == KnowledgeTarget.None &&
         perception.ContentFlags.Count == 0 && perception.Domains.All(domain => domain is
-            DialogueDomain.Social or DialogueDomain.Identity or DialogueDomain.Wellbeing or DialogueDomain.Activity);
+             DialogueDomain.Social or DialogueDomain.Identity or DialogueDomain.Wellbeing or DialogueDomain.Activity);
+
+    private static bool IsDeicticPlace(string value) => value is
+        "I" or "ME" or "WE" or "US" or "YOU" or "HERE" or "THERE" or "THIS PLACE" or "CURRENT LOCATION";
+
+    private static string ContextualizeCurrentLocation(
+        string rendered,
+        string current,
+        string toolName,
+        GameToolResult result)
+    {
+        if (toolName != "GET_CURRENT_LOCATION" || !result.Success ||
+            !result.Fields.TryGetValue("LOCATION", out var location))
+        {
+            return rendered;
+        }
+
+        var bare = current.Trim().TrimEnd('.', '?', '!');
+        if (bare is "WHERE ARE WE" or "WERE ARE WE")
+        {
+            return $"WE ARE AT {location}.";
+        }
+
+        if (bare is "WHERE ARE YOU" or "WERE ARE YOU")
+        {
+            return $"I AM AT {location}.";
+        }
+
+        return rendered;
+    }
 
     private static DiscourseFrame RejectIncompatibleLearnedDiscourse(
         DiscourseFrame frame,

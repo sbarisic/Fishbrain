@@ -16,18 +16,23 @@ public sealed partial class Brain
         var recognized = new List<string>();
         PendingDialogueAction? resumedAction = null;
         var identityOrigin = target is KnowledgeTarget.Origin or KnowledgeTarget.Home;
-        if (!identityOrigin && (Regex.IsMatch(text, "\\bWHERE (?:IS|ARE|CAN I FIND)\\b", RegexOptions.CultureInvariant) ||
+        var currentLocation = target == KnowledgeTarget.CurrentLocation;
+        if (!identityOrigin && !currentLocation &&
+            (Regex.IsMatch(text, "\\bWHERE (?:IS|ARE|CAN I FIND)\\b", RegexOptions.CultureInvariant) ||
             ContainsAny(text, "HOW FAR", "IS IT FAR", "FAR FROM HERE", "LOCATE ", "FIND THE ", "POINT OUT ",
                 "SHOW ME THE ", "GET THERE", "REACH IT", "GUIDE ME THERE")))
             recognized.Add("LOOKUP_LOCATION");
-        if (ContainsAny(text, "LIST WARES", "SHOW ME YOUR WARES", "WHAT DO YOU SELL", "WHAT DO YOU HAVE FOR SALE",
+        var waresQuestion = IsWaresAvailabilityQuestion(text);
+        if (waresQuestion || ContainsAny(text, "LIST WARES", "SHOW ME YOUR WARES", "WHAT DO YOU SELL", "WHAT DO YOU HAVE FOR SALE",
             "WHAT HAVE YOU GOT FOR SALE", "SHOW WARES", "SHOW ME WHAT YOU SELL", "MERCHANT STOCK",
             "SELL ME SOME WARES")) recognized.Add("LIST_WARES");
         var itemDescription = ContainsAny(text, "TELL ME ABOUT", "WHAT DO YOU KNOW ABOUT") &&
                               ContainsAny(text, "IRON SWORD", "HEALTH POTION", "ROPE", "SWORD", "POTION");
         if (ContainsAny(text, "PRICE", "COST") || itemDescription) recognized.Add("LOOKUP_PRICE");
-        if (ContainsAny(text, " BUY ", "BUY ", " PURCHASE ", "PURCHASE ")) recognized.Add("BUY");
+        var giftRequest = IsGiftPurchaseRequest(text);
+        if (ContainsAny(text, " BUY ", "BUY ", " PURCHASE ", "PURCHASE ") || giftRequest) recognized.Add("BUY");
         if (ContainsAny(text, " SELL ", "SELL ") &&
+            !waresQuestion &&
             !ContainsAny(text, "WHAT DO YOU SELL", "SHOW ME WHAT YOU SELL", "SELL ME SOME WARES")) recognized.Add("SELL");
         if (target == KnowledgeTarget.Balance ||
             (IsAnaphoric(text) && state.LastTool is "BUY" or "SELL" && ContainsAny(text, "HOW MUCH")))
@@ -86,9 +91,11 @@ public sealed partial class Brain
         });
         var confidence = missing.Length > 0 || ambiguous ? 0.50 : tool.Schema.MutatesWorldState ? 0.995 : 0.98;
         var threshold = tool.Schema.MutatesWorldState ? MutatingToolPrecisionThreshold : ReadOnlyToolPrecisionThreshold;
-        var canExecute = missing.Length == 0 && !ambiguous && confidence >= threshold;
+        var confirmationRequired = giftRequest && name == "BUY" && missing.Length == 0 && !ambiguous;
+        var canExecute = missing.Length == 0 && !ambiguous && !confirmationRequired && confidence >= threshold;
         return new(name, new ReadOnlyDictionary<string, string>(arguments), confidence, canExecute,
-            missing.Length > 0 ? missing : ambiguous ? ["AMBIGUOUS_SLOT"] : [], Additional(recognized));
+            missing.Length > 0 ? missing : ambiguous ? ["AMBIGUOUS_SLOT"] :
+                confirmationRequired ? ["CONFIRM_PURCHASE"] : [], Additional(recognized));
 
         IReadOnlyList<PendingDialogueAction> Additional(IReadOnlyList<string> names) => names.Skip(1)
             .Take(3).Select(pendingName =>
@@ -160,6 +167,7 @@ public sealed partial class Brain
 
     private static string ClarificationFor(ToolDecision decision, KnowledgeTarget target)
     {
+        if (decision.Reasons.Contains("CONFIRM_PURCHASE")) return "DO YOU WANT TO BUY THAT ITEM?";
         if (decision.Reasons.Contains("PLACE")) return "WHICH PLACE DO YOU MEAN?";
         if (decision.Reasons.Contains("ITEM")) return "WHICH ITEM DO YOU MEAN?";
         if (decision.Reasons.Contains("QUANTITY")) return "HOW MANY DO YOU MEAN?";
@@ -169,5 +177,21 @@ public sealed partial class Brain
         if (decision.Reasons.Contains("AMBIGUOUS_SLOT")) return "PLEASE NAME ONE TARGET.";
         if (target == KnowledgeTarget.WorldFact) return "WHICH WORLD FACT DO YOU WANT ME TO CHECK?";
         return "PLEASE EXPLAIN WHAT YOU NEED.";
+    }
+
+    private static bool IsWaresAvailabilityQuestion(string text)
+    {
+        var bare = text.Trim().TrimEnd('.', '?', '!');
+        return bare.StartsWith("DO YOU SELL ", StringComparison.Ordinal) ||
+               bare.StartsWith("DON'T YOU SELL ", StringComparison.Ordinal) ||
+               bare.StartsWith("HAVE YOU GOT ", StringComparison.Ordinal) && bare.Contains("FOR SALE", StringComparison.Ordinal) ||
+               bare is "WHAT CAN I BUY" or "IS ANYTHING FOR SALE" or "DO YOU HAVE ANYTHING FOR SALE";
+    }
+
+    private static bool IsGiftPurchaseRequest(string text)
+    {
+        var bare = text.Trim().TrimEnd('.', '?', '!');
+        return bare.StartsWith("GIVE ME ", StringComparison.Ordinal) ||
+               bare.StartsWith("HAND ME ", StringComparison.Ordinal);
     }
 }

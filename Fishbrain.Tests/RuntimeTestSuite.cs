@@ -4,7 +4,7 @@ using Fishbrain;
 
 namespace Fishbrain.Tests;
 
-internal static class RuntimeTestSuite
+internal static partial class RuntimeTestSuite
 {
     public static void RunAll()
     {
@@ -34,6 +34,7 @@ internal static class RuntimeTestSuite
             ("CONCURRENT WORLD IDEMPOTENCY", ConcurrentWorldIdempotency),
             ("REFERENCE RESOLUTION", ReferenceResolution),
             ("DISCOURSE MEMORY AND REPAIR", DiscourseMemoryAndRepair),
+            ("LIVE CONVERSATION REPAIRS", LiveConversationRepairs),
             ("RESPONSE CATALOG", ResponseCatalogValidation),
             ("TOOL SCHEMA VALIDATION", ToolSchemaValidation),
             ("TOOL SCHEMA SNAPSHOT", ToolSchemaSnapshot),
@@ -674,8 +675,10 @@ internal static class RuntimeTestSuite
         var prejudice = Say("my social message is german people only need to have blonde hair");
         Assert(prejudice.Perception.ContentFlags.Contains(ContentFlag.IdentityAttack) &&
                prejudice.Perception.Policy == ResponsePolicy.Refuse &&
-               prejudice.Diagnostics.FallbackReason != "CLASSIFICATION_EXPLANATION",
+                prejudice.Diagnostics.FallbackReason != "CLASSIFICATION_EXPLANATION",
             "identity-based exclusion is not acknowledged or mistaken for a diagnostics question");
+
+        VerifyLiveConversationRepairs(brain);
     }
 
     static void Assert(bool condition, string message)
