@@ -13,6 +13,10 @@ internal static class ContextualTraining
         if (planned is { } steps && steps != 260_000) throw new ArgumentException("The contextual curriculum has exactly 260000 updates.");
         var final = until ?? 260_000;
         if (final is < 1 or > 260_000) throw new ArgumentException("Training endpoint must be within 1-260000.");
+        checkpointPath = Path.GetFullPath(checkpointPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(checkpointPath)!);
+        // A second trainer must never race checkpoint writes or consume the same sampler position.
+        using var lease = new FileStream(checkpointPath + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         var corpusHash = CorpusHash(corpusDirectory);
         ContextualTrainer trainer;
         Dictionary<string, double> thresholds = [];
@@ -20,7 +24,7 @@ internal static class ContextualTraining
         {
             var loaded = ContextualCheckpoint.Load(checkpointPath, DemoDialogueDomains.Merchant, training: true);
             if (loaded.Header.CorpusHash != corpusHash) throw new InvalidDataException("Training corpus differs from the checkpoint.");
-            trainer = loaded.Trainer!;
+            trainer = ContextualTrainer.Restore(loaded);
             thresholds = loaded.Header.ExecutionThresholds;
         }
         else
@@ -60,12 +64,19 @@ internal static class ContextualTraining
         {
             while (trainer.Step < final && !cancellation.IsCancellationRequested)
             {
+                if (File.Exists(checkpointPath + ".stop")) { cancellation.Cancel(); break; }
                 var phase = ContextualTrainer.Phase(trainer.Step);
                 var pool = phase is ContextualPhase.JointRealization or ContextualPhase.DecoderPolish ? languageFamilies : families;
                 var batch = Enumerable.Range(0, 32).Select(i => Select(pool, checked((long)trainer.Step * 32 + i), trainer.Architecture.Config.Seed)).ToArray();
                 var loss = trainer.TrainBatch(batch);
                 if (trainer.Step == startStep + 1 || trainer.Step % 10 == 0)
+                {
                     Console.WriteLine($"CONTEXTUAL STEP {trainer.Step} PHASE {phase} LOSS {loss:F5} SECONDS_PER_UPDATE {timer.Elapsed.TotalSeconds / (trainer.Step - startStep):F3}");
+                    WriteProgress("RUNNING", loss);
+                }
+                // Durable progress between the more expensive 5000-update validation gates.
+                if (trainer.Step % 100 == 0)
+                    ContextualCheckpoint.Save(checkpointPath, trainer.Snapshot(), corpusHash, trainer.Step, thresholds, trainer);
                 if (trainer.Step % 5000 == 0)
                 {
                     var model = trainer.Snapshot();
@@ -90,8 +101,30 @@ internal static class ContextualTraining
         {
             Console.CancelKeyPress -= cancel;
             ContextualCheckpoint.Save(checkpointPath, trainer.Snapshot(), corpusHash, trainer.Step, thresholds, trainer);
+            WriteProgress(trainer.Step >= final ? "ENDPOINT_REACHED" : cancellation.IsCancellationRequested ? "STOPPED" : "FAILED", null);
         }
         if (cancellation.IsCancellationRequested) Console.WriteLine("TRAINING INTERRUPTED AFTER A COMPLETE UPDATE; CHECKPOINT SAVED.");
+
+        void WriteProgress(string status, float? loss)
+        {
+            var progress = new
+            {
+                Status = status,
+                ProcessId = Environment.ProcessId,
+                CompletedSteps = trainer.Step,
+                RequestedEndpoint = final,
+                NextPhase = trainer.Step == 260000 ? "COMPLETE" : ContextualTrainer.Phase(trainer.Step).ToString(),
+                CorpusHash = corpusHash,
+                UpdatedUtc = DateTimeOffset.UtcNow,
+                Loss = loss,
+                SecondsPerUpdate = trainer.Step == startStep ? (double?)null : timer.Elapsed.TotalSeconds / (trainer.Step - startStep),
+                Checkpoint = checkpointPath,
+                LastDurableCheckpointUtc = File.Exists(checkpointPath) ? (DateTime?)File.GetLastWriteTimeUtc(checkpointPath) : null
+            };
+            var path = checkpointPath + ".progress.json";
+            File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(progress, new JsonSerializerOptions { WriteIndented = true }));
+            File.Move(path + ".tmp", path, true);
+        }
     }
 
     internal static WordVocabulary BuildVocabulary(string path)

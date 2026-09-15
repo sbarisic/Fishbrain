@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Fishbrain;
 
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
     private static string ComputeCorpusHash(string directory)
     {

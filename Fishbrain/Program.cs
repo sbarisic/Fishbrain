@@ -23,11 +23,11 @@ internal static class Program
             {
                 case "train":
                     Count(args, 3, 4);
-                    Brain.TrainNew(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 260_000);
+                    LegacyBrain.TrainNew(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 260_000);
                     break;
                 case "resume":
                     Count(args, 3, 4);
-                    Brain.Resume(args[1], args[2], args.Length == 4 ? Steps(args[3]) : null);
+                    LegacyBrain.Resume(args[1], args[2], args.Length == 4 ? Steps(args[3]) : null);
                     break;
                 case "teach":
                     var teaching = TeachInvocation.Parse(args[1..]);
@@ -44,7 +44,7 @@ internal static class Program
                     return Evaluation.Run(args[1], args[2], gate);
                 case "diagnose-teaching":
                     Count(args, 3, 4);
-                    Console.WriteLine(Brain.DiagnoseTeaching(args[1], args[2],
+                    Console.WriteLine(LegacyBrain.DiagnoseTeaching(args[1], args[2],
                         args.Length == 4 ? args[3] : "validation"));
                     break;
                 case "chat":
@@ -68,6 +68,9 @@ internal static class Program
                 case "profile-contextual":
                     Count(args, 2, 3);
                     return ContextualPerformance.Run(args[1], args.Length == 3 ? Steps(args[2]) : 32);
+                case "acceptance-contextual":
+                    Count(args, 3, 3);
+                    return ContextualAcceptance.Run(args[1], args[2]);
                 case "compare-contextual":
                     Count(args, 4, 5);
                     ContextualComparison.Run(args[1], args[2], args[3], args.Length == 5 ? Steps(args[4]) : 3);
@@ -187,6 +190,7 @@ internal static class Program
         Console.WriteLine("  inspect MODEL.fbm");
         Console.WriteLine("  conversation-sample MODEL.fbm SCENARIOS.jsonl REVIEW.jsonl");
         Console.WriteLine("  conversation-gate SAMPLE.jsonl REVIEWED.jsonl");
+        Console.WriteLine("  acceptance-contextual MODEL.fbm REPORT.json");
         Console.WriteLine("  selftest");
     }
 

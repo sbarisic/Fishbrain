@@ -4,7 +4,7 @@ namespace Fishbrain.Tests;
 
 internal static partial class RuntimeTestSuite
 {
-    private static Brain ConversationTestBrain() => Brain.CreateForTesting(new BrainConfig
+    private static LegacyBrain ConversationTestBrain() => LegacyBrain.CreateForTesting(new BrainConfig
     {
         EmbeddingSize = 8,
         HeadCount = 2,
@@ -16,9 +16,9 @@ internal static partial class RuntimeTestSuite
         Seed = 17
     });
 
-    private static void LiveConversationRepairs() => VerifyLiveConversationRepairs(ConversationTestBrain());
+    private static void LiveConversationRepairs() => VerifyLiveConversationRepairs(ConversationTestBrain().Reply);
 
-    private static void VerifyLiveConversationRepairs(Brain brain)
+    private static void VerifyLiveConversationRepairs(Func<ReplyRequest, GameToolRegistry, ReplyResult> reply)
     {
         var world = new DemoWorldState();
         var tools = DemoGameTools.CreateMerchant(world);
@@ -30,7 +30,7 @@ internal static partial class RuntimeTestSuite
         ReplyResult Say(string text)
         {
             utterances.Add(new DialogueUtterance(++sequence, DialogueRole.Player, text));
-            var result = brain.Reply(new ReplyRequest("LIVE-REPAIRS", (++turn).ToString(), utterances,
+            var result = reply(new ReplyRequest("LIVE-REPAIRS", (++turn).ToString(), utterances,
                 state, NpcPersona.Default, PlayerConversationProfile.Empty, sequence + 1, 900 + turn), tools);
             state = result.State;
             if (result.Text.Length > 0)

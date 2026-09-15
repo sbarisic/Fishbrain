@@ -37,10 +37,10 @@ internal static class ContextualEvaluation
                 // Only the first fully validated candidate can execute. Calibration uses that same decision.
                 if (contextual.ActionCandidates.FirstOrDefault() is { } candidate)
                     decisions.Add(new(candidate.ToolName, candidate.Confidence, expectedFirst is not null &&
-                        ArgumentsEqual(expectedFirst, candidate.ToolName, candidate.Arguments)));
+                        ArgumentsEqual(expectedFirst, candidate.ToolName, candidate.Arguments, example.Request!)));
                 if (result.Diagnostics.ToolInvocation is { } invocation)
                 {
-                    if (expectedFirst is null || !ArgumentsEqual(expectedFirst, invocation.ToolName, invocation.Arguments)) unintended++;
+                    if (expectedFirst is null || !ArgumentsEqual(expectedFirst, invocation.ToolName, invocation.Arguments, example.Request!)) unintended++;
                     // Replay against an isolated identical world to verify exact typed authority rendering.
                     var oracle = DemoGameTools.CreateMerchant();
                     if (oracle.TryGet(invocation.ToolName, out var oracleTool))
@@ -67,6 +67,7 @@ internal static class ContextualEvaluation
         }
         var operational = OperationalMetrics(pairs);
         var f = Rate(frameCorrect, frameRows); var p = Rate(planCorrect, planRows); var m = Rate(memoryCorrect, memoryRows); var c = Rate(correctionCorrect, correctionRows);
+        operational["correctionState"] = c; // Score the actual clause-aware state reducer, not the legacy single-fact surrogate.
         var a = Rate(agendaCorrect, agendaRows);
         var pass = f >= .90 && p >= .90 && m >= .95 && c >= .95 && a >= .95 && unintended == 0 && alterations == 0 && invalid == 0 &&
             RequiredOperational.All(gate => operational[gate.Key] >= gate.Value) &&
@@ -77,13 +78,19 @@ internal static class ContextualEvaluation
 
         bool Executable(SemanticFrame frame) => frame.ToolName is not null && (frame.Status == ActionStatus.Affirmative ||
             frame.Status == ActionStatus.Question && !model.Domain.Tools.Single(t => t.Schema.Name == frame.ToolName).Schema.MutatesWorldState);
-        bool ArgumentsEqual(SemanticFrame frame, string tool, IReadOnlyDictionary<string, string> arguments)
+        bool ArgumentsEqual(SemanticFrame frame, string tool, IReadOnlyDictionary<string, string> arguments, ReplyRequest request)
         {
             if (frame.ToolName != tool || !Executable(frame)) return false;
             var binding = model.Domain.Tools.Single(t => t.Schema.Name == tool);
+            var pending = request.State.PendingActions.Where(x => x.ToolSchema == tool && x.Action == "EXECUTE_TOOL").ToArray();
+            var resumed = frame.SpeechAct is SpeechAct.Confirm or SpeechAct.Accept && frame.Status == ActionStatus.Affirmative &&
+                pending.Length == 1 && pending[0].SourceUtterance is { } origin && frame.Antecedent == origin ? pending[0] : null;
+            if (arguments.Keys.Any(key => binding.Schema.Parameters.All(p => p.Name != key))) return false;
             return binding.Schema.Parameters.All(parameter =>
             {
                 var values = frame.Arguments.Where(s => s.Type == binding.Parameters[parameter.Name]).Select(s => s.Value).Distinct().ToArray();
+                if (values.Length == 0 && resumed?.Arguments.TryGetValue(parameter.Name, out var prior) == true)
+                    return arguments.GetValueOrDefault(parameter.Name) == prior;
                 if (values.Length == 0 && !parameter.Required) return !arguments.ContainsKey(parameter.Name);
                 if (values.Length != 1 || !arguments.TryGetValue(parameter.Name, out var actual)) return false;
                 var expected = binding.Parameters[parameter.Name] == SlotType.Quantity ? Brain.NormalizeQuantity(values[0]) : model.Domain.CanonicalEntity(values[0]);
@@ -124,9 +131,14 @@ internal static class ContextualEvaluation
         expected.Count == actual.Count && expected.Zip(actual).All(pair => pair.First.Start == pair.Second.Start &&
             pair.First.Length == pair.Second.Length && pair.First.SpeechAct == pair.Second.SpeechAct && pair.First.Subject == pair.Second.Subject &&
             pair.First.Target == pair.Second.Target && pair.First.ToolName == pair.Second.ToolName && pair.First.Status == pair.Second.Status &&
-            pair.First.Antecedent == pair.Second.Antecedent && pair.First.Arguments.OrderBy(x => x.Start).ThenBy(x => x.Type)
+            pair.First.Antecedent == pair.Second.Antecedent && FactFramesEqual(pair.First.Fact, pair.Second.Fact) && pair.First.Arguments.OrderBy(x => x.Start).ThenBy(x => x.Type)
                 .Select(x => (x.Type, x.Start, x.Length, x.Value)).SequenceEqual(pair.Second.Arguments.OrderBy(x => x.Start).ThenBy(x => x.Type)
                     .Select(x => (x.Type, x.Start, x.Length, x.Value))));
+
+    internal static bool FactFramesEqual(DiscourseFrame? expected, DiscourseFrame? actual) =>
+        expected is null || actual is not null && expected.Act == actual.Act && expected.Subject == actual.Subject &&
+        expected.Target == actual.Target && expected.FactKind == actual.FactKind && expected.FactValueSpan == actual.FactValueSpan &&
+        expected.Negated == actual.Negated && expected.AntecedentUtterance == actual.AntecedentUtterance;
 
     private static object FactKey(DialogueFact f) => (f.Subject, f.Kind, f.Value, f.Negated, f.Provenance);
     private static double Rate(int correct, int count) => count == 0 ? 0 : correct / (double)count;

@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Fishbrain;
 
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
     private static ToolDecision SelectTool(
             string text,

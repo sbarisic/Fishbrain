@@ -13,10 +13,13 @@ internal static partial class CorpusCompiler
     private static void EnsureUniqueAndConsistent(IEnumerable<CorpusRow> rows)
     {
         var stateInputs = new HashSet<string>(StringComparer.Ordinal);
+        var acceptanceInputs = ContextualAcceptance.Cases().Select(x => DialogueText.Normalize(x.Request.Utterances[^1].Text)).ToHashSet(StringComparer.Ordinal);
         var labels = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
         foreach (var row in rows)
         {
             Validate(row);
+            if (acceptanceInputs.Contains(DialogueText.Normalize(row.Turns?.LastOrDefault()?.Text ?? row.Input)))
+                throw new InvalidDataException("An authored acceptance scenario leaked into the training corpus.");
             var key = JsonSerializer.Serialize(row.State, Json) + "|" + row.Input;
             if (!stateInputs.Add(key)) throw new InvalidDataException($"Duplicate (state,input): {row.Input}");
             var input = NormalizeKey(row.Input);
@@ -374,7 +377,7 @@ internal static partial class CorpusCompiler
                 (value.Length is < 1 or > 128 ||
                  value.NormalizedValue != DialogueText.Normalize(value.NormalizedValue)))
                 throw new InvalidDataException($"Invalid discourse frame in {row.GroupId}.");
-            discourse.FactValueSpan?.Validate(Brain.ExtractCurrentPlayerTurn(row.Input));
+            discourse.FactValueSpan?.Validate(LegacyBrain.ExtractCurrentPlayerTurn(row.Input));
         }
         if (row.Source.StartsWith("PROJECT_DISCOURSE_", StringComparison.Ordinal) ||
             row.Source == "PROJECT_CONVERSATION")

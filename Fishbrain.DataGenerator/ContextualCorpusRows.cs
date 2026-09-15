@@ -19,7 +19,8 @@ internal static partial class CorpusCompiler
         if (tool is not null && ActionLanguage.ExecutionVeto(current) is not null) return row;
         var slots = perception.Slots.Where(s => s.Start >= offset).Select(s => s with { Start = s.Start - Math.Max(0, offset) }).ToArray();
         var frame = new SemanticFrame(0, current.Length, perception.SpeechActs[0], DialogueParticipant.Player, DialogueParticipant.Npc,
-            tool, slots, perception.Discourse?.AntecedentUtterance, status, 1);
+            tool, slots, perception.Discourse?.AntecedentUtterance, status, 1)
+        { Fact = perception.Discourse ?? DiscourseFrame.Empty };
         var act = tool is not null ? DialogueResponseAct.ExecuteTool : perception.Policy switch
         {
             ResponsePolicy.Clarify => DialogueResponseAct.Clarify,
@@ -54,6 +55,7 @@ internal static partial class CorpusCompiler
             DialogueFact[] facts = [];
             DialogueFact[] relevant = [];
             DialogueAgendaEntry[] agenda = [];
+            PendingDialogueAction[] pending = [];
             var discourse = DiscourseFrame.Empty;
             if (source == "PROJECT_CONTEXTUAL_ACTIONS")
             {
@@ -63,6 +65,31 @@ internal static partial class CorpusCompiler
                 frames.Add(Frame(input, 0, input.Length, status, "BUY", [Slot(input, item, SlotType.Item), Slot(input, quantity.ToString(), SlotType.Quantity)]));
                 acts.Add(new(member == 0 ? DialogueResponseAct.ExecuteTool : member == 2 ? DialogueResponseAct.Clarify : DialogueResponseAct.Acknowledge, 0));
                 response = member == 0 ? "LET ME CHECK THAT TRANSACTION." : member == 2 ? "ARE YOU ASKING ABOUT THE PRICE?" : "I HAVE NOT MADE THAT PURCHASE.";
+                if (family % 4 == 3)
+                {
+                    pending = [new("EXECUTE_TOOL", "BUY", new Dictionary<string, string> { ["ITEM"] = item, ["QUANTITY"] = quantity.ToString() }) { SourceUtterance = 0 }];
+                    context += $" I ASKED YOU TO BUY {quantity} {item}.";
+                    input = member switch
+                    {
+                        0 => "YES, GO AHEAD WITH THAT PURCHASE.",
+                        1 => "CANCEL THE PURCHASE I REQUESTED.",
+                        2 => "IF I CONFIRMED THE PURCHASE, WOULD THAT HELP?",
+                        _ => "SOMEONE SAID \"YES, GO AHEAD\"."
+                    };
+                    frames.Clear();
+                    frames.Add(Frame(input, 0, input.Length, status, "BUY", []) with
+                    { SpeechAct = member == 0 ? SpeechAct.Confirm : member == 1 ? SpeechAct.Refuse : SpeechAct.Inform, Antecedent = 0 });
+                    if (family % 8 == 7 && member == 0)
+                    {
+                        pending = [pending[0], new("EXECUTE_TOOL", "SELL",
+                            new Dictionary<string, string> { ["ITEM"] = "HEALTH POTION", ["QUANTITY"] = "1" }) { SourceUtterance = 1 }];
+                        input = "YES, PROCEED.";
+                        frames[0] = Frame(input, 0, input.Length, status, null, []) with { SpeechAct = SpeechAct.Confirm };
+                        acts.Clear();
+                        acts.Add(new(DialogueResponseAct.Clarify, 0));
+                        response = "WHICH PENDING ACTION DO YOU WANT ME TO HANDLE?";
+                    }
+                }
             }
             else if (source == "PROJECT_CONTEXTUAL_MEMORY")
             {
@@ -111,7 +138,38 @@ internal static partial class CorpusCompiler
             }
             else throw new ArgumentException("Unknown contextual corpus group.", nameof(source));
 
-            var turns = new[] { new DialogueUtterance(0, DialogueRole.Player, context), new DialogueUtterance(1, DialogueRole.Npc, $"WE WERE DISCUSSING {topic}."), new DialogueUtterance(2, DialogueRole.Player, input) };
+            if (source == "PROJECT_CONTEXTUAL_COMPOUND" && family % 4 == 3)
+            {
+                var owner = member < 2 ? DialogueParticipant.Player : DialogueParticipant.Npc;
+                var other = owner == DialogueParticipant.Player ? DialogueParticipant.Npc : DialogueParticipant.Player;
+                var first = owner == DialogueParticipant.Player ? $"ACTUALLY MY HOME IS {place}." : $"ACTUALLY YOUR HOME IS {place}.";
+                var occupation = member % 2 == 0 ? "WEAVER" : "SCHOLAR";
+                var second = other == DialogueParticipant.Player ? $"MY OCCUPATION IS {occupation}." : $"YOUR OCCUPATION IS {occupation}.";
+                input = first + " " + second;
+                facts = [new(owner, DialogueFactKind.Home, "OLD TOWER", false, 0, 1, DialogueFactProvenance.SessionReported),
+                    new(other, DialogueFactKind.Home, "SOUTH TOWER", false, 1, 1, DialogueFactProvenance.SessionReported)];
+                relevant = [facts[0]];
+                discourse = new(DiscourseAct.Correct, owner, other, DialogueFactKind.Home,
+                    new(place, first.IndexOf(place, StringComparison.Ordinal), place.Length), false, 0, 1, "ANNOTATED_COMPOUND_CORRECTION");
+                var secondFact = new DiscourseFrame(DiscourseAct.Inform, other, owner, DialogueFactKind.Occupation,
+                    new(occupation, input.IndexOf(occupation, first.Length, StringComparison.Ordinal), occupation.Length), false, null, 1, "ANNOTATED_COMPOUND_FACT");
+                frames.Clear();
+                frames.Add(Frame(input, 0, first.Length, ActionStatus.Affirmative, null, []) with { SpeechAct = SpeechAct.Correct, Fact = discourse, Antecedent = 0 });
+                frames.Add(Frame(input, first.Length + 1, second.Length, ActionStatus.Affirmative, null, []) with { Fact = secondFact });
+                acts.Clear();
+                acts.Add(new(DialogueResponseAct.Correct, 0));
+                acts.Add(new(DialogueResponseAct.Acknowledge, 1));
+                response = "THANK YOU FOR CORRECTING THE HOME. I ALSO HEARD THE OCCUPATION YOU MENTIONED.";
+                agenda = [new(AgendaKind.UnansweredQuestion, "HOME", 0, AgendaStatus.Completed),
+                    new(AgendaKind.UnansweredQuestion, "OCCUPATION", 1, AgendaStatus.Completed)];
+            }
+
+            var turns = source == "PROJECT_CONTEXTUAL_MEMORY"
+                ? new[] { new DialogueUtterance(0, DialogueRole.Player, context), new DialogueUtterance(1, DialogueRole.Npc, $"WE WERE DISCUSSING {topic}."),
+                    new DialogueUtterance(2, DialogueRole.Player, "THE WIND HAS CHANGED."), new DialogueUtterance(3, DialogueRole.Npc, "THE ROAD IS STILL QUIET."),
+                    new DialogueUtterance(4, DialogueRole.Player, $"I ALSO HEARD ABOUT {person}."), new DialogueUtterance(5, DialogueRole.Npc, "WE CAN DISCUSS THAT LATER."),
+                    new DialogueUtterance(6, DialogueRole.Player, input) }
+                : new[] { new DialogueUtterance(0, DialogueRole.Player, context), new DialogueUtterance(1, DialogueRole.Npc, $"WE WERE DISCUSSING {topic}."), new DialogueUtterance(2, DialogueRole.Player, input) };
             var row = BuildDiscourseRow("PROJECT_DISCOURSE_FACTS", index, "CONTEXTUAL", $"{source}:{family:D5}", input, turns,
                 discourse, response, discourse.Act == DiscourseAct.Correct ? DiscourseResponseAction.AcknowledgeCorrection :
                     discourse.Act == DiscourseAct.Inform ? DiscourseResponseAction.AcknowledgeFact : DiscourseResponseAction.None,
@@ -126,7 +184,11 @@ internal static partial class CorpusCompiler
                 Policy = selectedFrame is null ? ResponsePolicy.Answer : ResponsePolicy.ExecuteTool,
                 ToolSchema = selectedFrame?.ToolName
             };
-            var supervision = new ContextualSupervision(frames.ToArray(), acts.ToArray(), relevant, agenda);
+            var supervision = new ContextualSupervision(frames.Select(frame => frame with
+            {
+                Fact = frame.Fact ?? (frames.Count == 1 ? discourse : DiscourseFrame.Empty),
+                Antecedent = frame.Antecedent ?? (frames.Count == 1 ? discourse.AntecedentUtterance : null)
+            }).ToArray(), acts.ToArray(), relevant, agenda);
             supervision.Validate(input);
             yield return row with
             {
@@ -137,12 +199,15 @@ internal static partial class CorpusCompiler
                 InitialDialogueState = NpcDialogueState.Initial with
                 {
                     SessionFacts = facts,
+                    PendingActions = pending,
                     Agenda = agenda.Select(a => a with { Status = AgendaStatus.Active }).ToArray()
                 },
                 Contextual = supervision,
                 ToolTarget = selectedFrame?.ToolName,
-                ToolArguments = selectedFrame is null ? [] : selectedFrame.Arguments.ToDictionary(s => s.Type == SlotType.Item ? "ITEM" : "QUANTITY", s => s.Value),
-                FactDelta = DialogueStateReducer.ReduceFacts(facts, discourse, 2).ToArray(),
+                ToolArguments = selectedFrame is null ? [] : pending.Length == 1 && selectedFrame.SpeechAct == SpeechAct.Confirm
+                    ? pending[0].Arguments.ToDictionary(x => x.Key, x => x.Value)
+                    : selectedFrame.Arguments.ToDictionary(s => s.Type == SlotType.Item ? "ITEM" : "QUANTITY", s => s.Value),
+                FactDelta = DialogueStateReducer.ReduceFrameFacts(facts, supervision.Frames!, turns[^1].Sequence).ToArray(),
                 ResponsePlanId = "ACKNOWLEDGE",
                 SupervisedHeads = FactDiscourseHeads
             };

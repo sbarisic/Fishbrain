@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Fishbrain;
 
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
     internal static void TrainNew(string dataPath, string checkpointPath, int plannedSteps)
     {
@@ -17,7 +17,7 @@ public sealed partial class Brain
         var tokenizer = new DialogueTokenizer(vocabulary);
         var data = TrainingData.Load(dataPath, tokenizer);
         var config = new BrainConfig { PlannedSteps = plannedSteps };
-        var brain = new Brain(
+        var brain = new LegacyBrain(
             config,
             vocabulary,
             new DeterministicRandom(config.Seed),
@@ -38,7 +38,7 @@ public sealed partial class Brain
         var fullCorpusDirectory = Path.GetFullPath(corpusDirectory);
         var fullCheckpointPath = Path.GetFullPath(checkpointPath);
         var trainPath = Path.Combine(fullCorpusDirectory, "train.jsonl");
-        Brain brain;
+        LegacyBrain brain;
         int plannedSteps;
         var extendedCurriculum = false;
         if (File.Exists(fullCheckpointPath))
@@ -61,7 +61,7 @@ public sealed partial class Brain
             var vocabulary = WordVocabulary.Build(trainPath);
             var tokenizer = new DialogueTokenizer(vocabulary);
             var initialData = TrainingData.Load(trainPath, tokenizer);
-            brain = new Brain(config, vocabulary, new DeterministicRandom(config.Seed), initialData.ToolNames,
+            brain = new LegacyBrain(config, vocabulary, new DeterministicRandom(config.Seed), initialData.ToolNames,
                 initialData.Examples, initialData.ResponseCatalog);
         }
         var data = TrainingData.Load(trainPath, brain._tokenizer);

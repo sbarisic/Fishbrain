@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Fishbrain;
 
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
     private const double ReadOnlyToolPrecisionThreshold = 0.95;
     private const double MutatingToolPrecisionThreshold = 0.99;
@@ -18,7 +18,6 @@ public sealed partial class Brain
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(tools);
-        if (_contextual is not null) return ContextualReply(request, tools);
         ValidateRequest(request);
         var packed = PackTurns(request.Utterances);
         var currentUtterance = request.Utterances[^1];
@@ -242,7 +241,7 @@ public sealed partial class Brain
             perception.Policy == ResponsePolicy.Clarify ? text : null,
             perception.Policy == ResponsePolicy.Clarify ? toolDecision.Reasons : [],
             discourseAction, discourse.AntecedentUtterance);
-        var state = DialogueStateReducer.Apply(request.State, request.PlayerProfile, currentUtterance,
+        var state = LegacyDialogueStateReducer.Apply(request.State, request.PlayerProfile, currentUtterance,
             request.ResponseSequence, perception, plan, toolResult, text, fallbackReason);
         var tone = Cognition.ToneFor(state.Mood);
         var diagnostics = new ReplyDiagnostics(

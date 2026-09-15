@@ -6,15 +6,15 @@ using System.Text.Json.Serialization;
 
 namespace Fishbrain;
 
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
-    internal static Brain CreateForTesting(BrainConfig config, params string[] trainedTools) =>
+    internal static LegacyBrain CreateForTesting(BrainConfig config, params string[] trainedTools) =>
             new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), trainedTools, [], []);
 
-    internal static Brain CreateForTesting(BrainConfig config, WordVocabulary vocabulary, params string[] trainedTools) =>
+    internal static LegacyBrain CreateForTesting(BrainConfig config, WordVocabulary vocabulary, params string[] trainedTools) =>
         new(config, vocabulary, new DeterministicRandom(config.Seed), trainedTools, [], []);
 
-    internal static Brain CreateForTestingWithExamples(
+    internal static LegacyBrain CreateForTestingWithExamples(
         BrainConfig config,
         IReadOnlyDictionary<string, string> examples) =>
         new(config, WordVocabulary.Testing(), new DeterministicRandom(config.Seed), [], examples, []);

@@ -59,7 +59,7 @@ internal static partial class RuntimeTestSuite
         Console.WriteLine($"PASS ALL {selected.Length} RUNTIME TESTS" + (includeShippedArtifact ? " INCLUDING SHIPPED ARTIFACT" : "; SHIPPED ARTIFACT EXCLUDED (--unit)"));
     }
 
-    static Brain TestBrain() => Brain.CreateForTesting(new BrainConfig
+    static LegacyBrain TestBrain() => LegacyBrain.CreateForTesting(new BrainConfig
     {
         EmbeddingSize = 8,
         HeadCount = 2,
@@ -422,7 +422,7 @@ internal static partial class RuntimeTestSuite
         {
             var path = Path.Combine(directory, "model.fbm");
             TestBrain().ExportInference(path, new string('a', 64));
-            var loaded = Brain.Load(path);
+            var loaded = LegacyBrain.Load(path);
             var result = loaded.Reply(Request("where is Zephyr-9?"), DemoGameTools.CreateMerchant());
             Assert(result.Text == "I CANNOT LOCATE ZEPHYR-9.", "compact checkpoint roundtrip");
             var bytes = File.ReadAllBytes(path);
@@ -431,7 +431,7 @@ internal static partial class RuntimeTestSuite
             var corruptRejected = false;
             try
             {
-                _ = Brain.Load(path);
+                _ = LegacyBrain.Load(path);
             }
             catch (InvalidDataException)
             {
@@ -494,7 +494,7 @@ internal static partial class RuntimeTestSuite
         var nonFiniteConfigRejected = false;
         try
         {
-            _ = Brain.CreateForTesting(new BrainConfig { LearningRate = double.NaN });
+            _ = LegacyBrain.CreateForTesting(new BrainConfig { LearningRate = double.NaN });
         }
         catch (InvalidDataException)
         {
@@ -506,7 +506,7 @@ internal static partial class RuntimeTestSuite
         var oversizedConfigRejected = false;
         try
         {
-            _ = Brain.CreateForTesting(new BrainConfig
+            _ = LegacyBrain.CreateForTesting(new BrainConfig
             {
                 LayerCount = 8,
                 EmbeddingSize = 1024,
@@ -542,9 +542,9 @@ internal static partial class RuntimeTestSuite
 
     static void MonotonicCurriculum()
     {
-        var at40K = Brain.CurriculumLearningRate(40_000, 0.14);
-        var at80K = Brain.CurriculumLearningRate(80_000, 0.14);
-        var at120K = Brain.CurriculumLearningRate(120_000, 0.14);
+        var at40K = LegacyBrain.CurriculumLearningRate(40_000, 0.14);
+        var at80K = LegacyBrain.CurriculumLearningRate(80_000, 0.14);
+        var at120K = LegacyBrain.CurriculumLearningRate(120_000, 0.14);
         Assert(at40K > at80K && at80K > at120K,
             "extending a completed curriculum cannot raise the absolute-step learning rate");
     }
@@ -552,17 +552,17 @@ internal static partial class RuntimeTestSuite
     static void PhaseLocalSampling()
     {
         var structured = Enumerable.Range(0, 20).Where(step => step % 10 <= 6)
-            .Select(Brain.StructuredCurriculumIndex).ToArray();
+            .Select(LegacyBrain.StructuredCurriculumIndex).ToArray();
         var ranking = Enumerable.Range(0, 20).Where(step => step % 10 is 7 or 8)
-            .Select(Brain.RankingCurriculumIndex).ToArray();
+            .Select(LegacyBrain.RankingCurriculumIndex).ToArray();
         Assert(structured.SequenceEqual(Enumerable.Range(0, 14)),
             "structured schedule visits consecutive family ordinals without residue gaps");
         Assert(ranking.SequenceEqual(Enumerable.Range(0, 4)),
             "ranking schedule visits consecutive family ordinals without residue gaps");
         var polishStructured = Enumerable.Range(200_000, 20).Where(step => step % 10 <= 7)
-            .Select(step => Brain.HeadPolishStructuredIndex(step, 200_000)).ToArray();
+            .Select(step => LegacyBrain.HeadPolishStructuredIndex(step, 200_000)).ToArray();
         var polishRanking = Enumerable.Range(200_000, 20).Where(step => step % 10 >= 8)
-            .Select(step => Brain.HeadPolishRankingIndex(step, 200_000)).ToArray();
+            .Select(step => LegacyBrain.HeadPolishRankingIndex(step, 200_000)).ToArray();
         Assert(polishStructured.SequenceEqual(Enumerable.Range(0, 16)),
             "head-polish structured sampling uses consecutive phase-local ordinals");
         Assert(polishRanking.SequenceEqual(Enumerable.Range(0, 4)),
@@ -672,7 +672,7 @@ internal static partial class RuntimeTestSuite
                 prejudice.Diagnostics.FallbackReason != "CLASSIFICATION_EXPLANATION",
             "identity-based exclusion is not acknowledged or mistaken for a diagnostics question");
 
-        VerifyLiveConversationRepairs(brain);
+        VerifyLiveConversationRepairs(brain.Reply);
     }
 
     static void Assert(bool condition, string message)

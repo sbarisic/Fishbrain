@@ -9,10 +9,13 @@ internal sealed record ContextualCheckpointHeader(string Architecture, Contextua
     int CompletedSteps, bool Training, ulong RandomState, ParameterShape[] Parameters,
     Dictionary<string, int> ParameterUpdates, Dictionary<string, double> ExecutionThresholds)
 {
+    public DomainSnapshot? Domain { get; init; }
     public string? NextPhase { get; init; }
     public string? Sampler { get; init; }
     public int EffectiveBatchSize { get; init; }
 }
+
+internal sealed record DomainSnapshot(string Id, DomainToolBinding[] Tools, Dictionary<string, string> EntityAliases);
 
 internal static class ContextualCheckpoint
 {
@@ -32,6 +35,8 @@ internal static class ContextualCheckpoint
         Segments = Enum.GetNames<InputSegment>(),
         Acts = Enum.GetNames<DialogueResponseAct>(),
         Status = Enum.GetNames<ActionStatus>(),
+        AgendaKinds = Enum.GetNames<AgendaKind>(),
+        AgendaStatuses = Enum.GetNames<AgendaStatus>(),
         Facts = Enum.GetNames<DialogueFactKind>(),
         Slots = Enum.GetNames<SlotType>(),
         Heads = ContextualNetwork.HeadSizes,
@@ -40,14 +45,15 @@ internal static class ContextualCheckpoint
     }))).ToLowerInvariant();
 
     public static void Save(string path, ContextualNetwork model, string corpusHash, int step,
-        IReadOnlyDictionary<string, double> thresholds, ContextualTrainer? trainer = null)
+        IReadOnlyDictionary<string, double> thresholds, IContextualTrainingState? trainer = null)
     {
         var parameters = trainer?.Parameters ?? model.Parameters();
         var header = new ContextualCheckpointHeader(ArchitectureName, model.Config, model.Vocabulary.Words, model.Vocabulary.OutputWords,
             model.Domain.Fingerprint, SchemaFingerprint(model), corpusHash, step, trainer is not null, trainer?.Random.State ?? 0,
             model.Shapes.ToArray(), trainer?.ParameterUpdates ?? [], thresholds.ToDictionary(x => x.Key, x => x.Value))
         {
-            NextPhase = step == 260_000 ? "COMPLETE" : ContextualTrainer.Phase(step).ToString(),
+            Domain = new(model.Domain.Id, model.Domain.Tools.ToArray(), model.Domain.EntityAliases.ToDictionary(x => x.Key, x => x.Value)),
+            NextPhase = step == 260_000 ? "COMPLETE" : ContextualSchedule.Phase(step).ToString(),
             Sampler = "COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION",
             EffectiveBatchSize = 32
         };
@@ -75,8 +81,8 @@ internal static class ContextualCheckpoint
         File.Move(temporary, full, true);
     }
 
-    public static (ContextualNetwork Model, ContextualCheckpointHeader Header, ContextualTrainer? Trainer) Load(
-        string path, DialogueDomainDefinition domain, bool training = false)
+    public static (ContextualNetwork Model, ContextualCheckpointHeader Header, ContextualTrainingState? TrainingState) Load(
+        string path, DialogueDomainDefinition? domain = null, bool training = false)
     {
         using var stream = File.OpenRead(path);
         if (stream.Length < Magic.Length + 4 + 32) throw new InvalidDataException("Truncated contextual checkpoint.");
@@ -101,12 +107,16 @@ internal static class ContextualCheckpoint
         var headerLength = reader.ReadInt32();
         if (headerLength is < 1 or > 16_777_216) throw new InvalidDataException("Invalid contextual header length.");
         var header = JsonSerializer.Deserialize<ContextualCheckpointHeader>(reader.ReadBytes(headerLength)) ?? throw new InvalidDataException("Missing contextual header.");
+        var definition = header.Domain ?? throw new InvalidDataException("Checkpoint has no embedded domain definition.");
+        var embeddedDomain = new DialogueDomainDefinition(definition.Id, definition.Tools, definition.EntityAliases);
+        if (embeddedDomain.Fingerprint != header.DomainFingerprint) throw new InvalidDataException("Embedded domain fingerprint mismatch.");
+        domain ??= embeddedDomain;
         if (header.Architecture != ArchitectureName || header.DomainFingerprint != domain.Fingerprint ||
             header.CompletedSteps is < 0 or > 260_000 || header.Config is null || header.Words is null || header.OutputWords is null ||
             header.Parameters is null || header.ExecutionThresholds is null || header.ParameterUpdates is null ||
             string.IsNullOrWhiteSpace(header.CorpusHash)) throw new InvalidDataException("Contextual checkpoint metadata mismatch.");
         header.Config.Validate();
-        if (header.NextPhase != (header.CompletedSteps == 260_000 ? "COMPLETE" : ContextualTrainer.Phase(header.CompletedSteps).ToString()) ||
+        if (header.NextPhase != (header.CompletedSteps == 260_000 ? "COMPLETE" : ContextualSchedule.Phase(header.CompletedSteps).ToString()) ||
             header.Sampler != "COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION" || header.EffectiveBatchSize != 32)
             throw new InvalidDataException("Contextual phase or sampler contract mismatch.");
         var wordSet = header.Words.ToHashSet(StringComparer.Ordinal);
@@ -125,7 +135,7 @@ internal static class ContextualCheckpoint
         var weights = ReadParameters(false);
         var model = new ContextualNetwork(header.Config, vocabulary, domain, weights, takeOwnership: true);
         if (SchemaFingerprint(model) != header.SchemaFingerprint) throw new InvalidDataException("Contextual label schema mismatch.");
-        ContextualTrainer? trainer = null;
+        ContextualTrainingState? trainer = null;
         if (training)
         {
             if (!header.Training || header.RandomState == 0 || header.ParameterUpdates.Count != shapes.Length ||
@@ -133,7 +143,7 @@ internal static class ContextualCheckpoint
                 throw new InvalidDataException("Inference checkpoints cannot resume training or are missing optimizer state.");
             var first = ReadParameters(false);
             var second = ReadParameters(true);
-            trainer = new(model, header.CompletedSteps, header.RandomState, first, second, header.ParameterUpdates);
+            trainer = new(header.RandomState, first, second, header.ParameterUpdates);
         }
         return (model, header, trainer);
 

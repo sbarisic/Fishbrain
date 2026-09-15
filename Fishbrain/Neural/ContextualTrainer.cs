@@ -1,9 +1,9 @@
 namespace Fishbrain.Neural;
 
-internal enum ContextualPhase { MaskedLanguage, JointUnderstanding, JointRealization, DecoderPolish }
+
 
 /// <summary>Mutable training state is owned here and is never allocated by Brain.Load.</summary>
-internal sealed class ContextualTrainer
+internal sealed class ContextualTrainer : IContextualTrainingState
 {
     public ContextualNetwork Architecture { get; }
     public Dictionary<string, Tensor> Parameters { get; }
@@ -28,9 +28,13 @@ internal sealed class ContextualTrainer
         if (randomState is { } state) Random.State = state;
     }
 
-    public static ContextualPhase Phase(int step) => step < 40_000 ? ContextualPhase.MaskedLanguage
-        : step >= 220_000 ? ContextualPhase.DecoderPolish
-        : (step - 40_000) % 10 < 7 ? ContextualPhase.JointUnderstanding : ContextualPhase.JointRealization;
+    public static ContextualPhase Phase(int step) => ContextualSchedule.Phase(step);
+
+    public static ContextualTrainer Restore((ContextualNetwork Model, ContextualCheckpointHeader Header, ContextualTrainingState? TrainingState) loaded)
+    {
+        var state = loaded.TrainingState ?? throw new InvalidDataException("Checkpoint contains no training state.");
+        return new(loaded.Model, loaded.Header.CompletedSteps, state.RandomState, state.FirstMoments, state.SecondMoments, state.ParameterUpdates);
+    }
 
     public ContextualNetwork Snapshot() => new(Architecture.Config, Architecture.Vocabulary, Architecture.Domain,
         Parameters.ToDictionary(x => x.Key, x => x.Value.Data));
@@ -134,6 +138,19 @@ internal sealed class ContextualTrainer
                         loss += graph.CrossEntropy(logits.Fields["active"], 0, i < frames.Length ? 1 : 0, 1f / 3);
                         if (i >= frames.Length) continue;
                         var frame = frames[i];
+                        if (frame.Fact is { } fact)
+                        {
+                            foreach (var (name, target) in new[] { ("factAct", (int)fact.Act), ("factKind", fact.FactKind is { } clauseKind ? (int)clauseKind + 1 : 0),
+                                ("factPolarity", fact.Negated ? 1 : 0), ("factSubject", (int)fact.Subject), ("factTarget", (int)fact.Target) })
+                                loss += graph.CrossEntropy(logits.Fields[name], 0, target, 1f / frames.Length);
+                            foreach (var (source, row) in sourceRows)
+                            {
+                                var span = fact.FactValueSpan;
+                                var label = span is not null && source.Start >= span.Start && source.Start < span.Start + span.Length
+                                    ? source.Start == span.Start ? 1 : 2 : 0;
+                                loss += graph.CrossEntropy(logits.FactSpans, row, label, 1f / (frames.Length * sourceRows.Length));
+                            }
+                        }
                         foreach (var (name, target) in new[] { ("act", (int)frame.SpeechAct), ("subject", (int)frame.Subject), ("target", (int)frame.Target),
                             ("status", (int)frame.Status), ("tool", model.ToolIndex(frame.ToolName)) })
                             loss += graph.CrossEntropy(logits.Fields[name], 0, target, 1f / frames.Length);
@@ -153,8 +170,13 @@ internal sealed class ContextualTrainer
                     }
                 if (example.Contextual?.Agenda is { } agenda)
                 {
-                    loss += graph.CrossEntropy(output.Heads["agenda"], 0, agenda.Length == 0 ? 0 : (int)agenda[^1].Kind + 1);
-                    if (agenda.Length > 0) loss += graph.CrossEntropy(output.Heads["agendaStatus"], 0, (int)agenda[^1].Status);
+                    for (var i = 0; i < 4; i++)
+                    {
+                        loss += graph.CrossEntropy(output.Agenda[i].Kind, 0, i < agenda.Length ? (int)agenda[i].Kind + 1 : 0, .25f);
+                        if (i >= agenda.Length) continue;
+                        loss += graph.CrossEntropy(output.Agenda[i].Status, 0, (int)agenda[i].Status, 1f / agenda.Length);
+                        loss += graph.CrossEntropy(output.Agenda[i].Subject, 0, model.AgendaSubjectIndex(agenda[i].Subject, input.Agenda), 1f / agenda.Length);
+                    }
                 }
                 if (ProjectResponse(example))
                 {

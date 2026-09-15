@@ -91,15 +91,15 @@ internal static class SelfTests
         var refusalTokens = Tokenizer.Lex(refusal).Select(token => token.Text).ToArray();
         Assert(refusalTokens.SequenceEqual(["PLAYER", "HEY", "I", "DON'T", "WANT", "TO", "HELP", "YOU", ",", "IDIOT"]),
             "one token per word with standalone punctuation");
-        Assert(Brain.ExtractCurrentPlayerTurn("HELLO, FRIEND!") == "HELLO, FRIEND!", "plain current turn");
-        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC GREETINGS. PLAYER WHAT?") == "WHAT?", "history current turn");
-        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER WAIT. NPC YES. PLAYER THANKS.") == "THANKS.", "multi-turn current turn");
-        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER I WILL NOT ASK. PLAYER FOLLOW ME.") == "FOLLOW ME.",
+        Assert(LegacyBrain.ExtractCurrentPlayerTurn("HELLO, FRIEND!") == "HELLO, FRIEND!", "plain current turn");
+        Assert(LegacyBrain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC GREETINGS. PLAYER WHAT?") == "WHAT?", "history current turn");
+        Assert(LegacyBrain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER WAIT. NPC YES. PLAYER THANKS.") == "THANKS.", "multi-turn current turn");
+        Assert(LegacyBrain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC HI. PLAYER I WILL NOT ASK. PLAYER FOLLOW ME.") == "FOLLOW ME.",
             "current turn after no-response history");
-        Assert(Brain.ExtractCurrentPlayerTurn("PLAYER I AM A PLAYER.") == "I AM A PLAYER.", "player noun is not a role marker");
-        Assert(Brain.ExtractCurrentPlayerTurn("PLAYERISH WORD") == "PLAYERISH WORD", "marker word boundary");
-        AssertThrows<ArgumentException>(() => Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT. PLAYER"));
-        AssertThrows<ArgumentException>(() => Brain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT."));
+        Assert(LegacyBrain.ExtractCurrentPlayerTurn("PLAYER I AM A PLAYER.") == "I AM A PLAYER.", "player noun is not a role marker");
+        Assert(LegacyBrain.ExtractCurrentPlayerTurn("PLAYERISH WORD") == "PLAYERISH WORD", "marker word boundary");
+        AssertThrows<ArgumentException>(() => LegacyBrain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT. PLAYER"));
+        AssertThrows<ArgumentException>(() => LegacyBrain.ExtractCurrentPlayerTurn("PLAYER HELLO. NPC WAIT."));
         AssertThrows<ArgumentException>(() => Tokenizer.Normalize("HELLO; FRIEND"));
         AssertThrows<ArgumentException>(() => Tokenizer.Normalize("HE SAID \"HELLO"));
     }
@@ -177,11 +177,11 @@ internal static class SelfTests
 
     private static void ModelChecks()
     {
-        var first = Brain.CreateForTesting(TinyConfig());
-        var second = Brain.CreateForTesting(TinyConfig());
+        var first = LegacyBrain.CreateForTesting(TinyConfig());
+        var second = LegacyBrain.CreateForTesting(TinyConfig());
         Assert(first.DebugWeights().SequenceEqual(second.DebugWeights()), "deterministic initialization");
-        var fullFirst = Brain.CreateForTesting(new BrainConfig());
-        var fullSecond = Brain.CreateForTesting(new BrainConfig());
+        var fullFirst = LegacyBrain.CreateForTesting(new BrainConfig());
+        var fullSecond = LegacyBrain.CreateForTesting(new BrainConfig());
         Assert(fullFirst.Config.LayerCount == 2 && fullFirst.Config.EmbeddingSize == 128 &&
                fullFirst.DebugWeights().SequenceEqual(fullSecond.DebugWeights()), "2x128 deterministic initialization");
         Assert(first.DebugNextLogits([Tokenizer.Bos]).Length == first.DialogueTokenizer.OutputSize, "logit count");
@@ -194,8 +194,8 @@ internal static class SelfTests
             index => concurrent[index] = first.DebugNextLogits([Tokenizer.Bos, 0, 1]));
         Assert(concurrent.All(logits => logits.SequenceEqual(concurrentExpected)),
             "32-way inference is deterministic and independent");
-        var optimized = Brain.CreateForTesting(TinyConfig());
-        var reference = Brain.CreateForTesting(TinyConfig());
+        var optimized = LegacyBrain.CreateForTesting(TinyConfig());
+        var reference = LegacyBrain.CreateForTesting(TinyConfig());
         int[] equivalenceWindow = [Tokenizer.Bos, 0, 1, Tokenizer.Decide, Tokenizer.Intent(DialogueIntent.Greeting), Tokenizer.Eos];
         var optimizedLogits = optimized.DebugTargetLogits(equivalenceWindow[..^1], 2, optimizedForward: true);
         var referenceLogits = reference.DebugTargetLogits(equivalenceWindow[..^1], 2, optimizedForward: false);
@@ -257,7 +257,7 @@ internal static class SelfTests
             Assert(data.Examples.Count == 1, "exact memory forms");
 
             var config = TinyConfig();
-            var brain = Brain.CreateForTesting(config, vocabulary);
+            var brain = LegacyBrain.CreateForTesting(config, vocabulary);
             var perceptionGradient = brain.DebugLossAndGradients(history);
             var layout = new PackedTrainer.Layout(config, tokenizer.VocabularySize, tokenizer.OutputSize);
             foreach (var parameterIndex in new[] { 0, layout.Key[0], layout.IntentHead, layout.AffectHead, layout.ExpectedHead })
@@ -289,9 +289,9 @@ internal static class SelfTests
         var path = Path.Combine(Path.GetTempPath(), $"fishbrain-checkpoint-{Guid.NewGuid():N}.json");
         try
         {
-            var brain = Brain.CreateForTesting(TinyConfig());
+            var brain = LegacyBrain.CreateForTesting(TinyConfig());
             brain.Save(path);
-            var loaded = Brain.Load(path);
+            var loaded = LegacyBrain.Load(path);
             Assert(loaded.Config.EmbeddingSize == 8 && loaded.DebugWeights().SequenceEqual(brain.DebugWeights()), "roundtrip");
             var checkpointJson = File.ReadAllText(path);
             using (var document = JsonDocument.Parse(checkpointJson))
@@ -301,9 +301,9 @@ internal static class SelfTests
                     $"\"IntegrityChecksum\": \"{integrity}\"", "\"IntegrityChecksum\": null",
                     StringComparison.Ordinal));
             }
-            AssertThrows<InvalidDataException>(() => Brain.Load(path));
+            AssertThrows<InvalidDataException>(() => LegacyBrain.Load(path));
             File.WriteAllText(path, "{}");
-            AssertThrows<InvalidDataException>(() => Brain.Load(path));
+            AssertThrows<InvalidDataException>(() => LegacyBrain.Load(path));
         }
         finally
         {
@@ -347,12 +347,12 @@ internal static class SelfTests
             ]);
             var vocabulary = WordVocabulary.Build(dataPath);
             var data = TrainingData.Load(dataPath, new DialogueTokenizer(vocabulary));
-            var uninterrupted = Brain.CreateForTesting(TinyConfig(), vocabulary);
+            var uninterrupted = LegacyBrain.CreateForTesting(TinyConfig(), vocabulary);
             uninterrupted.DebugTrainCurriculum(data, uninterruptedPath, plannedSteps: 12, untilStep: 12);
 
-            var interrupted = Brain.CreateForTesting(TinyConfig(), vocabulary);
+            var interrupted = LegacyBrain.CreateForTesting(TinyConfig(), vocabulary);
             interrupted.DebugTrainCurriculum(data, resumedPath, plannedSteps: 12, untilStep: 6);
-            var resumed = Brain.Load(resumedPath);
+            var resumed = LegacyBrain.Load(resumedPath);
             resumed.DebugTrainCurriculum(data, resumedPath, plannedSteps: 12, untilStep: 12);
             Assert(File.ReadAllBytes(uninterruptedPath).SequenceEqual(File.ReadAllBytes(resumedPath)),
                 "exact milestone resume");

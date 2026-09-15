@@ -10,7 +10,7 @@ internal static class ContextualArchitectureTests
         foreach (var input in new[] { "DO NOT BUY 2 ROPE", "IF I BUY 2 ROPE", "I DO NOT WANT TO BUY 2 ROPE", "CANCEL BUY 2 ROPE", "HE SAID BUY 2 ROPE" })
         {
             var world = new DemoWorldState();
-            var brain = Brain.CreateForTesting(new BrainConfig { EmbeddingSize = 8, HeadCount = 2, MlpSize = 12, ContextLength = 128, AttentionWindow = 128, PositionPeriod = 128 });
+            var brain = LegacyBrain.CreateForTesting(new BrainConfig { EmbeddingSize = 8, HeadCount = 2, MlpSize = 12, ContextLength = 128, AttentionWindow = 128, PositionPeriod = 128 });
             var result = brain.Reply(Request(input), DemoGameTools.CreateMerchant(world));
             Assert(result.Diagnostics.ToolInvocation is null && world.Balance == 100, $"Unintended mutation: {input}");
         }
@@ -20,6 +20,12 @@ internal static class ContextualArchitectureTests
         var packedFact = StructuredInput.FactText(fact);
         Assert(packedFact.Contains("SUBJECT Npc") && packedFact.Contains("SessionReported"), "Fact ownership lost.");
         AttentionGradients(false);
+        MatrixKernels();
+        ParallelAttentionParity();
+        ScratchLifetimeParity();
+        AssemblyBoundary();
+        ClauseFactReduction();
+        ClauseAndAgendaGradients();
         AttentionGradients(true);
         NetworkGradients();
         StructuredBoundaries();
@@ -53,6 +59,160 @@ internal static class ContextualArchitectureTests
                 var numeric = (plus - minus) / .002f;
                 Assert(Math.Abs(numeric - input.Gradient![i]) < .015f, "Attention finite difference mismatch.");
             }
+    }
+
+    private static void AssemblyBoundary()
+    {
+        var runtime = typeof(Brain).Assembly;
+        Assert(runtime.GetReferencedAssemblies().All(x => !x.Name!.StartsWith("Fishbrain")), "Runtime depends on another project assembly.");
+        Assert(runtime.GetTypes().All(t => t != typeof(ContextualTrainer) && t != typeof(LegacyBrain) && t != typeof(DemoWorldState)),
+            "Training or demo implementation leaked into runtime.");
+        Assert(typeof(ContextualTrainer).Assembly != runtime && typeof(DemoWorldState).Assembly != runtime, "Assemblies were not separated.");
+    }
+
+    private static void ClauseFactReduction()
+    {
+        var cases = ContextualAcceptance.Cases().Where(x => x.ExpectedFacts is not null).ToArray();
+        foreach (var scenario in ContextualAcceptance.Cases())
+        {
+            var words = Tokenizer.Lex(string.Join(' ', scenario.Request.Utterances.Select(x => x.Text))).Where(x => x.Kind == LexicalTokenKind.Word).Select(x => x.Text);
+            var tokenizer = new DialogueTokenizer(new WordVocabulary(words, words));
+            _ = StructuredInput.Pack(scenario.Request, tokenizer, 2048, scenario.SelectedFacts ?? [], DemoDialogueDomains.Merchant);
+        }
+        foreach (var example in cases.Where(x => x.Id.Contains("correction", StringComparison.Ordinal)))
+        {
+            var actual = DialogueStateReducer.ReduceFrameFacts(example.Request.State.SessionFacts, example.Frames, 6);
+            var expected = example.ExpectedFacts!;
+            Assert(actual.Select(Key).ToHashSet().SetEquals(expected.Select(Key)), "Clause facts changed the wrong owner: " + example.Id);
+            foreach (var status in new[] { ActionStatus.Quoted, ActionStatus.Hypothetical, ActionStatus.Question })
+            {
+                var suppressed = DialogueStateReducer.ReduceFrameFacts(example.Request.State.SessionFacts,
+                    example.Frames.Select(x => x with { Status = status }).ToArray(), 6);
+                Assert(suppressed.SequenceEqual(example.Request.State.SessionFacts), "Non-asserted clause became a session fact.");
+            }
+        }
+        static object Key(DialogueFact f) => (f.Subject, f.Kind, f.Value, f.Negated, f.SourceUtterance, f.Provenance);
+    }
+
+    private static void ClauseAndAgendaGradients()
+    {
+        var test = ContextualAcceptance.Cases().First(x => x.Id == "compound-owned-correction-Player");
+        var words = Tokenizer.Lex(string.Join(' ', test.Request.Utterances.Select(x => x.Text)) +
+            " NAME ROLE ORIGIN HOME FAMILY OCCUPATION FACTION TRAITS UNKNOWN MOOD RAPPORT TRUST GOALS PENDING SUBJECT PREDICATE VALUE SOURCE PROVENANCE PLAYER NPC NONE NEUTRAL TRAVELER")
+            .Where(x => x.Kind == LexicalTokenKind.Word).Select(x => x.Text).Distinct().ToArray();
+        var vocabulary = new WordVocabulary(words, words);
+        var model = new ContextualNetwork(new() { EncoderLayers = 1, DecoderLayers = 1, Width = 8, Heads = 2, FeedForwardWidth = 16 },
+            vocabulary, new("FACT_TEST", []));
+        var first = new DialogueAgendaEntry(AgendaKind.UnansweredQuestion, "HOME", 0, AgendaStatus.Active);
+        var second = new DialogueAgendaEntry(AgendaKind.UnansweredQuestion, "OCCUPATION", 1, AgendaStatus.Active);
+        var targets = new[] { first with { Status = AgendaStatus.Completed }, second with { Status = AgendaStatus.Completed } };
+        var request = test.Request with { State = test.Request.State with { Agenda = [first, second] } };
+        var example = new TrainingExample("", request.Utterances[^1].Text, request.Utterances.ToArray(), [], [], [],
+            UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Answer, [], [], "NONE", "ACKNOWLEDGE", KnowledgeTarget.None,
+            "PROJECT_TEST", "FACT_TEST", new HashSet<string>(), DiscourseFrame.Empty, [], [], DiscourseResponseAction.None, [], null)
+        { Request = request, Contextual = new(test.Frames, test.Plan, null, targets) };
+        var trainer = new ContextualTrainer(model, 100000);
+        trainer.Loss(example, ContextualPhase.JointUnderstanding);
+        foreach (var name in new[] { "encoder.embedding", "frame.factSpans", "frame.factSubject", "agenda.kind", "agenda.status", "agenda.subject" })
+        {
+            var parameter = trainer.Parameters[name];
+            var index = Enumerable.Range(0, parameter.Data.Length).MaxBy(i => Math.Abs(parameter.Gradient![i]));
+            Assert(Math.Abs(parameter.Gradient![index]) > 1e-7, "Missing clause/agenda gradient: " + name);
+            var original = parameter.Data[index];
+            parameter.Data[index] = original + .001f;
+            var plus = trainer.Loss(example, ContextualPhase.JointUnderstanding, false);
+            parameter.Data[index] = original - .001f;
+            var minus = trainer.Loss(example, ContextualPhase.JointUnderstanding, false);
+            parameter.Data[index] = original;
+            Assert(Math.Abs((plus - minus) / .002f - parameter.Gradient![index]) < .04f, "Clause/agenda finite difference mismatch: " + name);
+        }
+        var reduced = DialogueStateReducer.ReduceAgendaPlan(request.State.Agenda, targets, test.Plan, test.Frames, null, null);
+        Assert(reduced.SequenceEqual(targets), "Compound answers did not retire both agenda entries.");
+        Assert(DialogueStateReducer.ReduceAgendaPlan(request.State.Agenda, [], test.Plan, [], null, null).SequenceEqual(request.State.Agenda),
+            "Omitted predictions silently dropped active goals.");
+    }
+
+    private static void ParallelAttentionParity()
+    {
+        foreach (var causal in new[] { false, true })
+        {
+            var random = new Random(92);
+            var inputs = Enumerable.Range(0, 3).Select(_ => Enumerable.Range(0, 67 * 32)
+                .Select(_ => (float)(random.NextDouble() - .5)).ToArray()).ToArray();
+            (float[] Output, float[][] Gradients) Run(bool optimized)
+            {
+                var tensors = inputs.Select(x => new Tensor(67, 32, (float[])x.Clone(), true)).ToArray();
+                var graph = new TensorGraph(true, optimized);
+                var output = graph.Attention(tensors[0], tensors[1], tensors[2], 8, causal);
+                for (var row = 0; row < output.Rows; row++) graph.CrossEntropy(output, row, row % 32);
+                graph.Backward();
+                return (output.Data, tensors.Select(x => x.Gradient!).ToArray());
+            }
+            var fast = Run(true);
+            var reference = Run(false);
+            Assert(fast.Output.Zip(reference.Output).All(x => Math.Abs(x.First - x.Second) < 2e-6), "Parallel attention forward differs from scalar reference.");
+            for (var i = 0; i < 3; i++)
+                Assert(fast.Gradients[i].Zip(reference.Gradients[i]).All(x => Math.Abs(x.First - x.Second) < 2e-6), "Parallel attention gradient differs from scalar reference.");
+            var replay = Run(true);
+            Assert(fast.Output.SequenceEqual(replay.Output) && fast.Gradients.Zip(replay.Gradients).All(x => x.First.SequenceEqual(x.Second)),
+                "Parallel attention is not deterministic.");
+        }
+    }
+
+    private static void ScratchLifetimeParity()
+    {
+        var vocabulary = new WordVocabulary(["ALPHA", "BETA"], ["ALPHA", "BETA"]);
+        var model = new ContextualNetwork(new() { Width = 32, Heads = 8, EncoderLayers = 2, DecoderLayers = 2, FeedForwardWidth = 128 },
+            vocabulary, new("SCRATCH_TEST", []));
+        var tokens = Enumerable.Range(0, 128).Select(i => vocabulary.InputId(i % 2 == 0 ? "ALPHA" : "BETA")).ToArray();
+        var input = new PackedInput(tokens, new int[tokens.Length], tokens.Select((_, i) => new TokenSource(0, i * 6, 5, InputSegment.Player)).ToArray(),
+            [new(0, DialogueRole.Player, string.Join(' ', Enumerable.Repeat("ALPHA", 128)))], Enumerable.Range(0, 128).ToArray(), []);
+        float[] Run(bool pooled)
+        {
+            using var scratch = pooled ? new InferenceScratch() : null;
+            var parameters = model.Parameters();
+            var encoded = model.Encode(new TensorGraph(false), parameters, input);
+            var decode = Enumerable.Range(0, 32).Select(i => tokens[i]).Prepend(Tokenizer.Bos).ToArray();
+            var full = model.Decode(new TensorGraph(false), parameters, decode, encoded);
+            var cache = model.CreateDecoderSession(parameters, encoded);
+            for (var row = 0; row < decode.Length; row++)
+            {
+                var incremental = cache.Next(decode[row]);
+                Assert(incremental.Data.Zip(full.Data.Skip(row * full.Columns).Take(full.Columns))
+                    .All(x => Math.Abs(x.First - x.Second) < 2e-5), "Scratch reuse corrupted decoder cache.");
+            }
+            return full.Data.ToArray();
+        }
+        var expected = Run(false);
+        Assert(Run(true).SequenceEqual(expected) && Run(true).SequenceEqual(expected), "Pooled inference differs from unpooled inference.");
+        var concurrent = Enumerable.Range(0, 4).AsParallel().Select(_ => Run(true)).ToArray();
+        Assert(concurrent.All(x => x.SequenceEqual(expected)), "Concurrent scratch scopes share active buffers.");
+    }
+
+    private static void MatrixKernels()
+    {
+        foreach (var (rows, inner, columns) in new[] { (1, 23, 37), (7, 29, 35), (16, 64, 32), (16, 32, 43), (64, 384, 512) })
+        {
+            var random = new Random(42);
+            var a = new Tensor(rows, inner, Enumerable.Range(0, rows * inner).Select(_ => (float)(random.NextDouble() - .5)).ToArray(), true);
+            var b = new Tensor(inner, columns, Enumerable.Range(0, inner * columns).Select(_ => (float)(random.NextDouble() - .5)).ToArray(), true);
+            var referenceGraph = new TensorGraph(true, false);
+            var expected = referenceGraph.MatMul(a, b);
+            referenceGraph.CrossEntropy(expected, rows - 1, columns - 1);
+            referenceGraph.Backward();
+            var expectedA = a.Gradient!.ToArray(); var expectedB = b.Gradient!.ToArray();
+            Array.Clear(a.Gradient!); Array.Clear(b.Gradient!);
+            var fastGraph = new TensorGraph(true);
+            var actual = fastGraph.MatMul(a, b);
+            fastGraph.CrossEntropy(actual, rows - 1, columns - 1);
+            fastGraph.Backward();
+            Assert(expected.Data.Zip(actual.Data).All(p => Math.Abs(p.First - p.Second) <= 2e-4 * (1 + Math.Abs(p.First))), "Blocked matrix forward disagrees with scalar reference.");
+            Assert(expectedA.Zip(a.Gradient!).All(p => Math.Abs(p.First - p.Second) < 2e-5), "Blocked matrix left gradient disagrees with reference.");
+            Assert(expectedB.Zip(b.Gradient!).All(p => Math.Abs(p.First - p.Second) < 2e-5), "Blocked matrix right gradient disagrees with reference.");
+            var replay = new float[rows * columns];
+            TensorKernels.Multiply(a.Data, b.Data, replay, rows, inner, columns);
+            Assert(replay.SequenceEqual(actual.Data), "Parallel matrix execution is nondeterministic.");
+        }
     }
 
     private static void NetworkGradients()
@@ -121,9 +281,8 @@ internal static class ContextualArchitectureTests
             new("EAST TOWER", 0, 10), false, 0, 1, "TEST");
         var facts = DialogueStateReducer.ReduceFacts([source, other], correction, 2);
         Assert(facts.Contains(other) && facts.Single(f => f.Subject == DialogueParticipant.Player).Value == "EAST TOWER", "Correction changed another participant's fact.");
-        var agenda = DialogueStateReducer.ReduceAgenda([new(AgendaKind.UnansweredQuestion, "HOME", 0, AgendaStatus.Active)],
-            new(2, DialogueRole.Player, "EAST TOWER"), [new(DialogueResponseAct.Answer)], AgendaKind.UnansweredQuestion, false,
-            AgendaStatus.Completed, correction, null, null);
+        var agenda = DialogueStateReducer.ReduceAgendaPlan([new(AgendaKind.UnansweredQuestion, "HOME", 0, AgendaStatus.Active)],
+            [new(AgendaKind.UnansweredQuestion, "HOME", 0, AgendaStatus.Completed)], [new(DialogueResponseAct.Answer)], [], null, null);
         Assert(agenda.Single().Status == AgendaStatus.Completed, "An answered agenda entry was not retired.");
     }
 
@@ -194,13 +353,14 @@ internal static class ContextualArchitectureTests
         {
             var path = Path.Combine(directory, "training.fbm");
             ContextualCheckpoint.Save(path, trainer.Snapshot(), "TEST", trainer.Step, new Dictionary<string, double>(), trainer);
-            var resumed = ContextualCheckpoint.Load(path, domain, true).Trainer!;
+            var resumed = ContextualTrainer.Restore(ContextualCheckpoint.Load(path, domain, true));
             trainer.TrainBatch(examples, ContextualPhase.JointUnderstanding);
             resumed.TrainBatch(examples, ContextualPhase.JointUnderstanding);
             Assert(trainer.Step == resumed.Step && trainer.Parameters.All(x => x.Value.Data.SequenceEqual(resumed.Parameters[x.Key].Data)), "Training resume is not bit equivalent.");
             var inferencePath = Path.Combine(directory, "inference.fbm");
             ContextualCheckpoint.Save(inferencePath, trainer.Snapshot(), "TEST", trainer.Step, new Dictionary<string, double>());
-            var brain = Brain.Load(inferencePath, domain);
+            var brain = Brain.Load(inferencePath);
+            Assert(brain.Domain.Fingerprint == domain.Fingerprint, "Embedded domain did not round trip.");
             var reply = brain.Reply(examples[0].Request! with { ResponseMode = ResponseMode.DeterministicOnly }, GameToolRegistry.Empty);
             Assert(reply.Contextual is not null && reply.Diagnostics.ToolInvocation is null, "Loaded model did not use contextual inference.");
             var corrupt = File.ReadAllBytes(inferencePath); corrupt[^40] ^= 1; File.WriteAllBytes(inferencePath, corrupt);

@@ -6,7 +6,7 @@ frames, an ordered dialogue planner, and a separate generative decoder.
 
 **Release status:** the replacement is implemented as a development candidate.
 The checked-in `data/models/model-latest.fbm` is incompatible. It has not been
-replaced. Small learning tests and a full-size training update pass; the 260,000
+replaced. Small learning tests and full-size training updates pass; the 260,000
 update training run, held-out quality gates, and two-human review remain unfinished.
 Long-context inference currently exceeds the 100 ms engineering target.
 
@@ -32,6 +32,7 @@ rejection is a failure. Corrupt/incompatible artifact rejection is a separate ch
 ## Host API
 
 Reference `Fishbrain.Runtime/Fishbrain.Runtime.csproj` or the matching runtime DLL.
+This merchant example also references `Fishbrain.DemoDomain`.
 
 ```csharp
 using Fishbrain;
@@ -48,9 +49,9 @@ var result = brain.Reply(request, tools);
 // Persist result.State through the host's own session storage.
 ```
 
-`Brain.Load(path)` uses the merchant domain. Custom models require the exact
-immutable `DialogueDomainDefinition` used for training. Registering an `IGameTool`
-does not teach a new capability.
+`Brain.Load(path)` reads the domain embedded in the model. The explicit-domain
+overload requires the exact immutable `DialogueDomainDefinition` used for training.
+Registering an `IGameTool` does not teach a new capability.
 
 The host supplies persona, approved player facts, tools, history, and session
 state. The runtime returns new state; it never approves or writes persistent
@@ -79,12 +80,16 @@ dotnet run -c Release --project Fishbrain -- teach data/compiled-contextual data
 
 An existing matching training checkpoint resumes exactly. Use a smaller `--until`
 for a bounded engineering run. Ctrl+C finishes the current update and saves.
+For a background job, create `CHECKPOINT.fbm.stop` to request the same clean stop.
+Remove that stop file before resuming. Progress is in `CHECKPOINT.fbm.progress.json`.
+Complete state is saved every 100 updates, and validation runs every 5,000 updates.
+A file lock prevents concurrent writers to the same checkpoint.
 Checkpoints bind weights, token order, schema, domain, corpus, calibration, phase,
 sampler, optimizer, and RNG state. Old weights are not migrated.
 
-Training is CPU-intensive. The observed full-size initial update took about 14
-seconds; later phases can take different amounts of time. A complete run can take
-weeks on the development CPU.
+Training is CPU-intensive. The first 20 updates with the optimized kernels averaged
+5.84 seconds per update; later phases can take different amounts of time. A complete
+run can still take weeks on the development CPU.
 
 ## Evaluate and release
 
@@ -92,6 +97,7 @@ weeks on the development CPU.
 dotnet run -c Release --project Fishbrain -- export data/training/contextual-training.fbm data/training/candidate.fbm data/compiled-contextual
 dotnet run -c Release --project Fishbrain -- evaluate data/compiled-contextual/test.jsonl data/training/candidate.fbm --gate release
 dotnet run -c Release --project Fishbrain -- profile-contextual data/training/candidate.fbm 32
+dotnet run -c Release --project Fishbrain -- acceptance-contextual data/training/candidate.fbm data/logs/acceptance.json
 dotnet run -c Release --project Fishbrain -- compare-contextual data/compiled-contextual data/training/candidate.fbm data/logs/comparison.json
 dotnet run -c Release --project Fishbrain -- conversation-sample data/training/candidate.fbm data/benchmarks/conversation-scenarios.jsonl data/logs/conversation-sample.jsonl
 ```
@@ -110,7 +116,9 @@ artifact. A completed training run alone is never sufficient for release.
 
 ## Project layout
 
-- `Fishbrain.Runtime`: reusable library and host-facing API.
+- `Fishbrain.Runtime`: dependency-free contextual inference and host-facing API.
+- `Fishbrain.Training`: trainers, optimizer state, evaluation and the legacy lexical baseline.
+- `Fishbrain.DemoDomain`: merchant tools, world fixture and domain definitions.
 - `Fishbrain/Neural`: float32 network, differentiation, optimizer, checkpoint code.
 - `Fishbrain`: CLI plus runtime/training source linked into the library.
 - `Fishbrain.DataGenerator`: deterministic corpus compilation and audits.
@@ -118,5 +126,6 @@ artifact. A completed training run alone is never sufficient for release.
 
 Legacy scalar/lexical code remains for baseline comparisons and regression tests.
 The contextual production path does not allocate its parameters or optimizer.
-Training and demo-domain code still share the runtime assembly; extracting those
-into independent assemblies remains follow-up work.
+The runtime has no project references to training, CLI or demo-domain assemblies.
+Assembly-boundary tests check this separation. `Brain.Load(path)` uses the immutable
+domain embedded in the checkpoint; the explicit-domain overload verifies its fingerprint.

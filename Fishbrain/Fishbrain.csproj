@@ -10,6 +10,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../Fishbrain.Training/Fishbrain.Training.csproj" />
+    <ProjectReference Include="../Fishbrain.DemoDomain/Fishbrain.DemoDomain.csproj" />
     <Compile Include="Program.cs;SelfTests.cs;AssemblyInfo.cs" />
     <ProjectReference Include="../Fishbrain.Runtime/Fishbrain.Runtime.csproj" />
   </ItemGroup>

@@ -6,7 +6,7 @@ using System.Text.Json.Serialization;
 
 namespace Fishbrain;
 
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
     private double CalculateLoss(TrainingSample sample, bool optimizedForward = true)
     {
@@ -382,10 +382,10 @@ public sealed partial class Brain
 
     private sealed class InferenceSession
     {
-        private readonly Brain _brain;
+        private readonly LegacyBrain _brain;
         private readonly List<int> _context;
 
-        public InferenceSession(Brain brain, IReadOnlyList<int> context)
+        public InferenceSession(LegacyBrain brain, IReadOnlyList<int> context)
         {
             _brain = brain;
             var retainedStart = Math.Max(0, context.Count - brain.Config.ContextLength);

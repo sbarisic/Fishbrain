@@ -67,6 +67,7 @@ try {
     Invoke-DotNet $brain inspect $candidateFull
     Invoke-DotNet $brain artifact-smoke $candidateFull
     Invoke-DotNet $brain profile-contextual $candidateFull 32
+    Invoke-DotNet $brain acceptance-contextual $candidateFull (Join-Path $artifactsFull "contextual-acceptance.json")
     Invoke-DotNet $brain compare-contextual $corpusFull $candidateFull (Join-Path $artifactsFull "contextual-comparison.json")
 
     @(

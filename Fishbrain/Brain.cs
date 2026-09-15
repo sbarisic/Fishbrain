@@ -46,7 +46,7 @@ public sealed record BrainConfig
     }
 }
 /// <summary>A deliberately tiny word-level GPT for uppercase video-game dialogue.</summary>
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
     private const int TeachingCheckpointInterval = 5_000;
     private const int HeadPolishStartStep = 200_000;
@@ -88,7 +88,7 @@ public sealed partial class Brain
     private Dictionary<string, ModelSchemas.ConfidenceThreshold> _confidenceCalibration;
     private string _corpusHash = "UNKNOWN";
 
-    private Brain(
+    private LegacyBrain(
         BrainConfig config,
         WordVocabulary vocabulary,
         DeterministicRandom random,
@@ -163,9 +163,8 @@ public sealed partial class Brain
     public IReadOnlyCollection<string> TrainedTools => _trainedTools;
     internal DialogueTokenizer DialogueTokenizer => _tokenizer;
 
-    public static Brain Load(string path)
+    public static LegacyBrain Load(string path)
     {
-        if (Neural.ContextualCheckpoint.Matches(path)) return Load(path, DemoDialogueDomains.Merchant);
         if (IsInferenceCheckpoint(path)) return LoadInferenceCheckpoint(path);
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");
@@ -210,7 +209,7 @@ public sealed partial class Brain
             throw new InvalidDataException("Training checkpoint parameter count exceeds the supported architecture.");
         var vocabulary = new WordVocabulary(checkpoint.Words, checkpoint.OutputWords);
 
-        var brain = new Brain(
+        var brain = new LegacyBrain(
             checkpoint.Config,
             vocabulary,
             new DeterministicRandom(checkpoint.Config.Seed),

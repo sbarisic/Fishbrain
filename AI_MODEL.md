@@ -66,8 +66,11 @@ ordered response acts and their frame references.
 
 All supervised understanding losses propagate into encoder weights. Missing labels
 remain masked. Frame and plan teacher targets are used during training; runtime
-uses predictions. Each frame has its own antecedent pointer. Agenda updates currently
-use one learned transition per turn, applied to a bounded collection of four entries.
+uses predictions. Each frame has its own antecedent pointer, fact owner, predicate,
+polarity, discourse act and contextual value span. Memory reduction applies these
+clause facts in order and excludes hypothetical, quoted and question frames.
+Four agenda queries predict kind, status and subject, conditioned on the response plan.
+The reducer preserves omitted active entries and accepts grounded additions.
 
 Plans propose actions; validation controls execution. The runtime checks modality,
 speaker, sentence-level vetoes, plan/frame association, registered schema, arguments,

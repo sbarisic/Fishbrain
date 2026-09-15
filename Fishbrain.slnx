@@ -1,7 +1,9 @@
 <Solution>
+  <Project Path="Fishbrain.DemoDomain/Fishbrain.DemoDomain.csproj" />
   <Project Path="Fishbrain.Runtime/Fishbrain.Runtime.csproj" />
   <Project Path="Fishbrain.DataGenerator/Fishbrain.DataGenerator.csproj" />
   <Project Path="Fishbrain.DataGenerator.Tests/Fishbrain.DataGenerator.Tests.csproj" />
+  <Project Path="Fishbrain.Training/Fishbrain.Training.csproj" />
   <Project Path="Fishbrain/Fishbrain.csproj" />
   <Project Path="Fishbrain.Tests/Fishbrain.Tests.csproj" />
 </Solution>

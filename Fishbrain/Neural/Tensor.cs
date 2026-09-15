@@ -16,7 +16,7 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
 {
     private readonly List<Action> _backward = [];
     public bool Training { get; } = training;
-    private Tensor Result(int rows, int columns) => new(rows, columns, new float[checked(rows * columns)], Training);
+    private Tensor Result(int rows, int columns) => new(rows, columns, Training ? new float[checked(rows * columns)] : InferenceScratch.Allocate(checked(rows * columns)), Training);
     private void Record(Action action) { if (Training) _backward.Add(action); }
     private static void Accumulate(Tensor tensor, int index, float value)
     {
@@ -42,11 +42,28 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
     {
         if (a.Columns != b.Rows) throw new ArgumentException("Multiplication shape mismatch.");
         var y = Result(a.Rows, b.Columns);
-        for (var r = 0; r < a.Rows; r++)
+        if (vectorized) TensorKernels.Multiply(a.Data, b.Data, y.Data, a.Rows, a.Columns, b.Columns);
+        else for (var r = 0; r < a.Rows; r++)
             for (var k = 0; k < a.Columns; k++)
                 AddScaled(b.Data, k * b.Columns, y.Data, r * b.Columns, b.Columns, a.Data[r * a.Columns + k]);
         if (Training) Record(() =>
         {
+            if (vectorized)
+            {
+                if (a.Gradient is { } ag)
+                {
+                    var contribution = new float[ag.Length];
+                    TensorKernels.Multiply(y.Gradient!, TensorKernels.Transpose(b.Data, b.Rows, b.Columns), contribution, a.Rows, b.Columns, a.Columns);
+                    AddScaled(contribution, 0, ag, 0, ag.Length, 1);
+                }
+                if (b.Gradient is { } bg)
+                {
+                    var contribution = new float[bg.Length];
+                    TensorKernels.Multiply(TensorKernels.Transpose(a.Data, a.Rows, a.Columns), y.Gradient!, contribution, a.Columns, a.Rows, b.Columns);
+                    AddScaled(contribution, 0, bg, 0, bg.Length, 1);
+                }
+                return;
+            }
             for (var r = 0; r < a.Rows; r++)
                 for (var k = 0; k < a.Columns; k++)
                 {
@@ -132,47 +149,94 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
         var headWidth = width / heads;
         var scale = 1 / MathF.Sqrt(headWidth);
         var y = Result(query.Rows, width);
-        var probabilities = new float[checked(heads * query.Rows * key.Rows)];
-        for (var h = 0; h < heads; h++) for (var q = 0; q < query.Rows; q++)
+        var probabilities = Training ? new float[checked(heads * query.Rows * key.Rows)] : InferenceScratch.Allocate(checked(heads * query.Rows * key.Rows));
+        RunHeads(ForwardHead);
+        void ForwardHead(int h)
         {
-            var count = causal ? q + 1 : key.Rows;
-            var pOffset = (h * query.Rows + q) * key.Rows;
-            var qOffset = q * width + h * headWidth;
-            var maximum = float.NegativeInfinity;
-            for (var k = 0; k < count; k++) maximum = Math.Max(maximum, probabilities[pOffset + k] = Dot(query.Data, qOffset, key.Data, k * width + h * headWidth, headWidth) * scale);
-            var sum = 0f;
-            for (var k = 0; k < count; k++) sum += probabilities[pOffset + k] = MathF.Exp(probabilities[pOffset + k] - maximum);
-            for (var k = 0; k < count; k++)
+            if (vectorized && query.Rows >= 16 && key.Rows >= 16)
             {
-                var p = probabilities[pOffset + k] /= sum;
-                AddScaled(value.Data, k * width + h * headWidth, y.Data, qOffset, headWidth, p);
+                var qh = InferenceScratch.Allocate(query.Rows * headWidth);
+                var kt = InferenceScratch.Allocate(headWidth * key.Rows);
+                var vh = InferenceScratch.Allocate(key.Rows * headWidth);
+                for (var r = 0; r < query.Rows; r++)
+                    Array.Copy(query.Data, r * width + h * headWidth, qh, r * headWidth, headWidth);
+                for (var r = 0; r < key.Rows; r++)
+                    for (var c = 0; c < headWidth; c++)
+                    {
+                        kt[c * key.Rows + r] = key.Data[r * width + h * headWidth + c];
+                        vh[r * headWidth + c] = value.Data[r * width + h * headWidth + c];
+                    }
+                var scores = InferenceScratch.Allocate(query.Rows * key.Rows);
+                TensorKernels.Multiply(qh, kt, scores, query.Rows, headWidth, key.Rows, false);
+                for (var q = 0; q < query.Rows; q++)
+                {
+                    var offset = q * key.Rows;
+                    var count = causal ? q + 1 : key.Rows;
+                    var maximum = float.NegativeInfinity;
+                    for (var k = 0; k < count; k++) maximum = Math.Max(maximum, scores[offset + k] *= scale);
+                    var sum = TensorKernels.Exponentiate(scores, offset, count, maximum);
+                    for (var k = 0; k < count; k++) scores[offset + k] /= sum;
+                    Array.Clear(scores, offset + count, key.Rows - count);
+                }
+                Array.Copy(scores, 0, probabilities, h * scores.Length, scores.Length);
+                var result = InferenceScratch.Allocate(query.Rows * headWidth);
+                TensorKernels.Multiply(scores, vh, result, query.Rows, key.Rows, headWidth, false);
+                for (var r = 0; r < query.Rows; r++)
+                    Array.Copy(result, r * headWidth, y.Data, r * width + h * headWidth, headWidth);
+                return;
             }
-        }
-        if (Training) Record(() =>
-        {
-            var dp = new float[key.Rows];
-            for (var h = 0; h < heads; h++) for (var q = 0; q < query.Rows; q++)
+            for (var q = 0; q < query.Rows; q++)
             {
                 var count = causal ? q + 1 : key.Rows;
                 var pOffset = (h * query.Rows + q) * key.Rows;
                 var qOffset = q * width + h * headWidth;
-                var mean = 0f;
+                var maximum = float.NegativeInfinity;
+                for (var k = 0; k < count; k++) maximum = Math.Max(maximum, probabilities[pOffset + k] = Dot(query.Data, qOffset, key.Data, k * width + h * headWidth, headWidth) * scale);
+                var sum = 0f;
+                if (vectorized) sum = TensorKernels.Exponentiate(probabilities, pOffset, count, maximum);
+                else for (var k = 0; k < count; k++) sum += probabilities[pOffset + k] = MathF.Exp(probabilities[pOffset + k] - maximum);
                 for (var k = 0; k < count; k++)
                 {
-                    dp[k] = Dot(y.Gradient!, qOffset, value.Data, k * width + h * headWidth, headWidth);
-                    mean += dp[k] * probabilities[pOffset + k];
-                    if (value.Gradient is { } vg) AddScaled(y.Gradient!, qOffset, vg, k * width + h * headWidth, headWidth, probabilities[pOffset + k]);
+                    var p = probabilities[pOffset + k] /= sum;
+                    AddScaled(value.Data, k * width + h * headWidth, y.Data, qOffset, headWidth, p);
                 }
-                for (var k = 0; k < count; k++)
+            }
+        }
+        if (Training) Record(() =>
+        {
+            RunHeads(BackwardHead);
+            void BackwardHead(int h)
+            {
+                var dp = new float[key.Rows];
+                for (var q = 0; q < query.Rows; q++)
                 {
-                    var scoreGradient = probabilities[pOffset + k] * (dp[k] - mean) * scale;
-                    var kOffset = k * width + h * headWidth;
-                    if (query.Gradient is { } qg) AddScaled(key.Data, kOffset, qg, qOffset, headWidth, scoreGradient);
-                    if (key.Gradient is { } kg) AddScaled(query.Data, qOffset, kg, kOffset, headWidth, scoreGradient);
+                    var count = causal ? q + 1 : key.Rows;
+                    var pOffset = (h * query.Rows + q) * key.Rows;
+                    var qOffset = q * width + h * headWidth;
+                    var mean = 0f;
+                    for (var k = 0; k < count; k++)
+                    {
+                        dp[k] = Dot(y.Gradient!, qOffset, value.Data, k * width + h * headWidth, headWidth);
+                        mean += dp[k] * probabilities[pOffset + k];
+                        if (value.Gradient is { } vg) AddScaled(y.Gradient!, qOffset, vg, k * width + h * headWidth, headWidth, probabilities[pOffset + k]);
+                    }
+                    for (var k = 0; k < count; k++)
+                    {
+                        var scoreGradient = probabilities[pOffset + k] * (dp[k] - mean) * scale;
+                        var kOffset = k * width + h * headWidth;
+                        if (query.Gradient is { } qg) AddScaled(key.Data, kOffset, qg, qOffset, headWidth, scoreGradient);
+                        if (key.Gradient is { } kg) AddScaled(query.Data, qOffset, kg, kOffset, headWidth, scoreGradient);
+                    }
                 }
             }
         });
         return y;
+        void RunHeads(Action<int> run)
+        {
+            if (vectorized && query.Rows >= 32 && (long)heads * query.Rows * key.Rows >= 32768)
+                Parallel.For(0, heads, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(heads, Environment.ProcessorCount) }, run);
+            else for (var head = 0; head < heads; head++) run(head);
+        }
     }
 
     public float CrossEntropy(Tensor logits, int row, int target, float weight = 1)

@@ -7,11 +7,17 @@ namespace Fishbrain;
 
 public sealed partial class Brain
 {
-    private readonly ContextualNetwork? _contextual;
+    private readonly ContextualNetwork _contextual;
+    private readonly DialogueTokenizer _tokenizer;
+    private readonly int _step;
+    public int CompletedSteps => _step;
+    public ContextualModelConfig Config => _contextual.Config;
+    public IReadOnlyList<string> TrainedTools => Domain.Tools.Select(x => x.Schema.Name).ToArray();
+    internal DialogueTokenizer DialogueTokenizer => _tokenizer;
     private readonly string _contextualCorpusHash = "UNKNOWN";
     private IReadOnlyDictionary<string, double> _executionThresholds = new Dictionary<string, double>();
-    public ContextualModelConfig? ContextualConfig => _contextual?.Config;
-    public DialogueDomainDefinition? Domain => _contextual?.Domain;
+    public ContextualModelConfig ContextualConfig => _contextual.Config;
+    public DialogueDomainDefinition Domain => _contextual.Domain;
 
     public static Brain Load(string path, DialogueDomainDefinition domain)
     {
@@ -25,30 +31,7 @@ public sealed partial class Brain
         _contextual = network;
         _contextualCorpusHash = corpusHash;
         _step = completedSteps;
-        _curriculumPhase = "CONTEXTUAL_INFERENCE";
-        _vocabulary = network.Vocabulary;
         _tokenizer = network.Tokenizer;
-        _random = new(network.Config.Seed);
-        _trainedTools = network.Domain.Tools.Select(x => x.Schema.Name).ToHashSet(StringComparer.Ordinal);
-        _trainedExamples = [];
-        _responseCatalog = [];
-        _structuredHeads = null!;
-        _confidenceCalibration = ModelSchemas.DefaultCalibration;
-        _tokenEmbedding = _outputHead = _positionEmbedding = _intentHead = _affectHead = _expectedHead = [];
-        _queryLayers = _keyLayers = _valueLayers = _attentionOutputLayers = _mlpInLayers = _mlpOutLayers = [];
-        _weights = _packedGradients = _adamM = _adamV = [];
-        Config = new BrainConfig
-        {
-            LayerCount = network.Config.EncoderLayers,
-            EmbeddingSize = network.Config.Width,
-            HeadCount = network.Config.Heads,
-            MlpSize = network.Config.FeedForwardWidth,
-            ContextLength = network.Config.ContextLength,
-            AttentionWindow = network.Config.ContextLength,
-            PositionPeriod = network.Config.ContextLength,
-            MaximumOutputLength = network.Config.MaximumOutputTokens,
-            Seed = network.Config.Seed
-        };
         _executionThresholds = new ReadOnlyDictionary<string, double>(network.Domain.Tools.ToDictionary(x => x.Schema.Name,
             x => thresholds?.GetValueOrDefault(x.Schema.Name, 1.01) ?? 1.01));
     }
@@ -58,9 +41,13 @@ public sealed partial class Brain
     internal static Brain CreateContextualForEvaluation(ContextualNetwork network, int step,
         IReadOnlyDictionary<string, double> thresholds) => new(network, step, thresholds);
 
-    private ReplyResult ContextualReply(ReplyRequest request, GameToolRegistry tools)
+    internal ReplyResult ReplyForResourceProbe(ReplyRequest request, GameToolRegistry tools, IReadOnlyList<DialogueFact> selected) =>
+        ContextualReply(request, tools, selected);
+
+    private ReplyResult ContextualReply(ReplyRequest request, GameToolRegistry tools, IReadOnlyList<DialogueFact>? probeMemory = null)
     {
         ValidateRequest(request);
+        using var scratch = new InferenceScratch();
         var timer = Stopwatch.StartNew();
         var model = _contextual!;
         var parameters = model.Parameters();
@@ -72,6 +59,11 @@ public sealed partial class Brain
         var memoryScores = TensorGraph.Probabilities(model.MemoryScores(retrievalGraph, parameters, query, candidates));
         var memory = candidates.Select((fact, i) => new MemorySelection(fact, memoryScores[i + 1]))
             .Where(x => x.Score > memoryScores[0]).OrderByDescending(x => x.Score).ThenByDescending(x => x.Fact.SourceUtterance).Take(8).ToArray();
+        if (probeMemory is not null)
+        {
+            if (probeMemory.Count > 8 || probeMemory.Any(f => !candidates.Contains(f))) throw new ArgumentException("Invalid resource-probe memories.");
+            memory = probeMemory.Select(f => new MemorySelection(f, memoryScores[Array.IndexOf(candidates, f) + 1])).ToArray();
+        }
         var packed = StructuredInput.Pack(request, _tokenizer, model.Config.ContextLength, memory.Select(x => x.Fact).ToArray(), model.Domain);
         memory = memory.Where(x => packed.Facts.Contains(x.Fact)).ToArray();
         var graph = new TensorGraph(false);
@@ -85,10 +77,15 @@ public sealed partial class Brain
             Exclusive<DialogueParticipant>("discourseTarget"), ContextualNetwork.ArgMax(output.Heads["factKind"]) is var kind && kind > 0 ? (DialogueFactKind?)(kind - 1) : null,
             factSpan, ExclusiveIndex("factPolarity") == 1, antecedent, Confidence("discourseAct"), "LEARNED_CONTEXTUAL");
         var frames = DecodeFrames(model, output, packed, current, slots);
-        var acts = output.Plans.Select((x, i) => new PlannedResponseAct((DialogueResponseAct)ContextualNetwork.ArgMax(x),
-            ContextualNetwork.ArgMax(output.PlanFrames[i]) is var framePointer && framePointer > 0 && framePointer <= frames.Length ? framePointer - 1 : null,
-            (DialogueResponseAct)ContextualNetwork.ArgMax(x) == DialogueResponseAct.AskFollowUp
-                ? discourse.FactKind?.ToString().ToUpperInvariant() : null)).TakeWhile(x => x.Act != DialogueResponseAct.None).ToArray();
+        var acts = output.Plans.Select((x, i) =>
+        {
+            var act = (DialogueResponseAct)ContextualNetwork.ArgMax(x);
+            var pointerIndex = ContextualNetwork.ArgMax(output.PlanFrames[i]);
+            int? frameIndex = pointerIndex > 0 && pointerIndex <= frames.Length ? pointerIndex - 1 : null;
+            var subject = act == DialogueResponseAct.AskFollowUp
+                ? (frameIndex is { } index ? frames[index].Fact?.FactKind : discourse.FactKind)?.ToString().ToUpperInvariant() : null;
+            return new PlannedResponseAct(act, frameIndex, subject);
+        }).TakeWhile(x => x.Act != DialogueResponseAct.None).ToArray();
         var planConfidence = output.Plans.Take(Math.Max(1, acts.Length)).Concat(output.PlanFrames.Take(acts.Length))
             .Select(x => (double)TensorGraph.Probabilities(x).Max()).Min();
         var confidence = output.Heads.ToDictionary(x => x.Key.ToUpperInvariant(), x => (double)TensorGraph.Probabilities(x.Value).Max());
@@ -119,7 +116,12 @@ public sealed partial class Brain
             var frame = frames[index];
             if (frame.ToolName is null) continue;
             if (frame.Status == ActionStatus.Negated && frame.SpeechAct == SpeechAct.Refuse)
-                pending.RemoveAll(a => a.ToolSchema == frame.ToolName);
+            {
+                var matching = pending.Where(a => a.ToolSchema == frame.ToolName &&
+                    (frame.Antecedent is null || a.SourceUtterance == frame.Antecedent)).ToArray();
+                if (matching.Length == 1) pending.Remove(matching[0]);
+                else if (matching.Length > 1) vetoes.Add("AMBIGUOUS_CANCELLATION");
+            }
             var binding = model.Domain.Tools.Single(x => x.Schema.Name == frame.ToolName);
             // Include the whole surrounding sentence so a span prediction cannot omit a preceding negation.
             var sentenceStart = frame.Start == 0 ? 0 : current.LastIndexOfAny(['.', '?', '!', ';'], frame.Start - 1) + 1;
@@ -207,12 +209,12 @@ public sealed partial class Brain
             {
                 text = GenerateContextual(model, parameters, output.PlanMemory, request.Seed);
                 unsupported = TensorGraph.Probabilities(model.ClaimScores(new TensorGraph(false), parameters, output.PlanMemory, text))[1];
-                if (unsupported < .5 && (!text.Contains('?') || HasGroundedQuestion(request, acts, discourse)) &&
+                if (unsupported < .5 && (!text.Contains('?') || HasGroundedQuestion(request, acts, discourse, frames)) &&
                     ConversationalOutputValidator.IsSafe(text, request.Persona, memory.Select(m => m.Fact).ToArray(), out fallback))
                     source = ResponseSource.ConversationalGenerated;
-                else { text = ContextualFallback(request, acts, discourse, memory); fallback ??= "UNSUPPORTED_OR_UNPLANNED_GENERATION"; source = ResponseSource.Fallback; }
+                else { text = ContextualFallback(request, acts, discourse, memory, frames); fallback ??= "UNSUPPORTED_OR_UNPLANNED_GENERATION"; source = ResponseSource.Fallback; }
             }
-            else { text = ContextualFallback(request, acts, discourse, memory); fallback = "NO_VALIDATED_REALIZATION"; source = ResponseSource.Fallback; }
+            else { text = ContextualFallback(request, acts, discourse, memory, frames); fallback = "NO_VALIDATED_REALIZATION"; source = ResponseSource.Fallback; }
         }
         if (invocation is not null && source == ResponseSource.ToolTemplate && acts.Any(a => a.Act == DialogueResponseAct.Correct))
         {
@@ -227,10 +229,17 @@ public sealed partial class Brain
             clarified ? text : null, clarified && selectedTool is not null ? model.Domain.Tools.Single(x => x.Schema.Name == selectedTool).Schema.Parameters.Select(x => x.Name).ToArray() : [], action, antecedent);
         var reduced = DialogueStateReducer.Apply(request.State, request.PlayerProfile, request.Utterances[^1], request.ResponseSequence, perception, plan, toolResult, text, fallback);
         // Generated prose is not a memory source. Only interpreted input frames update session facts.
-        var facts = DialogueStateReducer.ReduceFacts(request.State.SessionFacts, discourse, request.Utterances[^1].Sequence);
-        var agenda = DialogueStateReducer.ReduceAgenda(request.State.Agenda, request.Utterances[^1], acts,
-            (AgendaKind)Math.Max(0, ExclusiveIndex("agenda") - 1), ExclusiveIndex("agenda") > 0,
-            Exclusive<AgendaStatus>("agendaStatus"), discourse, selectedTool, toolResult);
+        var facts = DialogueStateReducer.ReduceFrameFacts(request.State.SessionFacts, frames, request.Utterances[^1].Sequence);
+        var agendaCandidates = output.Agenda.Select(logits =>
+        {
+            var kind = ContextualNetwork.ArgMax(logits.Kind);
+            var subject = model.AgendaSubject(ContextualNetwork.ArgMax(logits.Subject), request.State.Agenda);
+            if (kind == 0 || subject is null) return null;
+            var prior = request.State.Agenda.LastOrDefault(x => x.Kind == (AgendaKind)(kind - 1) && x.Subject == subject);
+            return new DialogueAgendaEntry((AgendaKind)(kind - 1), subject, prior?.SourceTurn ?? request.Utterances[^1].Sequence,
+                (AgendaStatus)ContextualNetwork.ArgMax(logits.Status));
+        }).OfType<DialogueAgendaEntry>().ToArray();
+        var agenda = DialogueStateReducer.ReduceAgendaPlan(request.State.Agenda, agendaCandidates, acts, frames, selectedTool, toolResult);
         reduced = reduced with { SessionFacts = facts, Agenda = agenda };
         reduced.Validate();
         return new ReplyResult(text, reduced, raw, perception, plan, Cognition.ToneFor(reduced.Mood),
@@ -262,38 +271,53 @@ public sealed partial class Brain
             var tool = ContextualNetwork.ArgMax(logits.Fields["tool"]);
             var reference = ContextualNetwork.ArgMax(logits.Antecedent);
             long? antecedent = reference == 0 ? null : packed.Utterances[reference - 1].Sequence;
-            var probability = logits.Fields.Values.Select(x => TensorGraph.Probabilities(x).Max()).Append(TensorGraph.Probabilities(logits.Start).Max())
+            var probability = logits.Fields.Where(x => !x.Key.StartsWith("fact", StringComparison.Ordinal)).Select(x => TensorGraph.Probabilities(x.Value).Max()).Append(TensorGraph.Probabilities(logits.Start).Max())
                 .Append(TensorGraph.Probabilities(logits.End).Max()).Append(TensorGraph.Probabilities(logits.Antecedent).Max()).Min();
+            var span = DecodeFactSpan(logits.FactSpans, packed, current);
+            if (span is not null && (span.Start < startSource.Start || span.Start + span.Length > end)) span = null;
+            var factKind = ContextualNetwork.ArgMax(logits.Fields["factKind"]);
+            var fact = new DiscourseFrame((DiscourseAct)ContextualNetwork.ArgMax(logits.Fields["factAct"]),
+                (DialogueParticipant)ContextualNetwork.ArgMax(logits.Fields["factSubject"]),
+                (DialogueParticipant)ContextualNetwork.ArgMax(logits.Fields["factTarget"]),
+                factKind == 0 ? null : (DialogueFactKind?)(factKind - 1), span, ContextualNetwork.ArgMax(logits.Fields["factPolarity"]) == 1,
+                antecedent, logits.Fields.Where(x => x.Key.StartsWith("fact", StringComparison.Ordinal)).Min(x => TensorGraph.Probabilities(x.Value).Max()), "LEARNED_CLAUSE_FACT");
+            if (fact.Act == DiscourseAct.None) fact = DiscourseFrame.Empty;
             frames.Add(new(startSource.Start, end - startSource.Start, (SpeechAct)ContextualNetwork.ArgMax(logits.Fields["act"]),
                 (DialogueParticipant)ContextualNetwork.ArgMax(logits.Fields["subject"]), (DialogueParticipant)ContextualNetwork.ArgMax(logits.Fields["target"]),
                 tool == 0 ? null : model.Domain.Tools[tool - 1].Schema.Name,
                 slots.Where(s => s.Start >= startSource.Start && s.Start + s.Length <= end).ToArray(), antecedent,
-                (ActionStatus)ContextualNetwork.ArgMax(logits.Fields["status"]), probability));
+                (ActionStatus)ContextualNetwork.ArgMax(logits.Fields["status"]), probability)
+            { Fact = fact });
         }
         return frames.ToArray();
     }
 
-    private static bool HasGroundedQuestion(ReplyRequest request, IReadOnlyList<PlannedResponseAct> acts, DiscourseFrame discourse) =>
+    private static DiscourseFrame ActFact(PlannedResponseAct act, DiscourseFrame discourse, IReadOnlyList<SemanticFrame> frames) =>
+        act.FrameIndex is { } index && index < frames.Count && frames[index].Fact is { Act: not DiscourseAct.None } fact ? fact : discourse;
+
+    private static bool HasGroundedQuestion(ReplyRequest request, IReadOnlyList<PlannedResponseAct> acts, DiscourseFrame discourse,
+        IReadOnlyList<SemanticFrame> frames) =>
         acts.Any(a => a.Act == DialogueResponseAct.Clarify || a.Act == DialogueResponseAct.AskFollowUp && a.Subject is { } subject &&
             (request.State.Agenda.Any(goal => goal.Status == AgendaStatus.Active && goal.Subject == subject) ||
-                discourse.FactKind?.ToString().ToUpperInvariant() == subject && discourse.FactValueSpan is not null));
+                ActFact(a, discourse, frames).FactKind?.ToString().ToUpperInvariant() == subject && ActFact(a, discourse, frames).FactValueSpan is not null));
 
     private static string ContextualFallback(ReplyRequest request, IReadOnlyList<PlannedResponseAct> acts,
-        DiscourseFrame discourse, IReadOnlyList<MemorySelection> memory)
+        DiscourseFrame discourse, IReadOnlyList<MemorySelection> memory, IReadOnlyList<SemanticFrame> frames)
     {
         var clauses = new List<string>();
         foreach (var act in acts)
         {
+            var clauseFact = ActFact(act, discourse, frames);
             var clause = act.Act switch
             {
                 DialogueResponseAct.Correct => "THANK YOU FOR THE CORRECTION.",
-                DialogueResponseAct.Acknowledge => discourse.FactValueSpan is { } value ? $"YOU MENTIONED {value.NormalizedValue}." : "I UNDERSTAND.",
+                DialogueResponseAct.Acknowledge => clauseFact.FactValueSpan is { } value ? $"YOU MENTIONED {value.NormalizedValue}." : "I UNDERSTAND.",
                 DialogueResponseAct.Refuse => "I WILL NOT DO THAT.",
                 DialogueResponseAct.Farewell => "SAFE TRAVELS.",
                 DialogueResponseAct.Clarify => "COULD YOU CLARIFY WHAT YOU MEAN?",
-                DialogueResponseAct.AskFollowUp when HasGroundedQuestion(request, [act], discourse) =>
-                    $"WHAT ELSE WOULD YOU LIKE TO DISCUSS ABOUT {discourse.FactValueSpan?.NormalizedValue ?? act.Subject}?",
-                DialogueResponseAct.Answer when discourse.Act == DiscourseAct.ReferBack => Recall(),
+                DialogueResponseAct.AskFollowUp when HasGroundedQuestion(request, [act], discourse, frames) =>
+                    $"WHAT ELSE WOULD YOU LIKE TO DISCUSS ABOUT {clauseFact.FactValueSpan?.NormalizedValue ?? act.Subject}?",
+                DialogueResponseAct.Answer when clauseFact.Act == DiscourseAct.ReferBack => Recall(clauseFact),
                 DialogueResponseAct.Answer => "I AM NOT CERTAIN ABOUT THAT.",
                 _ => null
             };
@@ -301,10 +325,10 @@ public sealed partial class Brain
         }
         return clauses.Count == 0 ? "I AM NOT SURE HOW TO RESPOND TO THAT." : string.Join(' ', clauses);
 
-        string Recall()
+        string Recall(DiscourseFrame remembered)
         {
-            var owner = discourse.Target == DialogueParticipant.None ? discourse.Subject : discourse.Target;
-            var selected = memory.Where(m => m.Fact.Subject == owner && m.Fact.Kind == discourse.FactKind).Select(m => m.Fact).Distinct().ToArray();
+            var owner = remembered.Target == DialogueParticipant.None ? remembered.Subject : remembered.Target;
+            var selected = memory.Where(m => m.Fact.Subject == owner && m.Fact.Kind == remembered.FactKind).Select(m => m.Fact).Distinct().ToArray();
             if (selected.Length != 1) return "I CANNOT IDENTIFY ONE CLEAR MEMORY ABOUT THAT.";
             var fact = selected[0];
             var subject = fact.Subject == DialogueParticipant.Player ? "YOU" : "ME";

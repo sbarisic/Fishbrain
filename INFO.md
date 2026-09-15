@@ -18,6 +18,10 @@ scratch tensors, its decoder cache and RNG. Training owns a different parameter 
 gradient arrays and optimizer moments. Decoder polishing freezes encoder/planner state.
 Callers must not mutate their request collections concurrently with a reply.
 
+Inference reuses exact-length float buffers from a pool capped at 128 MiB. Layer
+scopes return intermediate buffers after their output is retained by the reply.
+Concurrent replies hold separate live buffers; the pool is included in resource checks.
+
 Inference config and domain definitions are immutable. Domain bindings snapshot
 schemas, aliases and typed response definitions. Loading requires a matching domain
 fingerprint; tool registration alone grants no learned semantic coverage.
@@ -41,11 +45,10 @@ The requested redesign is not fully accepted or released. Complete training, hel
 behavioral evaluation, ablations and two-human conversation review are still required.
 Long-context latency currently fails the engineering target.
 
-The runtime library/CLI boundary is in place. Legacy baseline, training and demo-domain
-types still coexist in that library; a fully separate training/demo assembly layout is
-not yet delivered. Further work is also needed on multiple simultaneous agenda
-transitions and broad training coverage for pending
-action continuations. Keep these limitations visible when assessing the milestones.
+Runtime, training, CLI and demo-domain responsibilities now have separate assemblies.
+The runtime references no other Fishbrain project. Clause-level fact updates and
+four-entry agenda predictions have numerical and reducer coverage. Broader learned
+behavior, including pending-action continuations, remains subject to acceptance gates.
 
 Preserve failed candidates and their reports. Do not lower thresholds, migrate old
 weights, or overwrite the shipped artifact to make a development run appear complete.

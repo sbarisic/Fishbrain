@@ -83,7 +83,7 @@ internal static class Evaluation
     public static int Run(string testPath, string checkpointPath, EvaluationGate gate)
     {
         var timer = Stopwatch.StartNew();
-        var brain = Brain.Load(checkpointPath);
+        var brain = LegacyBrain.Load(checkpointPath);
         var rows = File.ReadLines(testPath).Where(line => !string.IsNullOrWhiteSpace(line))
             .Select(line => JsonSerializer.Deserialize<Row>(line, Options)
                 ?? throw new InvalidDataException("Invalid evaluation row."))
@@ -94,10 +94,10 @@ internal static class Evaluation
 
     private static int RunEvaluation(
         string testPath, string checkpointPath, EvaluationGate gate, Stopwatch timer,
-        Brain brain, IReadOnlyList<Row> rows)
+        LegacyBrain brain, IReadOnlyList<Row> rows)
     {
         var data = TrainingData.Load(testPath, brain.DialogueTokenizer);
-        var examples = Brain.FamilyBalancedEvaluationSet(data.StructuredSamples, brain.Config.Seed);
+        var examples = LegacyBrain.FamilyBalancedEvaluationSet(data.StructuredSamples, brain.Config.Seed);
         if (examples.Count == 0) throw new InvalidDataException("Evaluation requires structured examples.");
         var rawBatch = brain.DebugEvaluateStructuredBatch(examples);
         var raw = rawBatch.Metrics;
@@ -326,7 +326,7 @@ internal static class Evaluation
         Console.WriteLine($"{prefix}_COMPOSITE {metrics.Composite:F4}");
     }
 
-    private static BenchmarkMetrics EvaluateBenchmark(Brain brain)
+    private static BenchmarkMetrics EvaluateBenchmark(LegacyBrain brain)
     {
         var path = RepositoryFiles.ResolveRepositoryFile("data", "benchmarks", "benchmark-256.jsonl");
         var rows = File.ReadLines(path).Where(line => !string.IsNullOrWhiteSpace(line))
@@ -391,7 +391,7 @@ internal static class Evaluation
     }
 
     private static void WriteEvaluationTelemetry(
-        string checkpointPath, Brain brain, TimeSpan elapsed,
+        string checkpointPath, LegacyBrain brain, TimeSpan elapsed,
         StructuredMetrics raw, StructuredMetrics production,
         IReadOnlyDictionary<ResponseSource, int> sources, int invalid, int empty, int overlength,
         double toolArguments, double toolFidelity, BenchmarkMetrics benchmark,
@@ -491,7 +491,7 @@ internal static class Evaluation
     private static bool HasExpectedTarget(Row row) => row.Source is not "CLINC150" and not "GOEMOTIONS";
     private static bool HasAllPerceptionTargets(Row row) => HasIntentTarget(row) && HasAffectTarget(row) && HasExpectedTarget(row);
 
-    private static GoldenResult[] GoldenCases(Brain brain)
+    private static GoldenResult[] GoldenCases(LegacyBrain brain)
     {
         var cases = new (string Name, string Input, DialogueIntent Intent, UserAffect Affect, bool Expected)[]
         {
@@ -532,7 +532,7 @@ internal static class Evaluation
 
     private sealed record GoldenResult(string Name, TurnPerception Expected, TurnPerception Predicted, bool Pass);
 
-    private static TranscriptResult[] TranscriptCases(Brain brain, bool production)
+    private static TranscriptResult[] TranscriptCases(LegacyBrain brain, bool production)
     {
         var sessions = new (string Name, TranscriptExpectation[] Cases)[]
         {
@@ -650,7 +650,7 @@ internal static class Evaluation
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)));
 
     private static void WriteTelemetry(
-        string corpusPath, string checkpointPath, Brain brain, TimeSpan elapsed, double languageLoss,
+        string corpusPath, string checkpointPath, LegacyBrain brain, TimeSpan elapsed, double languageLoss,
         double rawIntent, double constrainedIntent, double rawAffect, double constrainedAffect,
         double expectedF1, int generated, int invalid, int empty, int overlength,
         bool stagePass, bool releasePass)

@@ -12,7 +12,11 @@ public enum AgendaStatus { Active, Completed, Cancelled }
 public sealed record DialogueAgendaEntry(AgendaKind Kind, string Subject, long SourceTurn, AgendaStatus Status);
 public sealed record SemanticFrame(int Start, int Length, SpeechAct SpeechAct, DialogueParticipant Subject,
     DialogueParticipant Target, string? ToolName, IReadOnlyList<DialogueSlot> Arguments,
-    long? Antecedent, ActionStatus Status, double Confidence);
+    long? Antecedent, ActionStatus Status, double Confidence)
+{
+    // Null means no clause-level annotation in a training row; Empty is an explicit no-fact target.
+    public DiscourseFrame? Fact { get; init; }
+}
 public sealed record PlannedResponseAct(DialogueResponseAct Act, int? FrameIndex = null, string? Subject = null);
 public sealed record MemorySelection(DialogueFact Fact, double Score);
 public sealed record ValidatedActionCandidate(int FrameIndex, string ToolName,
@@ -34,6 +38,18 @@ public sealed record ContextualSupervision(SemanticFrame[]? Frames = null, Plann
                 if (!Enum.IsDefined(slot.Type) || slot.Start < frame.Start || slot.Length <= 0 ||
                     slot.Start + slot.Length > frame.Start + frame.Length || slot.Value != current.Substring(slot.Start, slot.Length))
                     throw new InvalidDataException("Semantic frame arguments must copy their clause's source spans.");
+            if (frame.Fact is { } fact)
+            {
+                if (!Enum.IsDefined(fact.Act) || !Enum.IsDefined(fact.Subject) || !Enum.IsDefined(fact.Target) ||
+                    fact.FactKind is { } kind && !Enum.IsDefined(kind) || !double.IsFinite(fact.Confidence) || fact.Confidence is < 0 or > 1)
+                    throw new InvalidDataException("Invalid clause fact annotation.");
+                if (fact.FactValueSpan is { } span)
+                {
+                    span.Validate(current);
+                    if (span.Start < frame.Start || span.Start + span.Length > frame.Start + frame.Length)
+                        throw new InvalidDataException("Clause facts must copy values from their own clause.");
+                }
+            }
         }
         if (Plan is not null && Plan.Any(a => a is null || !Enum.IsDefined(a.Act) || a.FrameIndex is { } i &&
             (i < 0 || Frames is null || i >= Frames.Length))) throw new InvalidDataException("Invalid response plan target.");
@@ -88,26 +104,6 @@ public sealed class DialogueDomainDefinition
         public ToolSchema Schema => schema;
         public GameToolResult Execute(GameToolInvocation invocation) => throw new InvalidOperationException("Definitions are not executable tools.");
     }
-}
-
-public static class DemoDialogueDomains
-{
-    public static DialogueDomainDefinition Observatory { get; } = new("OBSERVATORY",
-        [new(new ToolSchema("OBSERVE_SKY", [], [new("PHASE", ToolValueType.String)], false,
-            [new("OBSERVATION", "THE SKY IS {PHASE}.", ["PHASE"])]),
-            new Dictionary<string, SlotType>(), "OBSERVE THE SKY", DialogueDomain.Environment)],
-        new Dictionary<string, string> { ["LUNA"] = "MOON" });
-    public static DialogueDomainDefinition Merchant { get; } = new("MERCHANT",
-        DemoGameTools.CreateMerchant().Schemas.Select(schema => new DomainToolBinding(schema,
-            schema.Parameters.ToDictionary(p => p.Name, p => p.Name switch
-            {
-                "ITEM" => SlotType.Item,
-                "QUANTITY" => SlotType.Quantity,
-                "PLACE" => SlotType.Place,
-                _ => SlotType.Other
-            }), schema.Name.Replace('_', ' '), schema.Name.Contains("LOCATION", StringComparison.Ordinal)
-                ? DialogueDomain.LocationNavigation : schema.Name == "LOOKUP_WORLD_FACT" ? DialogueDomain.LoreWorld : DialogueDomain.TradeEconomy)),
-        new Dictionary<string, string> { ["SWORD"] = "IRON SWORD", ["POTION"] = "HEALTH POTION" });
 }
 
 public sealed record ContextualModelConfig

@@ -81,7 +81,7 @@ internal static class DiscourseTrainingTestSuite
         var toolNullContrasts = toolBatch.Count(TrainingCurriculumSampler.IsToolNullContrast);
         Assert(toolNullContrasts >= 200,
             "the rare-tool stream is not retaining hostile NONE contrasts");
-        var calibration = Brain.FamilyBalancedSubset(ToolSamplerExamples(), 4, 42);
+        var calibration = LegacyBrain.FamilyBalancedSubset(ToolSamplerExamples(), 4, 42);
         Assert(calibration.Any(example => example.ToolSchema is "BUY" or "SELL") &&
                calibration.Any(TrainingCurriculumSampler.IsToolNullContrast),
             "fixed calibration sampling omitted a mutating positive or hostile NONE contrast family");
@@ -100,8 +100,8 @@ internal static class DiscourseTrainingTestSuite
         Assert(discourse.GroupBy(example => example.SemanticFamilyId)
                 .All(group => group.Select(example => example.Input).Distinct(StringComparer.Ordinal).Count() > 1),
             "family member rotation did not expose multiple members");
-        Assert(Brain.StructuredLearningRate(0) == 0.03 &&
-               Math.Abs(Brain.StructuredLearningRate(200_000) - 0.003) < 1e-12,
+        Assert(LegacyBrain.StructuredLearningRate(0) == 0.03 &&
+               Math.Abs(LegacyBrain.StructuredLearningRate(200_000) - 0.003) < 1e-12,
             "structured learning-rate cosine endpoints are incorrect");
 
         static string Key(TrainingExample example) => example.SemanticFamilyId + "|" + example.Input;

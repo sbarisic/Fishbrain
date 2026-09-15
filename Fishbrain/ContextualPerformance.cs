@@ -26,25 +26,11 @@ internal static class ContextualPerformance
         var activeResidentPeak = residentBefore;
         for (var i = 0; i < iterations; i++)
         {
-            var allocation = GC.GetAllocatedBytesForCurrentThread();
+            var allocation = GC.GetTotalAllocatedBytes(true);
             var result = brain.Reply(request with { Seed = i }, tools);
             understanding.Add(result.Contextual!.UnderstandingMilliseconds);
-            var parameters = model.Parameters();
-            var packed = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, [], model.Domain);
-            var output = model.Understand(new TensorGraph(false), parameters, packed);
-            var clock = Stopwatch.StartNew();
-            var cache = model.CreateDecoderSession(parameters, output.PlanMemory);
-            var token = Tokenizer.Bos;
-            for (var step = 0; step < 64; step++)
-            {
-                var logits = cache.Next(token);
-                var outputId = model.Tokenizer.GeneratedTextOutputs.Where(x => model.Vocabulary.InputIdFromOutput(x) != Tokenizer.Eos)
-                    .MaxBy(x => logits.Data[x]);
-                token = model.Vocabulary.InputIdFromOutput(outputId);
-                if (step % 8 == 0) { process.Refresh(); activeResidentPeak = Math.Max(activeResidentPeak, process.WorkingSet64); }
-            }
-            realization.Add(clock.Elapsed.TotalMilliseconds + result.Contextual.UnderstandingMilliseconds);
-            allocations.Add(GC.GetAllocatedBytesForCurrentThread() - allocation);
+            realization.Add(Decode64(request, []) + result.Contextual.UnderstandingMilliseconds);
+            allocations.Add(GC.GetTotalAllocatedBytes(true) - allocation);
         }
         process.Refresh();
         var steadyResidentDelta = process.WorkingSet64 - residentBefore;
@@ -60,12 +46,41 @@ internal static class ContextualPerformance
         };
         var longTimes = new List<double>();
         int longTokens = 0, selectedMemories = 0;
+        for (var i = 0; i < 32; i++) brain.Reply(longRequest, tools);
         for (var i = 0; i < iterations; i++)
         {
             var result = brain.Reply(longRequest, tools);
             longTimes.Add(result.Contextual!.UnderstandingMilliseconds);
             longTokens = result.Diagnostics.PackedTokenCount;
             selectedMemories = result.Contextual.Memory.Count;
+            process.Refresh(); activeResidentPeak = Math.Max(activeResidentPeak, process.WorkingSet64);
+        }
+        var stressFacts = boundedFacts.Take(8).ToArray();
+        var stressRequest = longRequest;
+        var stressTokens = 0;
+        for (var extra = 0; extra < model.Config.ContextLength; extra++)
+        {
+            var trial = longRequest with
+            {
+                Utterances = longRequest.Utterances.Take(31)
+                .Append(longRequest.Utterances[^1] with { Text = longRequest.Utterances[^1].Text + string.Concat(Enumerable.Repeat(" THE", extra)) }).ToArray()
+            };
+            PackedInput packed;
+            try { packed = StructuredInput.Pack(trial, model.Tokenizer, model.Config.ContextLength, stressFacts, model.Domain); }
+            catch (ArgumentException) { break; }
+            if (packed.Facts.Count == 8 && packed.Tokens.Length > stressTokens) { stressTokens = packed.Tokens.Length; stressRequest = trial; }
+            if (stressTokens == model.Config.ContextLength) break;
+        }
+        if (stressTokens == 0) throw new InvalidOperationException("Cannot fit the eight-memory resource workload.");
+        for (var i = 0; i < 16; i++) brain.ReplyForResourceProbe(stressRequest, tools, stressFacts);
+        var stressTimes = new List<double>();
+        var stressReplies = new List<double>();
+        for (var i = 0; i < iterations; i++)
+        {
+            var result = brain.ReplyForResourceProbe(stressRequest, tools, stressFacts);
+            if (result.Contextual!.Memory.Count != 8) throw new InvalidOperationException("Resource probe dropped a required memory.");
+            stressTimes.Add(result.Contextual.UnderstandingMilliseconds);
+            stressReplies.Add(Decode64(stressRequest, stressFacts) + result.Contextual.UnderstandingMilliseconds);
             process.Refresh(); activeResidentPeak = Math.Max(activeResidentPeak, process.WorkingSet64);
         }
         var concurrentClock = Stopwatch.StartNew();
@@ -76,7 +91,7 @@ internal static class ContextualPerformance
         var managedDelta = GC.GetTotalMemory(true) - managedBefore;
         process.Refresh();
         var residentDelta = process.WorkingSet64 - residentBefore;
-        var pass = shortContextP95 <= 100 && P95(longTimes) <= 100 && P95(realization) <= 1000 &&
+        var pass = shortContextP95 <= 100 && P95(longTimes) <= 100 && P95(stressTimes) <= 100 && P95(realization) <= 1000 && P95(stressReplies) <= 1000 &&
             activeResidentPeak - residentBefore <= 512L * 1024 * 1024;
         Console.WriteLine(JsonSerializer.Serialize(new
         {
@@ -92,8 +107,16 @@ internal static class ContextualPerformance
             SteadyResidentBytesBeforeCompaction = steadyResidentDelta,
             ActiveResidentPeakBytes = activeResidentPeak - residentBefore,
             LongContext = new { InputTokens = longTokens, CandidateFacts = boundedFacts.Length, SelectedFacts = selectedMemories, UnderstandingP95Milliseconds = P95(longTimes) },
+            MaximumMemoryStress = new
+            {
+                InputTokens = stressTokens,
+                SelectedFacts = 8,
+                UnderstandingP95Milliseconds = P95(stressTimes),
+                Full64TokenReplyP95Milliseconds = P95(stressReplies),
+                Selection = "Forced bounded selection for resource coverage; retrieval scoring still runs. This is not a quality result."
+            },
             Concurrent = new { Workers = 4, Replies = iterations, UnderstandingP95Milliseconds = P95(concurrent), ElapsedMilliseconds = concurrentElapsed },
-            MeasurementNotes = "Batch-one resource gate includes short and long context. Four-worker timings are separate. Allocation count includes an extra plan preparation for the forced 64-token decode. Compacted resident memory is diagnostic, not the release gate.",
+            MeasurementNotes = "Batch-one resource gate includes short, long and eight-memory context. Four-worker timings are separate. Allocation count includes all worker threads and an extra plan preparation for the forced 64-token decode. Compacted resident memory is diagnostic, not the release gate.",
             OptimizerAllocated = false,
             ResourceGate = pass ? "PASS" : "FAIL",
             Machine = Environment.MachineName,
@@ -102,6 +125,25 @@ internal static class ContextualPerformance
         }, new JsonSerializerOptions { WriteIndented = true }));
         GC.KeepAlive(brain); GC.KeepAlive(model);
         return pass ? 0 : 1;
+        double Decode64(ReplyRequest input, IReadOnlyList<DialogueFact> facts)
+        {
+            using var scratch = new InferenceScratch();
+            var parameters = model.Parameters();
+            var packed = StructuredInput.Pack(input, model.Tokenizer, model.Config.ContextLength, facts, model.Domain);
+            var output = model.Understand(new TensorGraph(false), parameters, packed);
+            var clock = Stopwatch.StartNew();
+            var cache = model.CreateDecoderSession(parameters, output.PlanMemory);
+            var token = Tokenizer.Bos;
+            for (var step = 0; step < 64; step++)
+            {
+                var logits = cache.Next(token);
+                var outputId = model.Tokenizer.GeneratedTextOutputs.Where(x => model.Vocabulary.InputIdFromOutput(x) != Tokenizer.Eos)
+                    .MaxBy(x => logits.Data[x]);
+                token = model.Vocabulary.InputIdFromOutput(outputId);
+                if (step % 8 == 0) { process.Refresh(); activeResidentPeak = Math.Max(activeResidentPeak, process.WorkingSet64); }
+            }
+            return clock.Elapsed.TotalMilliseconds;
+        }
         static double P95(List<double> values) => values.Order().ElementAt((int)Math.Ceiling(values.Count * .95) - 1);
     }
 }

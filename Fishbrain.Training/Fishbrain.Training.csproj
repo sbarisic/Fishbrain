@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><Optimize>true</Optimize><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="*.cs" />
+    <Compile Include="../Fishbrain/*.cs" Exclude="../Fishbrain/ActionLanguage.cs;../Fishbrain/Cognition.cs;../Fishbrain/ContextualContracts.cs;../Fishbrain/ContextualRuntime.cs;../Fishbrain/ConversationalOutputValidator.cs;../Fishbrain/DialogueStateReducer.cs;../Fishbrain/GameTools.cs;../Fishbrain/ModelSchemas.cs;../Fishbrain/ModelTokenization.cs;../Fishbrain/RuntimeContracts.cs;../Fishbrain/StructuredInput.cs;../Fishbrain/WordVocabulary.cs;../Fishbrain/DeterministicRandom.cs;../Fishbrain/Program.cs;../Fishbrain/SelfTests.cs" />
+    <Compile Include="../Fishbrain/Neural/ContextualTrainer.cs" />
+    <ProjectReference Include="../Fishbrain.Runtime/Fishbrain.Runtime.csproj" />
+    <ProjectReference Include="../Fishbrain.DemoDomain/Fishbrain.DemoDomain.csproj" />
+  </ItemGroup>
+</Project>

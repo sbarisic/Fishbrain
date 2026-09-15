@@ -1,13 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <Optimize>true</Optimize>
-    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
-  </PropertyGroup>
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><Optimize>true</Optimize><EnableDefaultCompileItems>false</EnableDefaultCompileItems></PropertyGroup>
   <ItemGroup>
-    <Compile Include="../Fishbrain/*.cs" Exclude="../Fishbrain/Program.cs;../Fishbrain/SelfTests.cs" />
-    <Compile Include="../Fishbrain/Neural/*.cs" />
+    <Compile Include="Brain.cs" />
+    <Compile Include="../Fishbrain/ActionLanguage.cs;../Fishbrain/AssemblyInfo.cs;../Fishbrain/Cognition.cs;../Fishbrain/ContextualContracts.cs;../Fishbrain/ContextualRuntime.cs;../Fishbrain/ConversationalOutputValidator.cs;../Fishbrain/DialogueStateReducer.cs;../Fishbrain/GameTools.cs;../Fishbrain/ModelSchemas.cs;../Fishbrain/ModelTokenization.cs;../Fishbrain/RuntimeContracts.cs;../Fishbrain/StructuredInput.cs;../Fishbrain/WordVocabulary.cs;../Fishbrain/DeterministicRandom.cs" />
+    <Compile Include="../Fishbrain/Neural/*.cs" Exclude="../Fishbrain/Neural/ContextualTrainer.cs" />
   </ItemGroup>
 </Project>

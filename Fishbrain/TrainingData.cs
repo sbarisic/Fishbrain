@@ -153,7 +153,7 @@ internal sealed class TrainingData
             var candidateName = structured.ResponseCandidateId ?? "ACKNOWLEDGE";
             if (supervised.Contains("responseCandidate") && !KnownResponseCandidates.Contains(candidateName))
                 throw new InvalidDataException($"Unknown response candidate target '{candidateName}'.");
-            var currentTurn = Brain.ExtractCurrentPlayerTurn(input);
+            var currentTurn = LegacyBrain.ExtractCurrentPlayerTurn(input);
             var currentOffset = input.LastIndexOf(currentTurn, StringComparison.Ordinal);
             var normalizedSlots = structured.Slots.Select(slot => NormalizeSlot(slot, currentTurn, currentOffset)).ToArray();
             structured.Discourse?.FactValueSpan?.Validate(currentTurn);
@@ -276,7 +276,7 @@ internal sealed class TrainingData
         string input, TurnPerception perception, string bucket, string source, string? family,
         DialogueTokenizer tokenizer)
     {
-        var currentTurn = Brain.ExtractCurrentPlayerTurn(input);
+        var currentTurn = LegacyBrain.ExtractCurrentPlayerTurn(input);
         var encoded = tokenizer.Encode(currentTurn);
         var maximumText = 254;
         if (encoded.Length > maximumText) encoded = encoded[^maximumText..];
@@ -298,7 +298,7 @@ internal sealed class TrainingData
         ResponseTone tone, string response, string? rejectedResponse, DialogueTokenizer tokenizer)
     {
         var tokens = Start(input, tokenizer);
-        Brain.AppendState(tokens, state);
+        LegacyBrain.AppendState(tokens, state);
         tokens.Add(Tokenizer.Decide);
         AddPerception(tokens, perception, decision);
         tokens.Add(Tokenizer.Tone(tone));
@@ -329,7 +329,7 @@ internal sealed class TrainingData
         string tool, IReadOnlyList<string> arguments, DialogueTokenizer tokenizer)
     {
         var tokens = Start(input, tokenizer);
-        Brain.AppendState(tokens, state);
+        LegacyBrain.AppendState(tokens, state);
         tokens.Add(Tokenizer.Decide);
         AddPerception(tokens, perception, decision);
         tokens.Add(Tokenizer.Call);
@@ -345,7 +345,7 @@ internal sealed class TrainingData
         DialogueTokenizer tokenizer)
     {
         var tokens = Start(input, tokenizer);
-        Brain.AppendState(tokens, state);
+        LegacyBrain.AppendState(tokens, state);
         tokens.Add(Tokenizer.Decide);
         AddPerception(tokens, perception, decision);
         tokens.Add(Tokenizer.Tone(tone));

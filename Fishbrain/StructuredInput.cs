@@ -3,7 +3,10 @@ namespace Fishbrain;
 internal enum InputSegment { Player, Npc, Persona, State, ApprovedFact, SessionFact, Agenda, Capability, Plan, Mask }
 internal sealed record TokenSource(long? Utterance, int Start, int Length, InputSegment Segment);
 internal sealed record PackedInput(int[] Tokens, int[] Segments, TokenSource[] Sources,
-    DialogueUtterance[] Utterances, int[] CurrentPositions, IReadOnlyList<DialogueFact> Facts);
+    DialogueUtterance[] Utterances, int[] CurrentPositions, IReadOnlyList<DialogueFact> Facts)
+{
+    public IReadOnlyList<DialogueAgendaEntry> Agenda { get; init; } = [];
+}
 
 /// <summary>One packer for training and inference. Roles and source spans are out-of-band metadata.</summary>
 internal static class StructuredInput
@@ -16,10 +19,10 @@ internal static class StructuredInput
         mandatory.Add(Encode($"NAME {p.Name}. ROLE {p.Role}. ORIGIN {p.Origin ?? "UNKNOWN"}. HOME {p.Home ?? "UNKNOWN"}. FAMILY {p.Family ?? "UNKNOWN"}. OCCUPATION {p.Occupation ?? "UNKNOWN"}. FACTION {p.Faction ?? "UNKNOWN"}. TRAITS {string.Join(' ', p.Traits)}.", InputSegment.Persona));
         mandatory.Add(Encode($"MOOD {request.State.Mood}. RAPPORT {request.State.Rapport}. TRUST {request.State.Trust}. GOALS {string.Join(' ', request.State.ActiveGoals)}.", InputSegment.State));
         foreach (var action in request.State.PendingActions)
-            mandatory.Add(Encode($"PENDING {action.Action} {action.ToolSchema}. SOURCE {action.SourceUtterance?.ToString() ?? "UNKNOWN"}. {string.Join(' ', action.Arguments.Select(x => x.Key + " " + x.Value))}.", InputSegment.State));
+            mandatory.Add(Encode($"PENDING {Identifier(action.Action)} {Identifier(action.ToolSchema ?? "NONE")}. SOURCE {action.SourceUtterance?.ToString() ?? "UNKNOWN"}. {string.Join(' ', action.Arguments.Select(x => Identifier(x.Key) + " " + x.Value))}.", InputSegment.State));
         if (request.State.PendingClarification is { } clarification) mandatory.Add(Encode(clarification.Question, InputSegment.State));
         foreach (var entry in request.State.Agenda.Where(x => x.Status == AgendaStatus.Active))
-            mandatory.Add(Encode($"{entry.Kind} SUBJECT {entry.Subject}. SOURCE {entry.SourceTurn}. {entry.Status}.", InputSegment.Agenda));
+            mandatory.Add(Encode($"{entry.Kind} SUBJECT {Identifier(entry.Subject)}. SOURCE {entry.SourceTurn}. {entry.Status}.", InputSegment.Agenda));
         mandatory.Add(Encode(string.Join(". ", domain.Tools.Select(x => x.Capability)) + ".", InputSegment.Capability));
         var current = request.Utterances[^1];
         var currentPart = Encode(current.Text, InputSegment.Player, current.Sequence);
@@ -58,7 +61,8 @@ internal static class StructuredInput
         var tokens = parts.SelectMany(x => x.Tokens).ToArray();
         var sources = parts.SelectMany(x => x.Sources).ToArray();
         return new(tokens, sources.Select(x => (int)x.Segment).ToArray(), sources, retained.ToArray(),
-            Enumerable.Range(0, sources.Length).Where(i => sources[i].Utterance == current.Sequence && sources[i].Length > 0).ToArray(), facts);
+            Enumerable.Range(0, sources.Length).Where(i => sources[i].Utterance == current.Sequence && sources[i].Length > 0).ToArray(), facts)
+        { Agenda = request.State.Agenda };
 
         Part Encode(string text, InputSegment segment, long? sequence = null)
         {
@@ -83,6 +87,7 @@ internal static class StructuredInput
 
     internal static string FactText(DialogueFact fact) =>
         $"SUBJECT {fact.Subject}. PREDICATE {fact.Kind}. VALUE {(fact.Negated ? "NOT " : "")}{fact.Value}. SOURCE {fact.SourceUtterance}. PROVENANCE {fact.Provenance}.";
+    private static string Identifier(string value) => value.Replace('_', ' ');
     private sealed class Part
     {
         public List<int> Tokens { get; } = [];

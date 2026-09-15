@@ -1,9 +1,10 @@
 namespace Fishbrain.Neural;
 
 internal sealed record ParameterShape(string Name, int Rows, int Columns);
-internal sealed record FrameLogits(Dictionary<string, Tensor> Fields, Tensor Start, Tensor End, Tensor Antecedent);
+internal sealed record FrameLogits(Dictionary<string, Tensor> Fields, Tensor Start, Tensor End, Tensor Antecedent, Tensor FactSpans);
+internal sealed record AgendaLogits(Tensor Kind, Tensor Status, Tensor Subject);
 internal sealed record NetworkOutput(Tensor Encoded, Tensor Current, Dictionary<string, Tensor> Heads,
-    Tensor Slots, Tensor FactSpans, Tensor Antecedents, FrameLogits[] Frames, Tensor[] Plans, Tensor[] PlanFrames, Tensor PlanMemory);
+    Tensor Slots, Tensor FactSpans, Tensor Antecedents, FrameLogits[] Frames, Tensor[] Plans, Tensor[] PlanFrames, Tensor PlanMemory, AgendaLogits[] Agenda);
 
 /// <summary>Immutable packed inference parameters. Training owns a distinct mutable parameter set.</summary>
 internal sealed class ContextualNetwork
@@ -22,9 +23,7 @@ internal sealed class ContextualNetwork
         ["discourseSubject"] = Enum.GetValues<DialogueParticipant>().Length,
         ["discourseTarget"] = Enum.GetValues<DialogueParticipant>().Length,
         ["factKind"] = Enum.GetValues<DialogueFactKind>().Length + 1,
-        ["factPolarity"] = 2,
-        ["agenda"] = Enum.GetValues<AgendaKind>().Length + 1,
-        ["agendaStatus"] = Enum.GetValues<AgendaStatus>().Length
+        ["factPolarity"] = 2
     };
     private readonly Dictionary<string, float[]> _weights;
     public ContextualModelConfig Config { get; }
@@ -93,12 +92,22 @@ internal sealed class ContextualNetwork
         yield return new("frame.start", d, d);
         yield return new("frame.end", d, d);
         yield return new("frame.antecedent", d, d);
+        yield return new("frame.factAct", d, Enum.GetValues<DiscourseAct>().Length);
+        yield return new("frame.factKind", d, Enum.GetValues<DialogueFactKind>().Length + 1);
+        yield return new("frame.factPolarity", d, 2);
+        yield return new("frame.factSubject", d, Enum.GetValues<DialogueParticipant>().Length);
+        yield return new("frame.factTarget", d, Enum.GetValues<DialogueParticipant>().Length);
+        yield return new("frame.factSpans", d, 3);
         yield return new("frame.status.embedding", 5, d);
         yield return new("frame.tool.embedding", tools, d);
         yield return new("planner.query", 3, d);
         yield return new("planner.act.embedding", Enum.GetValues<DialogueResponseAct>().Length, d);
         yield return new("planner.output", d, Enum.GetValues<DialogueResponseAct>().Length);
         yield return new("planner.frame", d, 4);
+        yield return new("agenda.query", 4, d);
+        yield return new("agenda.kind", d, Enum.GetValues<AgendaKind>().Length + 1);
+        yield return new("agenda.status", d, Enum.GetValues<AgendaStatus>().Length);
+        yield return new("agenda.subject", d, 4 + Enum.GetValues<DialogueFactKind>().Length + tools - 1);
         yield return new("claim.query", 1, d);
         yield return new("claim.output", d, 2);
 
@@ -152,10 +161,12 @@ internal sealed class ContextualNetwork
             var query = g.Gather(p["frame.query"], [i]);
             if (previous is not null) query = g.Add(query, previous);
             var frame = g.Attention(query, encoded, encoded, Config.Heads, false);
-            var fields = new[] { "active", "act", "subject", "target", "status", "tool" }.ToDictionary(name => name, name => g.MatMul(frame, p[$"frame.{name}"]));
+            var fields = new[] { "active", "act", "subject", "target", "status", "tool", "factAct", "factKind", "factPolarity", "factSubject", "factTarget" }
+                .ToDictionary(name => name, name => g.MatMul(frame, p[$"frame.{name}"]));
             frames[i] = new(fields, g.MatMul(g.MatMul(frame, p["frame.start"]), g.Transpose(current)),
                 g.MatMul(g.MatMul(frame, p["frame.end"]), g.Transpose(current)),
-                g.MatMul(g.MatMul(frame, p["frame.antecedent"]), g.Transpose(g.Concat(antecedents.ToArray()))));
+                g.MatMul(g.MatMul(frame, p["frame.antecedent"]), g.Transpose(g.Concat(antecedents.ToArray()))),
+                g.MatMul(g.Add(current, g.Attention(current, frame, frame, Config.Heads, false)), p["frame.factSpans"]));
             var teacher = teacherFrames is not null && i < teacherFrames.Count ? teacherFrames[i] : null;
             var status = teacher is null ? ArgMax(fields["status"]) : (int)teacher.Status;
             var tool = teacher is null ? ArgMax(fields["tool"]) : ToolIndex(teacher.ToolName);
@@ -178,8 +189,34 @@ internal sealed class ContextualNetwork
             previous = g.Add(state, g.Gather(p["planner.act.embedding"], [act]));
             planStates.Add(previous);
         }
+        var planMemory = g.Concat(memory, g.Concat(planStates.ToArray()));
+        var agenda = new AgendaLogits[4];
+        previous = null;
+        for (var i = 0; i < agenda.Length; i++)
+        {
+            var query = g.Gather(p["agenda.query"], [i]);
+            if (previous is not null) query = g.Add(query, previous);
+            previous = g.Attention(query, planMemory, planMemory, Config.Heads, false);
+            agenda[i] = new(g.MatMul(previous, p["agenda.kind"]), g.MatMul(previous, p["agenda.status"]), g.MatMul(previous, p["agenda.subject"]));
+        }
         return new(encoded, current, heads, g.MatMul(current, p["head.slots"]), g.MatMul(current, p["head.factSpans"]),
-            pointer, frames, plans, planFrames, g.Concat(memory, g.Concat(planStates.ToArray())));
+            pointer, frames, plans, planFrames, planMemory, agenda);
+    }
+
+    internal string? AgendaSubject(int index, IReadOnlyList<DialogueAgendaEntry> previous)
+    {
+        if (index < 4) return index < previous.Count ? previous[index].Subject : null;
+        var labels = Enum.GetValues<DialogueFactKind>().Select(x => x.ToString().ToUpperInvariant()).Concat(Domain.Tools.Select(x => x.Schema.Name.Replace('_', ' '))).ToArray();
+        return index - 4 < labels.Length ? labels[index - 4] : null;
+    }
+
+    internal int AgendaSubjectIndex(string subject, IReadOnlyList<DialogueAgendaEntry> previous)
+    {
+        for (var i = 0; i < previous.Count; i++) if (previous[i].Subject == subject) return i;
+        var labels = Enum.GetValues<DialogueFactKind>().Select(x => x.ToString().ToUpperInvariant()).Concat(Domain.Tools.Select(x => x.Schema.Name.Replace('_', ' '))).ToArray();
+        var index = Array.IndexOf(labels, subject);
+        if (index < 0) throw new InvalidDataException("Agenda subject has neither a prior entry nor a supervised fact/capability identity.");
+        return index + 4;
     }
 
     internal Tensor Decode(TensorGraph g, IReadOnlyDictionary<string, Tensor> p, IReadOnlyList<int> inputTokens, Tensor memory)
@@ -220,6 +257,7 @@ internal sealed class ContextualNetwork
 
         internal Tensor Next(int inputToken)
         {
+            using var scratch = InferenceScratch.Nested(false);
             if (_position > _model.Config.MaximumOutputTokens) throw new InvalidOperationException("Decoder cache exceeded its token budget.");
             var g = new TensorGraph(false);
             var p = _parameters;
@@ -236,7 +274,11 @@ internal sealed class ContextualNetwork
                 x = g.Add(x, g.MatMul(g.Attention(g.MatMul(g.Normalize(x), p[prefix + ".cross.q"]), _memoryKeys[layer], _memoryValues[layer], _model.Config.Heads, false), p[prefix + ".cross.o"]));
                 x = g.Add(x, g.MatMul(g.Relu(g.MatMul(g.Normalize(x), p[prefix + ".in"])), p[prefix + ".out"]));
             }
-            return g.MatMul(g.Normalize(x), p["decoder.output"]);
+            var output = g.MatMul(g.Normalize(x), p["decoder.output"]);
+            scratch?.Keep(output.Data);
+            foreach (var key in _keys) if (key is not null) scratch?.Keep(key.Data);
+            foreach (var value in _values) if (value is not null) scratch?.Keep(value.Data);
+            return output;
         }
     }
 
@@ -251,10 +293,13 @@ internal sealed class ContextualNetwork
 
     private Tensor Layer(TensorGraph g, IReadOnlyDictionary<string, Tensor> p, Tensor input, string prefix, bool causal, Tensor? memory)
     {
+        using var scratch = InferenceScratch.Nested(g.Training);
         var norm = g.Normalize(input);
         var x = g.Add(input, Attention("self", norm, norm, causal));
         if (memory is not null) x = g.Add(x, Attention("cross", g.Normalize(x), memory, false));
-        return g.Add(x, g.MatMul(g.Relu(g.MatMul(g.Normalize(x), p[prefix + ".in"])), p[prefix + ".out"]));
+        var output = g.Add(x, g.MatMul(g.Relu(g.MatMul(g.Normalize(x), p[prefix + ".in"])), p[prefix + ".out"]));
+        scratch?.Keep(output.Data);
+        return output;
         Tensor Attention(string kind, Tensor query, Tensor source, bool mask) =>
             g.MatMul(g.Attention(g.MatMul(query, p[$"{prefix}.{kind}.q"]), g.MatMul(source, p[$"{prefix}.{kind}.k"]),
                 g.MatMul(source, p[$"{prefix}.{kind}.v"]), Config.Heads, mask), p[$"{prefix}.{kind}.o"]);

@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 namespace Fishbrain;
 
-public sealed partial class Brain
+public sealed partial class LegacyBrain
 {
     private static (ResponsePlanDefinition Plan, string Text)? RankResponse(
             StructuredPerception perception, string input, int seed, GameToolRegistry tools)

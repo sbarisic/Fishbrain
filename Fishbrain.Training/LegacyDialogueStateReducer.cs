@@ -4,30 +4,25 @@ using System.Text.RegularExpressions;
 
 namespace Fishbrain;
 
-internal static class DialogueStateReducer
+internal static class LegacyDialogueStateReducer
 {
-    internal static IReadOnlyList<DialogueAgendaEntry> ReduceAgendaPlan(IReadOnlyList<DialogueAgendaEntry> current,
-        IReadOnlyList<DialogueAgendaEntry> predictions, IReadOnlyList<PlannedResponseAct> acts,
-        IReadOnlyList<SemanticFrame> frames, string? tool, GameToolResult? result)
+    internal static IReadOnlyList<DialogueAgendaEntry> ReduceAgenda(IReadOnlyList<DialogueAgendaEntry> current,
+        DialogueUtterance utterance, IReadOnlyList<PlannedResponseAct> acts, AgendaKind kind, bool add,
+        AgendaStatus status, DiscourseFrame discourse, string? tool, GameToolResult? result)
     {
         var entries = current.ToList();
-        foreach (var prediction in predictions)
-        {
-            var index = entries.FindIndex(x => x.Kind == prediction.Kind && x.Subject == prediction.Subject);
-            var grounded = frames.Any(f => f.ToolName?.Replace('_', ' ') == prediction.Subject || f.Fact?.FactKind?.ToString().ToUpperInvariant() == prediction.Subject);
-            if (index < 0 && (!grounded || prediction.Status != AgendaStatus.Active ||
-                prediction.Kind == AgendaKind.UnansweredQuestion && !acts.Any(a => a.Act is DialogueResponseAct.AskFollowUp or DialogueResponseAct.Clarify))) continue;
-            if (index >= 0) entries[index] = prediction with { SourceTurn = entries[index].SourceTurn };
-            else entries.Add(prediction);
-        }
-        // Successful tools retire matching goals even if a learned transition omits them.
-        if (result?.Success == true)
+        var subject = discourse.FactKind?.ToString().ToUpperInvariant() ?? tool;
+        if (subject is not null)
             for (var i = 0; i < entries.Count; i++)
-                if (entries[i].Status == AgendaStatus.Active && entries[i].Subject == tool?.Replace('_', ' ')) entries[i] = entries[i] with { Status = AgendaStatus.Completed };
-        // Omitted active goals remain pending; prefer them over old completed entries at the bound.
-        return entries.Where(x => x.Status == AgendaStatus.Active).TakeLast(4)
-            .Concat(entries.Where(x => x.Status != AgendaStatus.Active).TakeLast(Math.Max(0, 4 - entries.Count(x => x.Status == AgendaStatus.Active))))
-            .OrderBy(x => x.SourceTurn).TakeLast(4).ToArray();
+                if (entries[i].Status == AgendaStatus.Active && entries[i].Subject == subject &&
+                    (discourse.Act is DiscourseAct.Inform or DiscourseAct.Correct || result?.Success == true))
+                    entries[i] = entries[i] with { Status = AgendaStatus.Completed };
+        if (add && subject is not null && (kind != AgendaKind.UnansweredQuestion || acts.Any(x => x.Act is DialogueResponseAct.AskFollowUp or DialogueResponseAct.Clarify)))
+        {
+            entries.RemoveAll(x => x.Kind == kind && x.Subject == subject);
+            entries.Add(new(kind, subject, utterance.Sequence, status));
+        }
+        return Array.AsReadOnly(entries.TakeLast(4).ToArray());
     }
     public static NpcDialogueState Apply(
         NpcDialogueState state,
@@ -90,6 +85,8 @@ internal static class DialogueStateReducer
             Latest(SlotType.System) ?? state.References.System,
             perception.Discourse?.AntecedentUtterance ?? state.References.UtteranceSequence);
         var facts = ReduceFacts(state.SessionFacts, perception.Discourse, currentUtterance.Sequence);
+        var npcFrame = DiscourseResolver.ExtractNpcFact(responseText);
+        facts = ReduceFacts(facts, npcFrame, responseSequence);
         var topic = TopicFor(perception);
         var topics = topic is null
             ? state.TopicSummaries
@@ -99,7 +96,7 @@ internal static class DialogueStateReducer
             ? state.LastResponseTrace
             : new ResponseSemanticTrace(responseSequence, plan.DiscourseAction,
                 topic ?? "GENERAL CONVERSATION",
-                new[] { perception.Discourse?.FactKind }
+                new[] { perception.Discourse?.FactKind, npcFrame?.FactKind }
                     .OfType<DialogueFactKind>()
                     .Distinct()
                     .ToArray(),
@@ -138,16 +135,6 @@ internal static class DialogueStateReducer
         facts.Add(new DialogueFact(frame.Subject, kind, value, frame.Negated, sourceUtterance,
             frame.Confidence, DialogueFactProvenance.SessionReported));
         return facts.TakeLast(16).ToArray();
-    }
-
-    internal static IReadOnlyList<DialogueFact> ReduceFrameFacts(IReadOnlyList<DialogueFact> current,
-        IReadOnlyList<SemanticFrame> frames, long sourceUtterance)
-    {
-        var facts = current;
-        foreach (var frame in frames)
-            if (frame.Status is ActionStatus.Affirmative or ActionStatus.Negated)
-                facts = ReduceFacts(facts, frame.Fact, sourceUtterance);
-        return facts;
     }
 
     private static bool IsSingleValued(DialogueFactKind kind) => kind is
