@@ -328,7 +328,7 @@ internal static class Evaluation
 
     private static BenchmarkMetrics EvaluateBenchmark(Brain brain)
     {
-        var path = Program.ResolveRepositoryFile("data", "benchmarks", "benchmark-256.jsonl");
+        var path = RepositoryFiles.ResolveRepositoryFile("data", "benchmarks", "benchmark-256.jsonl");
         var rows = File.ReadLines(path).Where(line => !string.IsNullOrWhiteSpace(line))
             .Select(line => JsonSerializer.Deserialize<BenchmarkRow>(line, Options)
                 ?? throw new InvalidDataException("Invalid benchmark row.")).ToArray();
@@ -397,7 +397,7 @@ internal static class Evaluation
         double toolArguments, double toolFidelity, BenchmarkMetrics benchmark,
         int recordCount, bool stagePass, bool releasePass)
     {
-        var directory = Program.TelemetryDirectory(checkpointPath);
+        var directory = RepositoryFiles.TelemetryDirectory(checkpointPath);
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "milestones.jsonl");
         var payload = new
@@ -405,7 +405,7 @@ internal static class Evaluation
             timestampUtc = DateTimeOffset.UtcNow,
             milestone = "EVALUATION",
             corpusHash = brain.DebugCorpusHash,
-            checkpointHash = Program.HashFile(checkpointPath),
+            checkpointHash = RepositoryFiles.HashFile(checkpointPath),
             environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
             vectorWidth = Vector<double>.Count,
             embeddingSize = brain.Config.EmbeddingSize,
@@ -655,15 +655,15 @@ internal static class Evaluation
         double expectedF1, int generated, int invalid, int empty, int overlength,
         bool stagePass, bool releasePass)
     {
-        var directory = Program.TelemetryDirectory(checkpointPath);
+        var directory = RepositoryFiles.TelemetryDirectory(checkpointPath);
         Directory.CreateDirectory(directory);
         var path = Path.Combine(directory, "milestones.jsonl");
         var payload = new
         {
             timestampUtc = DateTimeOffset.UtcNow,
             milestone = "A",
-            corpusHash = Program.HashFile(corpusPath),
-            checkpointHash = Program.HashFile(checkpointPath),
+            corpusHash = RepositoryFiles.HashFile(corpusPath),
+            checkpointHash = RepositoryFiles.HashFile(checkpointPath),
             environment = $"{Environment.OSVersion}; {System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture}; .NET {Environment.Version}",
             vectorWidth = Vector<double>.Count,
             embeddingSize = brain.Config.EmbeddingSize,

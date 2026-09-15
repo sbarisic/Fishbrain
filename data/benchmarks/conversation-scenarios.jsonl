@@ -24,3 +24,18 @@
 {"sessionId":"B11","turnIndex":3,"input":"THE BAKER."}
 {"sessionId":"B12","turnIndex":1,"input":"WHAT DO YOU DO WHEN THE SHOP IS EMPTY?"}
 {"sessionId":"B12","turnIndex":2,"input":"YOU DON'T ENJOY IT?"}
+{"sessionId":"C_MEMORY","turnIndex":1,"input":"I RENT A ROOM ABOVE THE GLASSWORKS."}
+{"sessionId":"C_MEMORY","turnIndex":2,"input":"MY BROTHER STAYS BESIDE THE WINDMILL."}
+{"sessionId":"C_MEMORY","turnIndex":3,"input":"LET'S TALK ABOUT MUSIC INSTEAD.","topicSwitchApplicable":true}
+{"sessionId":"C_MEMORY","turnIndex":4,"input":"I MOVED OUT OF THAT ROOM. MY HOME IS NOW THE WATCHTOWER."}
+{"sessionId":"C_MEMORY","turnIndex":5,"input":"WHERE DID I SAY I LIVE NOW?","memoryApplicable":true}
+{"sessionId":"C_COMPOUND","turnIndex":1,"input":"PLEASE CHECK MY BALANCE, THEN SHOW MY INVENTORY.","compoundApplicable":true}
+{"sessionId":"C_COMPOUND","turnIndex":2,"input":"CONTINUE WITH THE SECOND REQUEST.","compoundApplicable":true}
+{"sessionId":"C_COMPOUND","turnIndex":3,"input":"DON'T PURCHASE A POTION. JUST TELL ME ITS PRICE.","compoundApplicable":true}
+{"sessionId":"C_COMPOUND","turnIndex":4,"input":"THE GUARD SAID, \"BUY TWO ROPES.\" I AM ONLY REPEATING HIS WORDS.","compoundApplicable":true}
+{"sessionId":"C_AGENDA","turnIndex":1,"input":"I WANT TO PLAN A JOURNEY, BUT I HAVEN'T CHOSEN A DESTINATION.","agendaApplicable":true}
+{"sessionId":"C_AGENDA","turnIndex":2,"input":"SOMEWHERE WITH OLD BUILDINGS AND QUIET STREETS.","agendaApplicable":true}
+{"sessionId":"C_AGENDA","turnIndex":3,"input":"ACTUALLY, LET'S DROP THE JOURNEY. I WOULD RATHER TALK ABOUT YOU.","agendaApplicable":true,"topicSwitchApplicable":true}
+{"sessionId":"C_OWNERSHIP","turnIndex":1,"input":"YOU SAID YOU WERE A MERCHANT. I AM AN ASTRONOMER."}
+{"sessionId":"C_OWNERSHIP","turnIndex":2,"input":"I ENJOY OBSERVING DISTANT STARS."}
+{"sessionId":"C_OWNERSHIP","turnIndex":3,"input":"WHICH OF US WORKS AS AN ASTRONOMER?","memoryApplicable":true}

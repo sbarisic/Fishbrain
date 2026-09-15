@@ -7,6 +7,19 @@ internal static class GeneratorTestSuite
         StateEnumerationStaysWithinBounds();
         CommandLineDefaultsAreConsistent();
         DuplicateCommandLineOptionsAreRejected();
+        foreach (var source in new[] { "PROJECT_CONTEXTUAL_ACTIONS", "PROJECT_CONTEXTUAL_MEMORY", "PROJECT_CONTEXTUAL_COMPOUND", "PROJECT_CONTEXTUAL_AGENDA" })
+        {
+            var rows = DataGenerator.CorpusCompiler.ContextualRows(source, 5000, 42).ToArray();
+            if (rows.Length != 5000 || rows.Select(x => x.Input).Distinct().Count() != 5000)
+                throw new InvalidOperationException("Contextual group contains duplicate inputs: " + source);
+            foreach (var row in rows)
+            {
+                row.Contextual!.Validate(row.Turns![^1].Text);
+                foreach (var slot in row.StructuredPerception.Slots)
+                    if (row.Input.Substring(slot.Start, slot.Length) != slot.Value) throw new InvalidOperationException("Contextual slot offset mismatch.");
+            }
+        }
+        Console.WriteLine("PASS CONTEXTUAL CORPUS TARGETS");
 
         Console.WriteLine("PASS ALL GENERATOR TESTS");
     }
@@ -25,7 +38,7 @@ internal static class GeneratorTestSuite
     {
         var defaults = DataGenerator.CliOptions.Parse([]);
 
-        if (defaults.InputPath != Path.Combine("data", "compiled") || defaults.Count != 80_000)
+        if (defaults.InputPath != Path.Combine("data", "compiled") || defaults.Count != 100_000)
         {
             throw new InvalidOperationException("CLI defaults are inconsistent.");
         }

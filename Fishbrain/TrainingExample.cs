@@ -23,4 +23,9 @@ internal sealed record TrainingExample(
     DialogueFact[] ExpectedFactState,
     DiscourseResponseAction ResponseAction,
     string[] AcceptableResponseConstraints,
-    string? RejectedResponse);
+    string? RejectedResponse)
+{
+    public ReplyRequest? Request { get; init; }
+    public ContextualSupervision? Contextual { get; init; }
+    public string? Response { get; init; }
+}

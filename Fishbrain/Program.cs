@@ -31,16 +31,16 @@ internal static class Program
                     break;
                 case "teach":
                     var teaching = TeachInvocation.Parse(args[1..]);
-                    Brain.Teach(
+                    ContextualTraining.Run(
                         teaching.CorpusDirectory,
                         teaching.CheckpointPath,
                         teaching.PlannedSteps,
-                        teaching.UntilStep,
-                        FindProjectPath());
+                        teaching.UntilStep);
                     break;
                 case "evaluate":
                     Count(args, 3, 5);
                     var gate = EvaluationGateParser.Parse(args[3..]);
+                    if (Neural.ContextualCheckpoint.Matches(args[2])) return ContextualEvaluation.Run(args[1], args[2]);
                     return Evaluation.Run(args[1], args[2], gate);
                 case "diagnose-teaching":
                     Count(args, 3, 4);
@@ -64,6 +64,21 @@ internal static class Program
                 case "inspect":
                     Count(args, 2, 2);
                     Console.WriteLine(Brain.InspectInferenceCheckpoint(args[1]));
+                    break;
+                case "profile-contextual":
+                    Count(args, 2, 3);
+                    return ContextualPerformance.Run(args[1], args.Length == 3 ? Steps(args[2]) : 32);
+                case "compare-contextual":
+                    Count(args, 4, 5);
+                    ContextualComparison.Run(args[1], args[2], args[3], args.Length == 5 ? Steps(args[4]) : 3);
+                    break;
+                case "artifact-smoke":
+                    Count(args, 1, 2);
+                    var shipped = Brain.Load(args.Length == 2 ? args[1] : ResolveDefaultModel());
+                    if (shipped.ContextualConfig is null) throw new InvalidDataException("The shipped artifact must use the contextual architecture.");
+                    _ = shipped.Reply(new ReplyRequest("ARTIFACT_SMOKE", "1", [new(0, DialogueRole.Player, "HELLO")],
+                        NpcDialogueState.Initial, NpcPersona.Default, PlayerConversationProfile.Empty, 1, 42), DemoGameTools.CreateMerchant());
+                    Console.WriteLine("PASS SHIPPED CONTEXTUAL ARTIFACT");
                     break;
                 case "conversation-sample":
                     Count(args, 4, 4);
@@ -160,12 +175,14 @@ internal static class Program
         Console.WriteLine("FISHBRAIN");
         Console.WriteLine("  train DATA.jsonl CHECKPOINT.json [STEPS]");
         Console.WriteLine("  resume DATA.jsonl CHECKPOINT.json [TOTAL_STEPS]");
-        Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [STEPS]");
-        Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.json [--planned STEPS] [--until STEP]");
+        Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.fbm [--planned 260000] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|pilot|stage|release]");
         Console.WriteLine("  diagnose-teaching CORPUS_DIRECTORY TRAINING_CHECKPOINT.json [validation|test]");
         Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-latest.fbm)");
         Console.WriteLine("  latency [CHECKPOINT] [ITERATIONS]");
+        Console.WriteLine("  profile-contextual CHECKPOINT [ITERATIONS]");
+        Console.WriteLine("  compare-contextual CORPUS_DIRECTORY CHECKPOINT REPORT.json [LEXICAL_EPOCHS]");
+        Console.WriteLine("  artifact-smoke [CHECKPOINT]");
         Console.WriteLine("  export TRAINING_CHECKPOINT.json OUTPUT.fbm [CORPUS_DIRECTORY]");
         Console.WriteLine("  inspect MODEL.fbm");
         Console.WriteLine("  conversation-sample MODEL.fbm SCENARIOS.jsonl REVIEW.jsonl");

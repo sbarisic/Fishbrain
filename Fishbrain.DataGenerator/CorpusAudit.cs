@@ -214,6 +214,7 @@ internal static partial class CorpusCompiler
     }
 
     private static bool IsDiscourseSource(string source) =>
+        source.StartsWith("PROJECT_CONTEXTUAL", StringComparison.Ordinal) ||
         source.StartsWith("PROJECT_DISCOURSE", StringComparison.Ordinal) ||
         source == "PROJECT_CONVERSATION";
 
@@ -225,6 +226,14 @@ internal static partial class CorpusCompiler
             ["PROJECT_DISCOURSE_REFERENCES"] = (6_000, 1_500, 4),
             ["PROJECT_CONVERSATION"] = (4_000, 1_000, 4),
             ["PROJECT_DISCOURSE_NEGATIVES"] = (2_000, 1_000, 2)
+            ,
+            ["PROJECT_CONTEXTUAL_ACTIONS"] = (5_000, 1_250, 4)
+            ,
+            ["PROJECT_CONTEXTUAL_MEMORY"] = (5_000, 1_250, 4)
+            ,
+            ["PROJECT_CONTEXTUAL_COMPOUND"] = (5_000, 1_250, 4)
+            ,
+            ["PROJECT_CONTEXTUAL_AGENDA"] = (5_000, 1_250, 4)
         };
         foreach (var requirement in requirements)
         {
@@ -296,6 +305,7 @@ internal static partial class CorpusCompiler
 
     private static void Validate(CorpusRow row)
     {
+        row.Contextual?.Validate(row.Turns?[^1].Text ?? row.Input);
         if (row.Input != DialogueText.Normalize(row.Input) || !row.Input.StartsWith("PLAYER ", StringComparison.Ordinal))
             throw new InvalidDataException($"Noncanonical input in {row.GroupId}.");
         if (row.Input.Length > 1024 || row.Response?.Length > 256 ||
@@ -592,7 +602,7 @@ internal static partial class CorpusCompiler
             frame.AntecedentUtterance is < 0 || string.IsNullOrWhiteSpace(frame.Evidence) ||
             frame.Evidence.Length > 128 || frame.Evidence.Any(character =>
                 character is not (>= 'A' and <= 'Z') and not (>= '0' and <= '9') and not '_') ||
-            (frame.FactKind is null) != (frame.FactValueSpan is null) ||
+            frame.Act != DiscourseAct.ReferBack && (frame.FactKind is null) != (frame.FactValueSpan is null) ||
             frame.FactValueSpan is { } value &&
             (value.Length is < 1 or > 128 ||
              value.NormalizedValue != DialogueText.Normalize(value.NormalizedValue)))

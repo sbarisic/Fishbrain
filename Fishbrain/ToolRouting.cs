@@ -61,6 +61,8 @@ public sealed partial class Brain
         }
         if (recognized.Count == 0) return ToolDecision.None;
         var name = recognized[0];
+        if (ActionLanguage.ExecutionVeto(text) is { } veto)
+            return new(name, EmptyArguments, 0.0, false, [veto], []);
         if (!tools.TryGet(name, out var tool))
             return new(name, EmptyArguments, 1.0, false, ["CAPABILITY_UNAVAILABLE"], Additional(recognized));
 

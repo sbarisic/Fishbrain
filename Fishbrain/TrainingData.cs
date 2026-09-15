@@ -41,7 +41,7 @@ internal sealed class TrainingData
     public IReadOnlyList<TrainingSample> PerceptionSamples => Samples.Where(x => x.Task == TrainingTask.Perception).ToArray();
     public IReadOnlyList<TrainingSample> ToolSamples => Samples.Where(x => x.Task == TrainingTask.Tool).ToArray();
 
-    public static TrainingData Load(string path, DialogueTokenizer tokenizer)
+    public static TrainingData Load(string path, DialogueTokenizer tokenizer, DialogueDomainDefinition? domain = null)
     {
         ArgumentNullException.ThrowIfNull(tokenizer);
         var samples = new List<TrainingSample>();
@@ -61,7 +61,8 @@ internal sealed class TrainingData
             {
                 var row = JsonSerializer.Deserialize<TrainingRow>(line, options)
                     ?? throw new InvalidDataException("Empty object.");
-                AddRow(row, samples, structuredSamples, tools, examples, responseCatalog, rows, tokenizer);
+                AddRow(row, samples, structuredSamples, tools, examples, responseCatalog, rows, tokenizer,
+                    domain?.Tools.Select(t => t.Schema.Name).Append("NONE").ToHashSet(StringComparer.Ordinal) ?? KnownStructuredTools);
             }
             catch (Exception exception) when (exception is JsonException or ArgumentException or InvalidDataException)
             {
@@ -85,7 +86,7 @@ internal sealed class TrainingData
         Dictionary<string, string> examples,
         Dictionary<string, HashSet<string>> responseCatalog,
         Dictionary<string, string> rows,
-        DialogueTokenizer tokenizer)
+        DialogueTokenizer tokenizer, IReadOnlySet<string> knownTools)
     {
         if (row.Input is null || row.State is null || row.Perception is null || row.Action is null)
             throw new InvalidDataException("Input, state, perception, and action are required.");
@@ -147,7 +148,7 @@ internal sealed class TrainingData
                 throw new InvalidDataException("Structured supervision contains an unknown or duplicate head.");
             var supervised = supervisedNames.ToHashSet(StringComparer.Ordinal);
             var toolName = structured.ToolSchema ?? "NONE";
-            if (supervised.Contains("tool") && !KnownStructuredTools.Contains(toolName))
+            if (supervised.Contains("tool") && !knownTools.Contains(toolName))
                 throw new InvalidDataException($"Unknown structured tool target '{toolName}'.");
             var candidateName = structured.ResponseCandidateId ?? "ACKNOWLEDGE";
             if (supervised.Contains("responseCandidate") && !KnownResponseCandidates.Contains(candidateName))
@@ -196,7 +197,14 @@ internal sealed class TrainingData
                 candidateName, structured.KnowledgeTarget,
                 source, row.SemanticFamilyId, supervised, structured.Discourse ?? DiscourseFrame.Empty,
                 initialState.SessionFacts.ToArray(), expectedFactState, responseAction,
-                row.AcceptableResponseConstraints ?? [], row.RejectedResponse));
+                row.AcceptableResponseConstraints ?? [], row.RejectedResponse)
+            {
+                Request = new ReplyRequest(row.GroupId ?? source, row.SemanticFamilyId ?? source, turns, initialState,
+                    row.Persona ?? NpcPersona.Default, initialProfile, turns[^1].Sequence + 1, 42),
+                Contextual = row.Contextual,
+                Response = response
+            });
+            row.Contextual?.Validate(currentTurn);
         }
 
         var transition = Cognition.Apply(row.State, perception, decision, hasAllTool);
@@ -407,6 +415,7 @@ internal sealed class TrainingData
         int? UnlikelihoodToken = null);
     private sealed class TrainingRow
     {
+        public ContextualSupervision? Contextual { get; set; }
         public string? Input { get; set; }
         public NpcState? State { get; set; }
         public TurnPerception? Perception { get; set; }

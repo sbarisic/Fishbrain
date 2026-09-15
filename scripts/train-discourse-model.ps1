@@ -1,6 +1,7 @@
 param(
-    [string]$CorpusDirectory = "data/compiled",
-    [string]$WorkingDirectory = "data/training"
+    [string]$CorpusDirectory = "data/compiled-contextual",
+    [string]$WorkingDirectory = "data/training",
+    [ValidateRange(1, 260000)][int]$Until = 260000
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,34 +20,19 @@ Push-Location $root
 try {
     $corpusFull = [IO.Path]::GetFullPath($CorpusDirectory)
     $workingFull = [IO.Path]::GetFullPath($WorkingDirectory)
-    $pilot = Join-Path $workingFull "pilot.fbm"
-    $full = Join-Path $workingFull "training-checkpoint.fbm"
+    $full = Join-Path $workingFull "contextual-training.fbm"
 
     if (-not (Test-Path -LiteralPath (Join-Path $corpusFull "train.jsonl") -PathType Leaf)) {
         throw "Compiled corpus not found: $corpusFull"
     }
-    if (Test-Path -LiteralPath $pilot -PathType Leaf) {
-        throw "Pilot checkpoint already exists and must not be resumed: $pilot"
-    }
-    if (Test-Path -LiteralPath $full -PathType Leaf) {
-        throw "Full checkpoint already exists: $full"
-    }
 
     New-Item -ItemType Directory -Path $workingFull -Force | Out-Null
     Invoke-DotNet build Fishbrain.slnx -c Release --no-restore
+    # Resume only a matching contextual checkpoint. The first 40000 updates are MLM pretraining;
+    # a semantic gate after 20000 updates would test an untrained planner.
     Invoke-DotNet run -c Release --no-build --project Fishbrain -- teach `
-        $corpusFull $pilot --planned 260000 --until 20000
-    Invoke-DotNet run -c Release --no-build --project Fishbrain -- evaluate `
-        (Join-Path $corpusFull "validation.jsonl") $pilot --gate pilot
-
-    Remove-Item -LiteralPath $pilot -Force
-    $pilotGeneration = Join-Path $workingFull "pilot-best-generation.fbm"
-    if (Test-Path -LiteralPath $pilotGeneration -PathType Leaf) {
-        Remove-Item -LiteralPath $pilotGeneration -Force
-    }
-
-    Invoke-DotNet run -c Release --no-build --project Fishbrain -- teach `
-        $corpusFull $full --planned 260000 --until 260000
+        $corpusFull $full --planned 260000 --until $Until
+    Write-Host "Checkpoint retained at $full. Completion does not promote a model."
 }
 finally {
     Pop-Location

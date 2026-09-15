@@ -40,7 +40,7 @@ internal static class Program
     {
         Console.WriteLine("FISHBRAIN TEACHING DATA");
         Console.WriteLine("  fetch [--manifest data/sources.json] [--raw data/raw]");
-        Console.WriteLine("  compile [--count 80000] [--seed 42] [--raw data/raw] [--output data/compiled]");
+        Console.WriteLine("  compile [--count 100000] [--seed 42] [--raw data/raw] [--output data/compiled]");
         Console.WriteLine("  audit [--input data/compiled] [--manifest data/sources.json]");
     }
 }
@@ -57,7 +57,7 @@ internal sealed record CliOptions(
     {
         var rootManifest = Path.Combine("data", "sources.json");
         var manifest = File.Exists(rootManifest) ? rootManifest : Path.Combine(AppContext.BaseDirectory, "sources.json");
-        var result = new CliOptions(manifest, Path.Combine("data", "raw"), Path.Combine("data", "compiled"), Path.Combine("data", "compiled"), 80_000, 42);
+        var result = new CliOptions(manifest, Path.Combine("data", "raw"), Path.Combine("data", "compiled"), Path.Combine("data", "compiled"), 100_000, 42);
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         for (var index = 0; index < args.Length; index += 2)
         {

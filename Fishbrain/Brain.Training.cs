@@ -78,7 +78,7 @@ public sealed partial class Brain
         if (untilStep <= brain._step || untilStep > plannedSteps)
             throw new ArgumentOutOfRangeException(nameof(requestedUntilStep),
                 $"--until must be greater than completed step {brain._step} and no greater than planned step {plannedSteps}.");
-        brain.Config.PlannedSteps = plannedSteps;
+        brain.Config = brain.Config with { PlannedSteps = plannedSteps };
         brain.Config.Validate();
         if (extendedCurriculum)
         {
@@ -116,7 +116,7 @@ public sealed partial class Brain
         var target = targetSteps ?? brain.Config.PlannedSteps;
         if (target <= brain._step)
             throw new ArgumentOutOfRangeException(nameof(targetSteps), "Target steps must exceed completed steps.");
-        brain.Config.PlannedSteps = target;
+        brain.Config = brain.Config with { PlannedSteps = target };
         brain.Train(data.Samples, checkpointPath, target);
     }
 
@@ -176,7 +176,7 @@ public sealed partial class Brain
     private void Train(IReadOnlyList<TrainingSample> samples, string checkpointPath, int targetSteps)
     {
         if (samples.Count == 0) throw new InvalidDataException("Training data produced no training samples.");
-        Config.PlannedSteps = targetSteps;
+        Config = Config with { PlannedSteps = targetSteps };
         var epoch = -1;
         int[] order = [];
 
@@ -239,7 +239,7 @@ public sealed partial class Brain
         TeachingRecovery? recovery,
         string corpusHash)
     {
-        Config.PlannedSteps = plannedSteps;
+        Config = Config with { PlannedSteps = plannedSteps };
         var language = data.LanguageSamples.ToArray();
         if (language.Length == 0) throw new InvalidDataException("Teaching requires language samples.");
         var conversationalLanguage = language.Where(sample =>
@@ -299,7 +299,6 @@ public sealed partial class Brain
                         batch,
                         StructuredLearningRate(_step),
                         StructuredTrainingMode.Ranking);
-                    _step = checked(_step + 1);
                     _step = checked(_step + 1);
                 }
                 else
@@ -627,7 +626,7 @@ public sealed partial class Brain
         StructuredMetrics metrics, double generationLoss,
         int intervalSteps, TimeSpan elapsed, bool fullStage)
     {
-        var path = Path.Combine(Program.TelemetryDirectory(checkpointPath), "training.jsonl");
+        var path = Path.Combine(RepositoryFiles.TelemetryDirectory(checkpointPath), "training.jsonl");
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         var checkpointHash = FileSha256(checkpointPath);
         var responseSources = new Dictionary<ResponseSource, int>();

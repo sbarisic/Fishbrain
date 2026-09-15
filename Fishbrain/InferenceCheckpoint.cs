@@ -10,6 +10,13 @@ public sealed partial class Brain
 
     internal void ExportInference(string path, string corpusHash = "UNKNOWN")
     {
+        if (_contextual is not null)
+        {
+            if (corpusHash != "UNKNOWN" && _contextualCorpusHash != corpusHash)
+                throw new InvalidDataException("Export corpus does not match the contextual checkpoint.");
+            Neural.ContextualCheckpoint.Save(path, _contextual, _contextualCorpusHash, _step, _executionThresholds);
+            return;
+        }
         SyncScalarWeights();
         var header = new InferenceHeader
         {
@@ -157,6 +164,11 @@ public sealed partial class Brain
 
     internal static string InspectInferenceCheckpoint(string path)
     {
+        if (Neural.ContextualCheckpoint.Matches(path))
+        {
+            var loaded = Neural.ContextualCheckpoint.Load(path, DemoDialogueDomains.Merchant);
+            return JsonSerializer.Serialize(new { loaded.Header, loaded.Model.ParameterCount, OptimizerAllocated = false });
+        }
         using var stream = File.OpenRead(path);
         using var reader = new BinaryReader(stream, Encoding.UTF8, leaveOpen: false);
         if (!reader.ReadBytes(ModelMagic.Length).SequenceEqual(ModelMagic))

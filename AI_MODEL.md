@@ -1,230 +1,134 @@
-# Fishbrain AI model structure
+# Contextual Fishbrain model
 
-This document describes the current, unversioned model schema and the runtime that
-uses it. Fishbrain does not load older schemas. `data/models/model-latest.fbm` is
-replaced only after a freshly trained candidate passes every release gate.
-
-## Shape
-
-| Property | Value |
-|---|---:|
-| Transformer layers | 2 |
-| Token embedding width | 128 |
-| Attention heads per layer | 8 |
-| Dimensions per attention head | 16 |
-| Feed-forward width | 256 |
-| Maximum runtime context | 256 tokens |
-| Position-embedding period | 256 |
-| Maximum generated response | 64 tokens |
-| Known input words | Artifact-dependent; recorded after release |
-| Input token IDs | Known input words plus 114 base IDs |
-| Output words | Artifact-dependent; recorded after release |
-| Output token IDs | Known output words plus 114 base IDs |
-| Sequence-model parameters | Artifact-dependent because embedding rows follow the vocabulary |
-| Lexical hash features | 4,096 |
-| Context features supplied to structured heads | 128 |
-| Structured feature width | 4,224 |
-| Structured output rows | 371 |
-| Structured-head parameters | 1,567,104 |
-| Planned fresh training | 260,000 fixed steps |
-
-Vocabulary sizes are stored in the artifact and depend on the audited corpus. The
-base tokenizer has 114 control, punctuation, and unknown-word character IDs. Known
-input and output words are appended to that base. The tokenizer accepts double quotes
-so reported speech can remain visible to the discourse model.
-
-## Inputs to a reply
-
-`ReplyRequest` has nine fields. `Brain.Reply` receives the tool registry separately:
-
-| Input | Owner and use | Neural text input? |
-|---|---|:---:|
-| Conversation ID | Caller; idempotency and diagnostics | No |
-| Turn ID | Caller; idempotency and diagnostics | No |
-| `DialogueUtterance` list | Caller; speaker, sequence, and text history | Yes |
-| `NpcDialogueState` | Fishbrain-reduced bounded session memory | Packed for conversation generation |
-| `NpcPersona` | Caller-authored NPC facts | Packed for conversation generation |
-| `PlayerConversationProfile` | Caller-approved persistent player facts | Packed for conversation generation |
-| Response sequence | Caller-reserved sequence for the new NPC utterance and trace | No |
-| Seed | Caller; deterministic selection | No |
-| Response mode | Production hybrid or deterministic-only | No |
-| `GameToolRegistry` | Caller authorization and authoritative game facts | No |
-
-The main contextual classifier receives a variable sequence of 1 to 256 token IDs.
-The conversational realization path receives a separate packed sequence containing
-persona, approved profile facts, session facts, the resolved discourse frame, its
-antecedent, and up to six retained earlier utterances.
-
-An utterance is one complete message by one speaker. It is not one word or necessarily
-one sentence. Sequence numbers are conversation-local, unique, and strictly increasing.
-
-## Reply flow
+## Architecture
 
 ```mermaid
-flowchart TD
-    A["ReplyRequest and registered tools"] --> B["Validate utterances, state, profile, persona, and tool schemas"]
-    B --> C["Retain complete newest utterances within 256 tokens"]
-    C --> D["Tokenize words, punctuation, quotes, and unknown-word characters"]
-    D --> E["Two-layer causal Transformer"]
-    E --> F["Mean-pool current player states into 128 context values"]
-    C --> G["Hash current words and bigrams into 4,096 lexical values"]
-    F --> H["Fuse 4,224 structured features"]
-    G --> H
-    H --> I["Perception, discourse, slot, antecedent, tool, and response heads"]
-    I --> J["Deterministic constraints and discourse resolution"]
-    J --> K["DialogueStateReducer applies facts and references"]
-    J --> L["Tool or persona template, repair, ranked response, or validated generation"]
-    L --> M["Semantic trace and bounded state"]
-    K --> M
+flowchart LR
+    Input[Typed dialogue, persona and state] --> Encoder[Bidirectional encoder]
+    Encoder --> Retrieval[Bounded fact retrieval]
+    Retrieval --> Context[Context with selected facts]
+    Context --> Frames[Semantic frames and reference heads]
+    Frames --> Planner[Ordered response acts]
+    Planner --> Tools[Validated tool invocation]
+    Planner --> Decoder[Causal decoder]
+    Tools --> Typed[Typed authoritative clauses]
+    Decoder --> Screening[Claim detector and deterministic checks]
+    Typed --> Reply[Reply and state reducer]
+    Screening --> Reply
 ```
 
-## Token and embedding layer
+| Component | Production configuration |
+|---|---:|
+| Encoder layers | 4, bidirectional self-attention |
+| Decoder layers | 2, causal self-attention plus cross-attention |
+| Width | 256 |
+| Attention heads | 8 |
+| Feed-forward width | 1,024 |
+| Input limit | 512 tokens |
+| Output limit | 64 tokens and 256 characters |
+| Selected facts | Up to 8 |
+| Semantic frames / response acts | Up to 3 each |
+| Agenda | Up to 4 entries |
+| Tool invocations per reply | At most 1 |
+| Stored parameters | Packed float32 |
 
-Input is normalized to uppercase. Supported visible characters are letters, digits,
-whitespace, `. , ? ! ' " - :`. Known words use one token. An unknown word is encoded
-as `WORD_BEGIN`, its uppercase character/digit/apostrophe/hyphen tokens, and
-`WORD_END`. This preserves unseen names and tool arguments.
+The audited development vocabulary produces about 21 million parameters. Vocabulary
+changes alter that count. Layer blocks use residual connections, RMS normalization,
+and ReLU feed-forward layers. Scalar/reference and SIMD float32 operations share
+the same differentiation graph. The decoder caches key/value projections per reply.
 
-Each sequence position adds a learned 128-value token embedding to a learned 128-value
-position embedding. For `T` tokens the result is a `T x 128` matrix.
+## Input and ownership
 
-## Transformer layer 1
+`StructuredInput` is shared by training and inference. Segment embeddings encode
+player/NPC roles, persona, state, approved/session facts, agenda and capabilities.
+Boundary tokens separate typed sections. Literal PLAYER or NPC words never define
+a role. Token-source metadata preserves utterance sequence and normalized offsets,
+including character fallback tokens.
 
-The first layer performs:
+Packing reserves the complete persona and required state plus the current utterance.
+It selects bounded facts, retains whole recent utterances, and fits older topic
+summaries when space remains. Oversized mandatory input is rejected. No part of the
+current utterance is silently cut.
 
-1. RMS normalization;
-2. independent 128-by-128 query, key, and value projections;
-3. causal self-attention with eight 16-value heads;
-4. a 128-by-128 attention output projection and residual connection;
-5. RMS normalization;
-6. a 128-to-256 projection, ReLU, and 256-to-128 projection;
-7. a second residual connection and final RMS normalization.
+Facts retain subject, predicate, polarity, source sequence, confidence and provenance.
+The retrieval query is computed before adding selected facts during both training and
+inference. The model scores all bounded profile/session entries against a NONE entry
+and selects at most eight. A second encoder pass runs when selected memory changes
+the input.
 
-## Transformer layer 2
+## Understanding and planning
 
-The second layer repeats the same operations with separate weights. The layers do not
-share parameters. Causal attention can use only the current and earlier positions.
+Task-specific learned attention pooling feeds multilabel and exclusive heads.
+Contextual token states feed BIO slot labels and fact spans. An utterance pointer
+predicts references. Three conditioned frame queries predict speech act, participants,
+tool, modality, and span boundaries. Three conditioned planner queries predict
+ordered response acts and their frame references.
 
-## Structured feature layer
+All supervised understanding losses propagate into encoder weights. Missing labels
+remain masked. Frame and plan teacher targets are used during training; runtime
+uses predictions. Each frame has its own antecedent pointer. Agenda updates currently
+use one learned transition per turn, applied to a bounded collection of four entries.
 
-The final Transformer states for the current player utterance are averaged into 128
-values. These are concatenated with 4,096 stable hashes of normalized words and
-adjacent word pairs.
+Plans propose actions; validation controls execution. The runtime checks modality,
+speaker, sentence-level vetoes, plan/frame association, registered schema, arguments,
+and calibrated confidence. It invokes at most one tool and retains additional actions.
+Pending confirmations require an explicit learned confirmation/acceptance frame and a
+matching source reference. Ambiguous or incomplete proposals cannot execute.
 
-Slot tagging builds a separate 4,224-value vector per current-turn word. It includes
-the word, its prefix, nearby words, and local combinations. Fact values use a separate
-three-class `O/B/I` head. They never share parameters with game and tool slots.
+## Realization
 
-## Learned heads
+The causal decoder cross-attends to contextual encoder, frame, and plan states.
+Social text is generated independently of typed tool/persona clauses. A trained
+claim classifier and deterministic screening can reject it; neither is an absolute
+factual guarantee. Fallbacks depend on the selected response acts and preserve
+attribution for recalled facts.
 
-All structured heads are linear projections from 4,224 features. Multi-label heads use
-sigmoid/BCE with calibrated thresholds. Exclusive heads use softmax cross-entropy.
+A generated question requires a clarification act or a follow-up tied to a known
+subject/active agenda. During final polishing, only decoder parameters update.
+Rejected candidate outputs identified by deterministic screening join authored
+negative examples for claim training during the joint understanding phase.
 
-| Head | Rows | Purpose |
-|---|---:|---|
-| Speech acts | 18 | Ask, inform, correct, thank, threaten, and related acts |
-| Domains | 20 | Social and game topic labels |
-| Goals | 24 | Rapport, information, transaction, task, and other goals |
-| Affect | 5 | Player affect |
-| Stance | 5 | Friendly through hostile/deceptive stance |
-| Response policy | 8 | Answer, clarify, tool, refuse, silence, acknowledge, negotiate, defer |
-| Content flags | 9 | Safety-sensitive content bands |
-| BIO slots | 27 | Outside plus beginning/inside for 13 game and tool slot types |
-| Knowledge target | 14 | Persona, capability, inventory, location, or world target |
-| Discourse act | 6 | None, inform, correct, reject, explain, or refer back |
-| Discourse subject | 3 | Player, NPC, or none |
-| Discourse target | 3 | Player, NPC, or none |
-| Fact predicate | 12 | None plus 11 conversational fact kinds |
-| Fact polarity | 2 | Positive or negative |
-| Fact-value BIO | 3 | Outside, beginning, or inside a conversational fact value |
-| Antecedent pointer | 1 scorer | One softmax across retained utterances and explicit `NONE` |
-| Tool | 10 | None plus nine demo tool schemas |
-| Response plan | 201 | Ranked catalog plan |
+## Data and optimization
 
-The antecedent head scores up to eight retained utterances plus `NONE` in one normalized
-distribution. Its pair features include candidate speaker, distance, lexical overlap,
-discourse act, and the shared Transformer context. Ambiguous and evicted references are
-trained as `NONE`. Deterministic constraints override the scorer only for unambiguous
-cases such as an immediate `WHAT DO YOU MEAN?`.
+The corpus contains 100,000 rows: all original source quotas plus four project-owned
+5,000-row groups for action modality, contextual memory, compound plans, and agenda.
+Existing authored single-act annotations also supply frame/plan targets. External
+rows do not receive invented contextual supervision.
 
-## Conversational memory
+Family/conversation split isolation and held-out input exclusion are audited.
+The additional groups are template-generated and do not by themselves establish
+generalization to unseen conversational structures.
 
-The model proposes a `DiscourseFrame`; it does not mutate memory. Only
-`DialogueStateReducer` may apply the frame.
+| Phase | Updates | Learning rate |
+|---|---:|---:|
+| Masked-language encoder pretraining | 40,000 | Peak 0.0003 |
+| Joint understanding/realization, 7:3 updates | 180,000 | Peak 0.0003 |
+| Decoder-only polishing | 40,000 | Peak 0.0001 |
 
-Session memory contains at most 16 unverified facts and eight topic summaries. A fact
-stores subject, typed predicate, normalized value, polarity, source utterance,
-confidence, and provenance. Name, role, occupation, origin, and home are single-valued:
-a newer positive replaces the previous positive, while negation removes only the
-matching positive value and retains the negative conversational claim.
+Training uses seed 42, effective batch 32 with sequential microbatches, AdamW,
+global norm clipping at 1, and phase-local warmup/cosine schedules. The sampler
+deterministically permutes semantic families and rotates family members. Complete
+optimizer, update counters, next phase, sampler identity and RNG state are saved.
 
-`NpcDialogueState.Initial` clears session memory. Fishbrain never writes to the
-caller-owned `PlayerConversationProfile`; the host may create a new profile containing
-facts it explicitly approves.
+Every 5,000 updates, calibration and scoring use disjoint validation families.
+A candidate is retained only when automated gates pass and its operational score
+improves. Human and packaging gates remain separate.
 
-Every NPC response also records a semantic trace: response utterance sequence, action,
-topic, referenced predicates, plan/frame identifier, and fallback reason. An explanation
-response describes this trace and repairs an unsuitable fallback when required.
+## Artifact and release contract
 
-## Production response hybrid
+The binary checkpoint binds architecture, config, token order, label/schema and
+domain fingerprints, corpus hash, execution thresholds and float32 tensors through
+an integrity digest. Training checkpoints also hold optimizer state. Inference
+loading allocates neither gradients nor Adam moments. Export cannot relabel a
+checkpoint with another corpus hash.
 
-Priority is:
+Existing operational thresholds remain, except catalog top-1/top-3 and variation
+retrieval metrics, which are explicitly retired for free generation. New gates
+require frame/plan exact accuracy of at least 90%, memory/correction accuracy of
+at least 95%, and zero unintended tool invocations or altered authoritative fields.
+The evaluator also requires 95% exact agenda-state accuracy.
 
-1. validated game-tool templates;
-2. discourse correction, explanation, and repair actions;
-3. no-response, clarification, capability, and safety templates;
-4. caller-authored persona templates;
-5. ranked project-owned responses or conversational generation;
-6. a typed deterministic fallback.
-
-Generation is part of `ResponseMode.Production`. `DeterministicOnly` disables it. The
-generator cannot render tool results or exact persona facts. Its output is rejected if
-it is invalid, overlength, claims an authoritative quantity or mutation, invents a
-persona fact, or contradicts the caller persona. Rejected text becomes an uncertainty
-fallback and a diagnostic reason.
-
-Player statements such as `I HAVE 1000 GOLD` remain unverified conversation. They can
-be acknowledged but cannot change inventory, currency, permissions, quests, locations,
-tool arguments, or any other caller-owned field.
-
-## Training rows and data flow
-
-The audited corpus contains 80,000 rows. Each contextual row can store the complete
-conversation, initial dialogue state, initial approved profile, persona, discourse
-frame, fact delta, antecedent sequence, response action, acceptable constraints,
-rejected response, structured targets, tool data, and provenance.
-
-Training has four connected paths:
-
-1. Contextual classification encodes retained utterances and updates the shared
-   Transformer plus supervised structured heads.
-2. Discourse training updates act, participant, predicate, polarity, fact span, and
-   dynamic antecedent heads.
-3. Pairwise response ranking trains the correct catalog plan against its strongest
-   eligible negative.
-4. Language training serializes the separate conversational conditioning pack and
-   desired response for next-token cross-entropy. A reviewed rejected response adds
-   weight-0.2 unlikelihood loss at its first divergent token.
-
-Complete conversations and semantic families are assigned to one split before
-expansion. The operational 256-turn benchmark and the B01-B12 conversation sessions are
-excluded from compilation and audited for exact contamination.
-
-## Training schedule
-
-| Steps | Behavior |
-|---|---|
-| 0-200,000 | 70% structured, 20% ranking, and 10% generation; structured minibatches are 75% operational and 25% discourse |
-| 200,000-245,000 | Freeze the Transformer and passing operational heads; use 60% discourse, 25% ranking, and 15% corrective operational updates |
-| 245,000-260,000 | Freeze all structured heads and polish conversational realization only |
-
-Structured training uses averaged 32-example minibatches. Discourse selections are
-40% facts, 30% references, 20% banter, and 10% hard negatives. Families are shuffled
-deterministically per epoch and members rotate deterministically. The structured rate
-follows cosine decay from `0.03` to `0.003` by step 200K, and positive-class weights
-never exceed `2.0`. Calibration uses one fixed family-balanced 2,000-row subset.
-
-Training starts from deterministic seed 42 and fresh initialization. Checkpoints retain
-weights, optimizer state, sampler position, vocabulary, calibration, and random state.
-The release artifact is exported only if all operational, discourse, runtime, authority,
-and two-reviewer conversation gates pass without lowering a threshold.
+Resource measurements report cold loading, short and long context, allocations,
+active resident memory, forced 64-token decoding and concurrent calls separately.
+Ablations compare identical test splits using paired semantic-family bootstrap
+intervals. No full trained candidate or quality claim has been released.

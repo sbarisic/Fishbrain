@@ -18,6 +18,7 @@ public sealed partial class Brain
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(tools);
+        if (_contextual is not null) return ContextualReply(request, tools);
         ValidateRequest(request);
         var packed = PackTurns(request.Utterances);
         var currentUtterance = request.Utterances[^1];

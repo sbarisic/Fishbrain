@@ -4,7 +4,7 @@ namespace Fishbrain;
 
 internal static partial class ConversationalOutputValidator
 {
-    [GeneratedRegex(@"\b[0-9]+\s+(?:GOLD|CREDITS|COINS|ITEMS?)\b", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"\b(?:[0-9]+|ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE|TEN|HUNDRED|THOUSAND)\s+(?:GOLD|CREDITS|COINS|ITEMS?)\b", RegexOptions.CultureInvariant)]
     private static partial Regex AuthoritativeQuantityPattern();
 
     public static bool IsSafe(
@@ -20,9 +20,9 @@ internal static partial class ConversationalOutputValidator
                 "YOU OWN THE", "YOU HAVE PERMISSION", "YOU ARE AUTHORIZED", "YOUR QUEST IS",
                 "I COMPLETED THE QUEST", "THE QUEST IS COMPLETE", "I MOVED YOU", "I CHANGED YOUR"))
             return Fail("GENERATED_AUTHORITATIVE_CLAIM", out reason);
-        if (ContainsAny(text, "MY NAME IS", "I AM FROM", "MY HOME IS", "MY FAMILY IS", "MY FACTION IS"))
+        if (ContainsAny(text, "MY NAME IS", "I AM FROM", "MY HOME IS", "MY HOMETOWN IS", "MY FAMILY IS", "MY FACTION IS"))
             return Fail("GENERATED_PERSONA_FACT", out reason);
-        if (text.Contains("I AM A ", StringComparison.Ordinal) &&
+        if ((text.Contains("I AM A ", StringComparison.Ordinal) || text.Contains("I AM AN ", StringComparison.Ordinal)) &&
             !text.Contains(persona.Role, StringComparison.Ordinal) &&
             !(persona.Occupation is { } occupation && text.Contains(occupation, StringComparison.Ordinal)))
             return Fail("GENERATED_PERSONA_CONTRADICTION", out reason);

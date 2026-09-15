@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$ReviewedConversationFile,
 
-    [string]$CorpusDirectory = "data/compiled",
+    [string]$CorpusDirectory = "data/compiled-contextual",
     [string]$CandidateModel = "data/training/model-candidate.fbm",
     [string]$ArtifactsPath = "data/logs/discourse-release-artifacts"
 )
@@ -65,6 +65,9 @@ try {
     Invoke-DotNet $brain conversation-sample $candidateFull data/benchmarks/conversation-scenarios.jsonl $reviewSample
     Invoke-DotNet $brain conversation-gate $reviewSample $reviewFull
     Invoke-DotNet $brain inspect $candidateFull
+    Invoke-DotNet $brain artifact-smoke $candidateFull
+    Invoke-DotNet $brain profile-contextual $candidateFull 32
+    Invoke-DotNet $brain compare-contextual $corpusFull $candidateFull (Join-Path $artifactsFull "contextual-comparison.json")
 
     @(
         "who are you?",
@@ -77,7 +80,14 @@ try {
         throw "Live CLI conversation failed with exit code $LASTEXITCODE."
     }
 
-    Write-Host "ALL DISCOURSE RELEASE GATES PASSED"
+    $modelHash = (Get-FileHash -LiteralPath $candidateFull -Algorithm SHA256).Hash.ToLowerInvariant()
+    $package = Join-Path $root "data/releases/contextual-$($modelHash.Substring(0, 12))"
+    Invoke-DotNet publish Fishbrain/Fishbrain.csproj -c Release --no-build --artifacts-path $artifactsFull -o $package
+    $packagedModels = Join-Path $package "data/models"
+    New-Item -ItemType Directory -Path $packagedModels -Force | Out-Null
+    Copy-Item -LiteralPath $candidateFull -Destination (Join-Path $packagedModels "model-latest.fbm")
+    Invoke-DotNet (Join-Path $package "Fishbrain.dll") artifact-smoke (Join-Path $packagedModels "model-latest.fbm")
+    Write-Host "ALL DISCOURSE RELEASE GATES PASSED. MATCHING RUNTIME AND MODEL PACKAGED AT $package"
 }
 finally {
     Pop-Location

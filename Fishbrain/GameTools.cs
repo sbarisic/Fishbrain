@@ -169,7 +169,7 @@ public sealed class GameToolRegistry
         public GameToolResult Execute(GameToolInvocation invocation) => implementation.Execute(invocation);
     }
 
-    private static void ValidateArguments(ToolSchema schema, IReadOnlyDictionary<string, string> arguments)
+    internal static void ValidateArguments(ToolSchema schema, IReadOnlyDictionary<string, string> arguments)
     {
         ArgumentNullException.ThrowIfNull(arguments);
         var declared = schema.Parameters.ToDictionary(parameter => parameter.Name, StringComparer.Ordinal);

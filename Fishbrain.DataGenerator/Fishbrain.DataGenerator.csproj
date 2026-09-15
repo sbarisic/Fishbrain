@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Fishbrain\Fishbrain.csproj" />
+    <ProjectReference Include="..\Fishbrain.Runtime\Fishbrain.Runtime.csproj" />
     <None Include="..\data\sources.json" Link="sources.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 

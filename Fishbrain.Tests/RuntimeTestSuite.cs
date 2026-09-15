@@ -6,10 +6,11 @@ namespace Fishbrain.Tests;
 
 internal static partial class RuntimeTestSuite
 {
-    public static void RunAll()
+    public static void RunAll(bool includeShippedArtifact = true)
     {
         var tests = new (string Name, Action Test)[]
         {
+            ("CONTEXTUAL ARCHITECTURE", ContextualArchitectureTests.Run),
             ("STRUCTURED ROLES", StructuredRoles),
             ("BOUNDED HISTORY", BoundedHistory),
             ("TOOL FIDELITY", ToolFidelity),
@@ -48,13 +49,14 @@ internal static partial class RuntimeTestSuite
             ("MODEL ARTIFACT SMOKE", ModelArtifactSmoke),
             ("COMPACT CHECKPOINT", CompactCheckpoint)
         };
-        foreach (var (name, test) in tests)
+        var selected = tests.Where(x => includeShippedArtifact || x.Name != "MODEL ARTIFACT SMOKE").ToArray();
+        foreach (var (name, test) in selected)
         {
             test();
             Console.WriteLine($"PASS {name}");
         }
 
-        Console.WriteLine($"PASS ALL {tests.Length} RUNTIME TESTS");
+        Console.WriteLine($"PASS ALL {selected.Length} RUNTIME TESTS" + (includeShippedArtifact ? " INCLUDING SHIPPED ARTIFACT" : "; SHIPPED ARTIFACT EXCLUDED (--unit)"));
     }
 
     static Brain TestBrain() => Brain.CreateForTesting(new BrainConfig
@@ -580,16 +582,8 @@ internal static partial class RuntimeTestSuite
                 [Environment.CurrentDirectory, AppContext.BaseDirectory],
                 "data", "models", "model-latest.fbm")
             : Path.GetFullPath(requestedModel);
-        Brain brain;
-        try
-        {
-            brain = Brain.Load(modelPath);
-        }
-        catch (InvalidDataException) when (string.IsNullOrWhiteSpace(requestedModel))
-        {
-            Console.WriteLine("PASS OLD MODEL ARTIFACT REJECTED");
-            return;
-        }
+        var brain = Brain.Load(modelPath);
+        Assert(brain.ContextualConfig is not null, "Shipped artifact must use the contextual architecture.");
         var world = new DemoWorldState();
         var tools = DemoGameTools.CreateMerchant(world);
         var balance = brain.Reply(Request("balance", turnId: "MODEL-BALANCE"), tools);

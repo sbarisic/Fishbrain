@@ -6,22 +6,22 @@ using System.Text.Json.Serialization;
 
 namespace Fishbrain;
 
-public sealed class BrainConfig
+public sealed record BrainConfig
 {
-    public int LayerCount { get; set; } = 2;
-    public int EmbeddingSize { get; set; } = 128;
-    public int HeadCount { get; set; } = 8;
-    public int MlpSize { get; set; } = 256;
-    public int ContextLength { get; set; } = 256;
-    public int AttentionWindow { get; set; } = 256;
-    public int PositionPeriod { get; set; } = 256;
-    public int MaximumOutputLength { get; set; } = 64;
-    public double LearningRate { get; set; } = 0.005;
-    public double Beta1 { get; set; } = 0.85;
-    public double Beta2 { get; set; } = 0.99;
-    public double AdamEpsilon { get; set; } = 1e-8;
-    public int Seed { get; set; } = 42;
-    public int PlannedSteps { get; set; } = 260_000;
+    public int LayerCount { get; init; } = 2;
+    public int EmbeddingSize { get; init; } = 128;
+    public int HeadCount { get; init; } = 8;
+    public int MlpSize { get; init; } = 256;
+    public int ContextLength { get; init; } = 256;
+    public int AttentionWindow { get; init; } = 256;
+    public int PositionPeriod { get; init; } = 256;
+    public int MaximumOutputLength { get; init; } = 64;
+    public double LearningRate { get; init; } = 0.005;
+    public double Beta1 { get; init; } = 0.85;
+    public double Beta2 { get; init; } = 0.99;
+    public double AdamEpsilon { get; init; } = 1e-8;
+    public int Seed { get; init; } = 42;
+    public int PlannedSteps { get; init; } = 260_000;
 
     internal void Validate()
     {
@@ -158,13 +158,14 @@ public sealed partial class Brain
         _adamV = new double[_parameters.Count];
     }
 
-    public BrainConfig Config { get; }
+    public BrainConfig Config { get; private set; }
     public int CompletedSteps => _step;
     public IReadOnlyCollection<string> TrainedTools => _trainedTools;
     internal DialogueTokenizer DialogueTokenizer => _tokenizer;
 
     public static Brain Load(string path)
     {
+        if (Neural.ContextualCheckpoint.Matches(path)) return Load(path, DemoDialogueDomains.Merchant);
         if (IsInferenceCheckpoint(path)) return LoadInferenceCheckpoint(path);
         var checkpoint = JsonSerializer.Deserialize<Checkpoint>(File.ReadAllText(path), JsonOptions())
             ?? throw new InvalidDataException("Checkpoint is empty.");

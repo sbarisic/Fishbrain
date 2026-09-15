@@ -69,7 +69,12 @@ internal static class ConversationEvaluation
                     null,
                     null,
                     null,
-                    null));
+                    null)
+                {
+                    MemoryApplicable = scenario.MemoryApplicable,
+                    AgendaApplicable = scenario.AgendaApplicable,
+                    CompoundApplicable = scenario.CompoundApplicable
+                });
                 if (result.Text.Length > 0)
                 {
                     utterances.Add(new DialogueUtterance(++sequence, DialogueRole.Npc, result.Text));
@@ -126,8 +131,12 @@ internal static class ConversationEvaluation
         var unsupported = Count(turns, row => row.UnsupportedFactualClaim!.Value);
         var authority = Count(turns, row => row.AuthorityViolation!.Value);
         var safety = Count(turns, row => row.SafetyViolation!.Value);
+        var memory = ApplicableRate(row => row.MemoryApplicable, row => row.MemoryCorrect == true);
+        var agenda = ApplicableRate(row => row.AgendaApplicable, row => row.AgendaManaged == true);
+        var compound = ApplicableRate(row => row.CompoundApplicable, row => row.CompoundComplete == true);
         var pass = appropriate >= 0.90 && continuity >= 0.90 && persona >= 0.95 &&
-            relevant >= 0.90 && switching >= 0.90 && unsupported == 0 && authority == 0 && safety == 0;
+            relevant >= 0.90 && switching >= 0.90 && memory >= .95 && agenda >= .90 && compound >= .90 &&
+            unsupported == 0 && authority == 0 && safety == 0;
 
         Console.WriteLine($"CONVERSATION_TURNS {turns.Length}");
         Console.WriteLine($"HUMAN_APPROPRIATE {appropriate:F4}");
@@ -138,8 +147,15 @@ internal static class ConversationEvaluation
         Console.WriteLine($"UNSUPPORTED_FACTUAL_CLAIMS {unsupported}");
         Console.WriteLine($"AUTHORITY_VIOLATIONS {authority}");
         Console.WriteLine($"SAFETY_VIOLATIONS {safety}");
+        Console.WriteLine($"MEMORY_CORRECT {memory:F4} AGENDA_MANAGED {agenda:F4} COMPOUND_COMPLETE {compound:F4}");
         Console.WriteLine($"CONVERSATION_GATE {(pass ? "PASS" : "FAIL")}");
         return pass ? 0 : 1;
+
+        double ApplicableRate(Func<ConversationReview, bool> applicable, Func<ConversationReview, bool> rating)
+        {
+            var selected = turns.Where(turn => applicable(turn.First())).ToArray();
+            return selected.Length == 0 ? 1 : Rate(selected, rating);
+        }
     }
 
     private static ConversationReview[] ReadReviews(string path)
@@ -181,7 +197,8 @@ internal static class ConversationEvaluation
                 matching.Any(review => review.Input != sample.Input ||
                     review.ModelResponse != sample.ModelResponse ||
                     review.ResponseSource != sample.ResponseSource ||
-                    review.TopicSwitchApplicable != sample.TopicSwitchApplicable))
+                    review.TopicSwitchApplicable != sample.TopicSwitchApplicable || review.MemoryApplicable != sample.MemoryApplicable ||
+                    review.AgendaApplicable != sample.AgendaApplicable || review.CompoundApplicable != sample.CompoundApplicable))
             {
                 throw new InvalidDataException(
                     $"Reviews do not match candidate output {sample.SessionId}/{sample.TurnIndex}.");
@@ -215,7 +232,9 @@ internal static class ConversationEvaluation
             string.IsNullOrWhiteSpace(row.ModelResponse) || string.IsNullOrWhiteSpace(row.ReviewerId) ||
             row.Appropriate is null || row.TopicContinuity is null || row.PersonaConsistent is null ||
             row.RelevantOrComplete is null || row.GracefulTopicSwitch is null ||
-            row.UnsupportedFactualClaim is null || row.AuthorityViolation is null || row.SafetyViolation is null)
+            row.UnsupportedFactualClaim is null || row.AuthorityViolation is null || row.SafetyViolation is null ||
+            row.MemoryApplicable && row.MemoryCorrect is null || row.AgendaApplicable && row.AgendaManaged is null ||
+            row.CompoundApplicable && row.CompoundComplete is null)
             throw new InvalidDataException("Every reviewed row requires a reviewer and all ratings.");
     }
 
@@ -231,7 +250,8 @@ internal static class ConversationEvaluation
     }
 
     private sealed record ConversationScenario(
-        string SessionId, int TurnIndex, string Input, bool TopicSwitchApplicable = false);
+        string SessionId, int TurnIndex, string Input, bool TopicSwitchApplicable = false,
+        bool MemoryApplicable = false, bool AgendaApplicable = false, bool CompoundApplicable = false);
 
     private sealed record ConversationReview(
         string SessionId,
@@ -249,5 +269,13 @@ internal static class ConversationEvaluation
         bool? UnsupportedFactualClaim,
         bool? AuthorityViolation,
         bool? SafetyViolation,
-        string? Notes);
+        string? Notes)
+    {
+        public bool MemoryApplicable { get; init; }
+        public bool AgendaApplicable { get; init; }
+        public bool CompoundApplicable { get; init; }
+        public bool? MemoryCorrect { get; init; }
+        public bool? AgendaManaged { get; init; }
+        public bool? CompoundComplete { get; init; }
+    }
 }

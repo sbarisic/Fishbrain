@@ -131,7 +131,7 @@ public sealed record PlayerConversationProfile
         ArgumentNullException.ThrowIfNull(fact);
         if (!Enum.IsDefined(fact.Subject) || fact.Subject == DialogueParticipant.None ||
             !Enum.IsDefined(fact.Kind) || !Enum.IsDefined(fact.Provenance) || fact.Provenance != provenance ||
-            fact.SourceUtterance < 0 || fact.Confidence is < 0 or > 1 ||
+            fact.SourceUtterance < 0 || !double.IsFinite(fact.Confidence) || fact.Confidence is < 0 or > 1 ||
             string.IsNullOrWhiteSpace(fact.Value) || fact.Value.Length > 128 ||
             fact.Value != DialogueText.Normalize(fact.Value))
             throw new ArgumentException("Dialogue fact is invalid.", nameof(fact));
@@ -238,7 +238,10 @@ public sealed record NpcPersona(
 
 public sealed record PendingClarification(string Question, string? ToolSchema, IReadOnlyList<string> MissingSlots);
 public sealed record DialogueTransaction(string Kind, string Item, int Quantity, string Status);
-public sealed record PendingDialogueAction(string Action, string? ToolSchema, IReadOnlyDictionary<string, string> Arguments);
+public sealed record PendingDialogueAction(string Action, string? ToolSchema, IReadOnlyDictionary<string, string> Arguments)
+{
+    public long? SourceUtterance { get; init; }
+}
 
 public sealed record DialogueReferenceState(
     string? Person,
@@ -275,6 +278,7 @@ public sealed record NpcDialogueState(
     IReadOnlyList<DialogueTopicSummary> TopicSummaries,
     ResponseSemanticTrace? LastResponseTrace)
 {
+    public IReadOnlyList<DialogueAgendaEntry> Agenda { get; init; } = Array.Empty<DialogueAgendaEntry>();
     public static NpcDialogueState Initial { get; } = new(
         1, 1, 0, 0, NpcMood.Neutral, [], null, UserAffect.Neutral,
         null, null, [], [], DialogueReferenceState.Empty, 0, 0, null,
@@ -282,6 +286,10 @@ public sealed record NpcDialogueState(
 
     public void Validate()
     {
+        if (Agenda is null || Agenda.Count > 4 || Agenda.Any(a => a is null || !Enum.IsDefined(a.Kind) ||
+            !Enum.IsDefined(a.Status) || a.SourceTurn < 0 || string.IsNullOrWhiteSpace(a.Subject) || a.Subject.Length > 128 ||
+            a.Subject != DialogueText.Normalize(a.Subject)))
+            throw new ArgumentException("Dialogue agenda is invalid.");
         if (Rapport > 3 || Trust > 3 || Familiarity > 3 || Hostility > 3)
             throw new ArgumentOutOfRangeException(nameof(NpcDialogueState), "Social values must be between 0 and 3.");
         if (ThreatLevel > 3 || CalmTurns > 3)
@@ -356,7 +364,7 @@ public sealed record NpcDialogueState(
         foreach (var action in PendingActions)
         {
             if (!IsIdentifier(action.Action) || action.ToolSchema is not null && !IsIdentifier(action.ToolSchema) ||
-                action.Arguments is null || action.Arguments.Count > 8)
+                action.Arguments is null || action.Arguments.Count > 8 || action.SourceUtterance is < 0)
                 throw new ArgumentException("Pending action metadata is invalid.", nameof(PendingActions));
             foreach (var argument in action.Arguments)
             {
@@ -417,7 +425,10 @@ public sealed record ReplyResult(
     StructuredPerception Perception,
     TurnPlan Plan,
     ResponseTone Tone,
-    ReplyDiagnostics Diagnostics);
+    ReplyDiagnostics Diagnostics)
+{
+    public ContextualDiagnostics? Contextual { get; init; }
+}
 
 public sealed record ResponseCandidate(
     string Id,

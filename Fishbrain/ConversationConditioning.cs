@@ -51,6 +51,6 @@ internal static class ConversationConditioning
         }
 
         void AppendFact(string prefix, DialogueFact fact) =>
-            Append($"{prefix} {fact.Kind} {(fact.Negated ? "NOT " : string.Empty)}{fact.Value}");
+            Append($"{prefix} SUBJECT {fact.Subject} PREDICATE {fact.Kind} PROVENANCE {fact.Provenance} SOURCE {fact.SourceUtterance} {(fact.Negated ? "NOT " : string.Empty)}{fact.Value}");
     }
 }

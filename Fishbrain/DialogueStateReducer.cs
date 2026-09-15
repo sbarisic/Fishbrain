@@ -6,6 +6,24 @@ namespace Fishbrain;
 
 internal static class DialogueStateReducer
 {
+    internal static IReadOnlyList<DialogueAgendaEntry> ReduceAgenda(IReadOnlyList<DialogueAgendaEntry> current,
+        DialogueUtterance utterance, IReadOnlyList<PlannedResponseAct> acts, AgendaKind kind, bool add,
+        AgendaStatus status, DiscourseFrame discourse, string? tool, GameToolResult? result)
+    {
+        var entries = current.ToList();
+        var subject = discourse.FactKind?.ToString().ToUpperInvariant() ?? tool;
+        if (subject is not null)
+            for (var i = 0; i < entries.Count; i++)
+                if (entries[i].Status == AgendaStatus.Active && entries[i].Subject == subject &&
+                    (discourse.Act is DiscourseAct.Inform or DiscourseAct.Correct || result?.Success == true))
+                    entries[i] = entries[i] with { Status = AgendaStatus.Completed };
+        if (add && subject is not null && (kind != AgendaKind.UnansweredQuestion || acts.Any(x => x.Act is DialogueResponseAct.AskFollowUp or DialogueResponseAct.Clarify)))
+        {
+            entries.RemoveAll(x => x.Kind == kind && x.Subject == subject);
+            entries.Add(new(kind, subject, utterance.Sequence, status));
+        }
+        return Array.AsReadOnly(entries.TakeLast(4).ToArray());
+    }
     public static NpcDialogueState Apply(
         NpcDialogueState state,
         PlayerConversationProfile playerProfile,
