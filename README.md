@@ -69,6 +69,12 @@ instead of silently truncating its meaning.
 
 ## Compile and train
 
+GPU training is available through [PyTorch/ROCm](scripts/torch_training/README.md),
+with the same dependency-free C# inference runtime. The RX 9070 XT development
+benchmark projects about 7.7 hours for all 260,000 updates, before validation,
+checkpoint and native evaluation overhead. This is a throughput estimate, not
+a quality guarantee. The commands below remain the native C# CPU alternative.
+
 The source manifest and existing preparation scripts govern source provenance.
 After the raw data is available:
 

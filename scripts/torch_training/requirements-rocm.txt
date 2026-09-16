@@ -1,0 +1,2 @@
+--index-url https://stable.repo.amd.com/rocm/whl-next/
+torch[device-gfx1201]==2.13.0+rocm10.0.0

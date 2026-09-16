@@ -142,7 +142,8 @@ parallelize independent optimizer blocks and samples. Sample workers share weigh
 but own gradients; nested kernel workers are disabled inside sample workers. RNG
 states are assigned before dispatch and gradients are reduced in sample order.
 The environment variable `FISHBRAIN_TRAINING_WORKERS` selects 1-6 workers, with 1
-as the memory-conservative default. The development training job uses 6.
+as the memory-conservative default. The CPU job used 6 before stopping cleanly at
+update 2509 for fresh GPU training; its checkpoint is preserved.
 
 All three measured losses in each later phase matched the baseline float values;
 pretraining differed by at most 0.0000006. Tests compare sequential and parallel
@@ -169,7 +170,58 @@ A ROCm/rocBLAS GPU experiment passed FP32 matrix parity, but offloading individu
 matrix operations did not improve whole-update throughput. A native OpenBLAS trial
 was also slower. Neither backend is included or used by the training job. A larger
 GPU improvement needs a backend that keeps tensors on the device across operations;
-there is no measured speed claim for that design.
+the complete GPU backend below addresses that requirement.
+
+### PyTorch/ROCm training
+
+The owner approved Python/PyTorch training while retaining dependency-free C# CPU
+inference. A project-local environment now supports the RX 9070 XT. The new trainer
+keeps tensors on the device across the full update and exports the existing `.fbm`
+format. It does not migrate old weights or add an obsolete runtime loader.
+
+Measured with PyTorch 2.13.0+rocm10.0.0, FP32, deterministic algorithms, batch 32,
+three warmups and 20 measured updates per phase, from fresh seed-42 weights:
+
+| Phase | GPU seconds/update |
+|---|---:|
+| Encoder pretraining | 0.0391 |
+| Joint understanding, including rejected-output mining | 0.1584 |
+| Joint realization | 0.0807 |
+| Decoder polishing | 0.0496 |
+
+These rates project **7.7 hours of update work** for the unchanged 260,000-update
+schedule. Validation, checkpoint writes, native assessment and human reviews add
+time. This short benchmark does not establish sustained throughput or model quality.
+Peak allocated GPU tensors in these batches were about 1.0 GiB; this is not the
+runtime's CPU resident-memory gate or total GPU process usage.
+
+Ten contextual reference cases passed C#/GPU forward, loss and sampled-gradient
+parity, including memory, compound turns, agenda and padded batches. Largest forward
+absolute error was about 0.000077. Decoder polishing left encoder/planner weights
+bit-identical. Exact continuation tests cover all four phases, Adam state, masking
+and device RNG, duplicate-writer rejection and mismatched/corrupt artifacts. C#
+loaded and replied using a Python-exported development artifact. Full validation
+data executed in all phases: 9,887 semantic/MLM rows and 7,424 permitted response rows.
+
+Every 5,000-update snapshot is retained. Automatic completion evaluates the
+phase-loss shortlist and final weights through native calibration, operational and
+held-out test scoring, authored acceptance, resources and paired ablations. It
+produces a human-review sample. A loss shortlist is not a fully eligible release;
+no model is promoted automatically and other snapshots remain available.
+
+Local evidence:
+
+- `data/training/gpu-deterministic-benchmark.json`
+- `data/training/torch-parity.json` and `torch-resume-tests.json`
+- `data/training/torch-validation-data-tests.json`
+- `data/training/torch-corpus-v1/manifest.json`
+
+The original corpus hash is
+`effedd1665c689aecbb0b7041ff67b06599a62ec318fabb64f6bd5ed066eeef3`.
+Packed manifest plus initial-model fingerprint is
+`a75118a306cb642d1a8a8e48a5d8253e140ab16843a946ef98d01e907d70aa6e`.
+Reproduction and stop/resume commands are in the
+[GPU training guide](scripts/torch_training/README.md).
 
 ## Remaining acceptance work
 

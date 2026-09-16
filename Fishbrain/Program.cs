@@ -72,6 +72,21 @@ internal static class Program
                     Count(args, 4, 5);
                     ContextualTrainingBenchmark.Run(args[1], args[2], args[3], args.Length == 5 ? Steps(args[4]) : 3);
                     break;
+                case "prepare-torch":
+                    Count(args, 3, 3);
+                    TorchTrainingBridge.Prepare(args[1], args[2]);
+                    break;
+                case "torch-reference":
+                    Count(args, 4, 4);
+                    TorchTrainingBridge.Reference(args[1], args[2], args[3]);
+                    break;
+                case "validate-generated":
+                    Count(args, 2, 2);
+                    TorchTrainingBridge.ValidateGenerated(args[1]);
+                    break;
+                case "assess-torch":
+                    Count(args, 3, 3);
+                    return TorchTrainingBridge.Assess(args[1], args[2]);
                 case "acceptance-contextual":
                     Count(args, 3, 3);
                     return ContextualAcceptance.Run(args[1], args[2]);
@@ -197,6 +212,10 @@ internal static class Program
         Console.WriteLine("  acceptance-contextual MODEL.fbm REPORT.json");
         Console.WriteLine("  selftest");
         Console.WriteLine("  benchmark-training CORPUS_DIRECTORY CHECKPOINT REPORT.json [UPDATES_PER_PHASE]");
+        Console.WriteLine("  prepare-torch CORPUS_DIRECTORY EMPTY_OUTPUT_DIRECTORY");
+        Console.WriteLine("  torch-reference CORPUS_DIRECTORY MODEL.fbm OUTPUT.jsonl");
+        Console.WriteLine("  validate-generated MODEL.fbm  (JSON lines on stdin)");
+        Console.WriteLine("  assess-torch CORPUS_DIRECTORY GPU_RUN_DIRECTORY");
     }
 
     private static string FindProjectPath()

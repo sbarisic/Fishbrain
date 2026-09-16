@@ -108,20 +108,35 @@ generalization to unseen conversational structures.
 | Joint understanding/realization, 7:3 updates | 180,000 | Peak 0.0003 |
 | Decoder-only polishing | 40,000 | Peak 0.0001 |
 
-Training uses seed 42, effective batch 32 with sequential microbatches by default, AdamW,
+Training uses seed 42, effective batch 32, AdamW,
 global norm clipping at 1, and phase-local warmup/cosine schedules. The sampler
 deterministically permutes semantic families and rotates family members. Complete
 optimizer, update counters, next phase, sampler identity and RNG state are saved.
 
+The native C# trainer defaults to sequential microbatches.
 `FISHBRAIN_TRAINING_WORKERS=1..6` optionally processes samples concurrently with
 separate gradient buffers. Masking RNG states are assigned in sample order before
 dispatch, and gradient accumulation retains that order. This trades training memory
 for throughput without changing batch size or checkpoint compatibility. Each sample
 worker disables nested kernel parallelism.
 
-Every 5,000 updates, calibration and scoring use disjoint validation families.
+In the native C# trainer, every 5,000 updates, calibration and scoring use disjoint validation families.
 A candidate is retained only when automated gates pass and its operational score
 improves. Human and packaging gates remain separate.
+
+The optional Python/PyTorch ROCm trainer uses full GPU batches of 32 and the same
+architecture, targets and curriculum. C# exports canonical structured inputs and
+fresh initial weights. Float32 output/loss/gradient parity and exact GPU resume are
+tested. Decoder polishing freezes all encoder and planner parameters. No Python
+dependency enters the inference assemblies.
+
+The GPU path checks full validation losses every 5,000 updates and archives those
+weight snapshots. It retains complete optimizer checkpoints for the best loss per
+phase. After training, native calibration and operational validation select from
+that shortlist plus final weights; held-out test scoring follows selection. These
+are development candidates, not automatic promotions or proof of the best fully
+eligible checkpoint. Other archived candidates remain available for assessment.
+See [GPU training](scripts/torch_training/README.md) for complete commands and gates.
 
 ## Artifact and release contract
 
