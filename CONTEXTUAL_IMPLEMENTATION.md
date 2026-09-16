@@ -80,7 +80,8 @@ The fresh final-corpus run uses the full 260,000-update endpoint:
 
 - Checkpoint: `data/training/contextual-v3-training.fbm`.
 - Progress: `data/training/contextual-v3-training.fbm.progress.json`.
-- Fixed executable snapshot and logs: `data/training/contextual-v3-job/`.
+- Original executable snapshot and logs: `data/training/contextual-v3-job/`.
+- Optimized six-worker snapshot and logs: `data/training/contextual-v3-fast-job/`.
 - Clean stop: create `data/training/contextual-v3-training.fbm.stop`; the current
   update finishes and complete state is saved. Remove the stop file before resume.
 
@@ -119,6 +120,56 @@ Compacted idle memory is diagnostic; the active resident measurement controls th
 Local evidence: `data/logs/contextual-v2/resources-final.json`,
 `unit-tests.log`, `acceptance.json`, and `corpus-v3-audit.log`.
 Generated models, corpora and logs are ignored by Git.
+
+## Training throughput
+
+Measured on 2026-09-17 with the Ryzen 5 3600XT, .NET 10, and the full-size
+checkpoint saved at update 2367. Each phase starts with the same saved weights,
+optimizer and RNG, uses the same ordered batches of 32, and has one warmup plus
+three measured updates. No training process competed with these benchmarks.
+Forced phases measure execution cost, not quality at their eventual training stage.
+
+| Phase | Previous implementation | Optimized, six sample workers | Speedup |
+|---|---:|---:|---:|
+| Encoder pretraining | 6.38 s/update | 1.77 s/update | 3.61x |
+| Joint understanding | 5.95 s/update | 2.42 s/update | 2.46x |
+| Joint realization | 6.60 s/update | 3.41 s/update | 1.94x |
+| Decoder polishing | 3.43 s/update | 1.85 s/update | 1.85x |
+
+The changes avoid the full vocabulary transpose in masked-language projection,
+reuse bounded scratch and gradient buffers, vectorize gradient accumulation, and
+parallelize independent optimizer blocks and samples. Sample workers share weights
+but own gradients; nested kernel workers are disabled inside sample workers. RNG
+states are assigned before dispatch and gradients are reduced in sample order.
+The environment variable `FISHBRAIN_TRAINING_WORKERS` selects 1-6 workers, with 1
+as the memory-conservative default. The development training job uses 6.
+
+All three measured losses in each later phase matched the baseline float values;
+pretraining differed by at most 0.0000006. Tests compare sequential and parallel
+weights, moments and RNG across all phases, including incomplete worker groups,
+phase transitions and checkpoint resume. Separate projection tests check forward
+values and both gradients against the scalar implementation, including a tied
+embedding used through both projection and gather.
+
+These are short throughput measurements, not release or quality gates. At these
+phase-specific rates, the remaining update work is about 7.3 days, before validation,
+checkpoint writes, machine contention or changes in sample cost. Repeat on the
+intended machine instead of treating this as a completion deadline.
+
+Local evidence:
+
+- `data/training/performance-baseline/report.json`
+- `data/training/performance-pooled/report.json` (optimized sequential)
+- `data/training/performance-workers3/report.json`
+- `data/training/performance-workers6/report.json`
+- `data/training/performance-saved-step2367.fbm`, SHA256
+  `fd5d38a097c686181f36c4012783cbad829b5a1e0a9ec19b392f99de863553aa`
+
+A ROCm/rocBLAS GPU experiment passed FP32 matrix parity, but offloading individual
+matrix operations did not improve whole-update throughput. A native OpenBLAS trial
+was also slower. Neither backend is included or used by the training job. A larger
+GPU improvement needs a backend that keeps tensors on the device across operations;
+there is no measured speed claim for that design.
 
 ## Remaining acceptance work
 

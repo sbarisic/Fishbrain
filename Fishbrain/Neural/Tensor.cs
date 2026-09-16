@@ -3,20 +3,24 @@ using System.Numerics;
 namespace Fishbrain.Neural;
 
 /// <summary>A per-call tensor. Inference never creates gradients or records a backward tape.</summary>
-internal sealed class Tensor(int rows, int columns, float[] data, bool differentiable = false)
+internal sealed class Tensor(int rows, int columns, float[] data, bool differentiable = false, float[]? gradientBuffer = null)
 {
     public int Rows { get; } = rows;
     public int Columns { get; } = columns;
     public float[] Data { get; } = data.Length == checked(rows * columns) ? data
         : throw new ArgumentException("Tensor dimensions do not match storage.");
-    public float[]? Gradient { get; } = differentiable ? new float[data.Length] : null;
+    public float[]? Gradient { get; } = differentiable
+        ? gradientBuffer is null ? new float[data.Length] : gradientBuffer.Length == data.Length ? gradientBuffer
+            : throw new ArgumentException("Gradient dimensions do not match storage.")
+        : null;
 }
 
 internal sealed class TensorGraph(bool training, bool vectorized = true)
 {
     private readonly List<Action> _backward = [];
     public bool Training { get; } = training;
-    private Tensor Result(int rows, int columns) => new(rows, columns, Training ? new float[checked(rows * columns)] : InferenceScratch.Allocate(checked(rows * columns)), Training);
+    private Tensor Result(int rows, int columns) => new(rows, columns, InferenceScratch.Allocate(checked(rows * columns)),
+        Training, Training ? InferenceScratch.Allocate(checked(rows * columns)) : null);
     private void Record(Action action) { if (Training) _backward.Add(action); }
     private static void Accumulate(Tensor tensor, int index, float value)
     {
@@ -52,13 +56,13 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
             {
                 if (a.Gradient is { } ag)
                 {
-                    var contribution = new float[ag.Length];
+                    var contribution = InferenceScratch.Allocate(ag.Length);
                     TensorKernels.Multiply(y.Gradient!, TensorKernels.Transpose(b.Data, b.Rows, b.Columns), contribution, a.Rows, b.Columns, a.Columns);
                     AddScaled(contribution, 0, ag, 0, ag.Length, 1);
                 }
                 if (b.Gradient is { } bg)
                 {
-                    var contribution = new float[bg.Length];
+                    var contribution = InferenceScratch.Allocate(bg.Length);
                     TensorKernels.Multiply(TensorKernels.Transpose(a.Data, a.Rows, a.Columns), y.Gradient!, contribution, a.Columns, a.Rows, b.Columns);
                     AddScaled(contribution, 0, bg, 0, bg.Length, 1);
                 }
@@ -70,6 +74,44 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
                     Accumulate(a, r * a.Columns + k, Dot(y.Gradient!, r * b.Columns, b.Data, k * b.Columns, b.Columns));
                     if (b.Gradient is { } bg) AddScaled(y.Gradient!, r * b.Columns, bg, k * b.Columns, b.Columns, a.Data[r * a.Columns + k]);
                 }
+        });
+        return y;
+    }
+
+    /// <summary>Projects against row-major embeddings without materializing a vocabulary-sized transpose.</summary>
+    public Tensor MatMulRightTranspose(Tensor a, Tensor b)
+    {
+        if (a.Columns != b.Columns) throw new ArgumentException("Transposed multiplication shape mismatch.");
+        var y = Result(a.Rows, b.Rows);
+        void Forward(int row)
+        {
+            for (var r = 0; r < a.Rows; r++)
+                y.Data[r * b.Rows + row] = Dot(a.Data, r * a.Columns, b.Data, row * b.Columns, a.Columns);
+        }
+        if (vectorized && TensorParallelism.AllowWorkers && (long)a.Rows * b.Rows * a.Columns >= 1_000_000)
+            Parallel.For(0, b.Rows, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, Forward);
+        else for (var row = 0; row < b.Rows; row++) Forward(row);
+        if (Training) Record(() =>
+        {
+            if (a.Gradient is { } ag)
+            {
+                var contribution = InferenceScratch.Allocate(ag.Length);
+                if (vectorized) TensorKernels.Multiply(y.Gradient!, b.Data, contribution, a.Rows, b.Rows, a.Columns);
+                else for (var r = 0; r < a.Rows; r++) for (var k = 0; k < b.Rows; k++)
+                    AddScaled(b.Data, k * b.Columns, contribution, r * a.Columns, a.Columns, y.Gradient![r * b.Rows + k]);
+                AddScaled(contribution, 0, ag, 0, ag.Length, 1);
+            }
+            if (b.Gradient is { } bg)
+            {
+                void BackwardRow(int row)
+                {
+                    for (var r = 0; r < a.Rows; r++)
+                        AddScaled(a.Data, r * a.Columns, bg, row * b.Columns, b.Columns, y.Gradient![r * b.Rows + row]);
+                }
+                if (vectorized && TensorParallelism.AllowWorkers && (long)a.Rows * b.Rows * a.Columns >= 1_000_000)
+                    Parallel.For(0, b.Rows, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, BackwardRow);
+                else for (var row = 0; row < b.Rows; row++) BackwardRow(row);
+            }
         });
         return y;
     }
@@ -149,7 +191,7 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
         var headWidth = width / heads;
         var scale = 1 / MathF.Sqrt(headWidth);
         var y = Result(query.Rows, width);
-        var probabilities = Training ? new float[checked(heads * query.Rows * key.Rows)] : InferenceScratch.Allocate(checked(heads * query.Rows * key.Rows));
+        var probabilities = InferenceScratch.Allocate(checked(heads * query.Rows * key.Rows));
         RunHeads(ForwardHead);
         void ForwardHead(int h)
         {
@@ -233,7 +275,7 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
         return y;
         void RunHeads(Action<int> run)
         {
-            if (vectorized && query.Rows >= 32 && (long)heads * query.Rows * key.Rows >= 32768)
+            if (vectorized && TensorParallelism.AllowWorkers && query.Rows >= 32 && (long)heads * query.Rows * key.Rows >= 32768)
                 Parallel.For(0, heads, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(heads, Environment.ProcessorCount) }, run);
             else for (var head = 0; head < heads; head++) run(head);
         }

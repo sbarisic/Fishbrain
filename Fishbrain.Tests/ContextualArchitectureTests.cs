@@ -21,6 +21,8 @@ internal static class ContextualArchitectureTests
         Assert(packedFact.Contains("SUBJECT Npc") && packedFact.Contains("SessionReported"), "Fact ownership lost.");
         AttentionGradients(false);
         MatrixKernels();
+        TransposedProjection();
+        ParallelTrainingParity();
         ParallelAttentionParity();
         ScratchLifetimeParity();
         AssemblyBoundary();
@@ -189,6 +191,65 @@ internal static class ContextualArchitectureTests
         Assert(concurrent.All(x => x.SequenceEqual(expected)), "Concurrent scratch scopes share active buffers.");
     }
 
+    private static void ParallelTrainingParity()
+    {
+        var request = Request("HELLO FRIEND");
+        var model = new ContextualNetwork(new() { Width = 8, Heads = 2, EncoderLayers = 1, DecoderLayers = 1, FeedForwardWidth = 16 },
+            new WordVocabulary(["HELLO", "FRIEND"], ["HELLO", "FRIEND"]), new DialogueDomainDefinition("EMPTY", []));
+        var example = new TrainingExample("HELLO FRIEND", "HELLO FRIEND", request.Utterances.ToArray(), [SpeechAct.Greet], [DialogueDomain.Social], [],
+            UserAffect.Neutral, DialogueStance.Neutral, ResponsePolicy.Answer, [], [], "NONE", "ACKNOWLEDGE", KnowledgeTarget.None,
+            "PROJECT_TEST", "PARALLEL", new HashSet<string> { "domains" }, DiscourseFrame.Empty, [], [], DiscourseResponseAction.None, [], null)
+        { Request = request, Response = "HELLO FRIEND" };
+        foreach (var workers in new[] { 3, 6 })
+        {
+            var single = new ContextualTrainer(model, 100000);
+            var parallel = new ContextualTrainer(model, 100000, sampleWorkers: workers);
+            foreach (var phase in Enum.GetValues<ContextualPhase>().Concat(Enum.GetValues<ContextualPhase>()))
+            {
+                // Seven samples also exercise the partially filled final worker group.
+                var examples = Enumerable.Repeat(example, 7).ToArray();
+                var loss = single.TrainBatch(examples, phase);
+                Assert(loss == parallel.TrainBatch(examples, phase), "Parallel training loss changed.");
+                Assert(single.Random.State == parallel.Random.State, "Parallel masking changed RNG position.");
+                Assert(single.Parameters.All(x => x.Value.Data.SequenceEqual(parallel.Parameters[x.Key].Data)), "Parallel training changed weights.");
+                Assert(single.FirstMoments.All(x => x.Value.SequenceEqual(parallel.FirstMoments[x.Key])) &&
+                    single.SecondMoments.All(x => x.Value.SequenceEqual(parallel.SecondMoments[x.Key])), "Parallel training changed optimizer state.");
+            }
+        }
+    }
+
+    private static void TransposedProjection()
+    {
+        foreach (var (rows, width, vocabulary) in new[] { (1, 7, 11), (5, 32, 37), (7, 64, 4096) })
+        {
+            var random = new Random(42);
+            var a = new Tensor(rows, width, Enumerable.Range(0, rows * width).Select(_ => (float)(random.NextDouble() - .5)).ToArray(), true);
+            var b = new Tensor(vocabulary, width, Enumerable.Range(0, vocabulary * width).Select(_ => (float)(random.NextDouble() - .5)).ToArray(), true);
+            var reference = new TensorGraph(true, false);
+            var expected = reference.MatMul(a, reference.Transpose(b));
+            for (var row = 0; row < rows; row++) reference.CrossEntropy(expected, row, row % vocabulary);
+            reference.Backward();
+            var da = a.Gradient!.ToArray(); var db = b.Gradient!.ToArray();
+            Array.Clear(a.Gradient!); Array.Clear(b.Gradient!);
+            var graph = new TensorGraph(true);
+            var actual = graph.MatMulRightTranspose(a, b);
+            // A tied embedding also receives gradients through its input gather.
+            var gathered = graph.Gather(b, [0, 0]);
+            graph.CrossEntropy(gathered, 0, 1);
+            graph.CrossEntropy(gathered, 1, 2);
+            for (var row = 0; row < rows; row++) graph.CrossEntropy(actual, row, row % vocabulary);
+            graph.Backward();
+            var gatherGraph = new TensorGraph(true, false);
+            var isolated = new Tensor(b.Rows, b.Columns, b.Data, true);
+            var isolatedGather = gatherGraph.Gather(isolated, [0, 0]);
+            gatherGraph.CrossEntropy(isolatedGather, 0, 1); gatherGraph.CrossEntropy(isolatedGather, 1, 2);
+            gatherGraph.Backward();
+            Assert(actual.Data.Zip(expected.Data).All(p => Math.Abs(p.First - p.Second) < 2e-5), "Transposed projection forward mismatch.");
+            Assert(a.Gradient!.Zip(da).All(p => Math.Abs(p.First - p.Second) < 2e-5), "Transposed projection input gradient mismatch.");
+            Assert(b.Gradient!.Select((v, i) => Math.Abs(v - db[i] - isolated.Gradient![i])).Max() < 2e-5, "Tied embedding gradient accumulation mismatch.");
+        }
+    }
+
     private static void MatrixKernels()
     {
         foreach (var (rows, inner, columns) in new[] { (1, 23, 37), (7, 29, 35), (16, 64, 32), (16, 32, 43), (64, 384, 512) })
@@ -353,7 +414,7 @@ internal static class ContextualArchitectureTests
         {
             var path = Path.Combine(directory, "training.fbm");
             ContextualCheckpoint.Save(path, trainer.Snapshot(), "TEST", trainer.Step, new Dictionary<string, double>(), trainer);
-            var resumed = ContextualTrainer.Restore(ContextualCheckpoint.Load(path, domain, true));
+            var resumed = ContextualTrainer.Restore(ContextualCheckpoint.Load(path, domain, true), sampleWorkers: 3);
             trainer.TrainBatch(examples, ContextualPhase.JointUnderstanding);
             resumed.TrainBatch(examples, ContextualPhase.JointUnderstanding);
             Assert(trainer.Step == resumed.Step && trainer.Parameters.All(x => x.Value.Data.SequenceEqual(resumed.Parameters[x.Key].Data)), "Training resume is not bit equivalent.");

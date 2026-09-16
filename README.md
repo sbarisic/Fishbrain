@@ -87,9 +87,31 @@ A file lock prevents concurrent writers to the same checkpoint.
 Checkpoints bind weights, token order, schema, domain, corpus, calibration, phase,
 sampler, optimizer, and RNG state. Old weights are not migrated.
 
-Training is CPU-intensive. The first 20 updates with the optimized kernels averaged
-5.84 seconds per update; later phases can take different amounts of time. A complete
-run can still take weeks on the development CPU.
+Training is CPU-intensive. Sequential microbatches remain the default. To use the
+validated six-worker configuration on the development CPU:
+
+```powershell
+$env:FISHBRAIN_TRAINING_WORKERS = '6'
+dotnet run --no-build -c Release --project Fishbrain -- teach data/compiled-contextual-v3 data/training/contextual-v3-training.fbm --planned 260000 --until 260000
+```
+
+Workers share read-only weights and own their temporary gradients. Effective batch
+size stays 32; masking RNG and gradient sums keep sample order. More workers use
+more memory. Values from 1 to 6 are supported, including when resuming a checkpoint.
+This configuration needs no GPU or native math library.
+
+For a reproducible speed comparison, stop training and benchmark a saved checkpoint:
+
+```powershell
+dotnet run --no-build -c Release --project Fishbrain -- benchmark-training data/compiled-contextual-v3 data/training/contextual-v3-training.fbm data/training/speed-report.json 3
+```
+
+The command tests all four phases with one warmup and three measured updates each.
+It does not save its updated weights or change the source checkpoint. On the
+development CPU, six workers reduced pretraining from 6.38 to 1.77 seconds per
+update in a paired short benchmark; later phases improved by 1.85-2.46 times.
+These timings exclude validation and checkpoint writes. Full training still takes
+days. See [measurement details](CONTEXTUAL_IMPLEMENTATION.md#training-throughput).
 
 ## Evaluate and release
 

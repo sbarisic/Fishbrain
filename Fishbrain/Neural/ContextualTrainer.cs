@@ -1,3 +1,5 @@
+using System.Numerics;
+
 namespace Fishbrain.Neural;
 
 
@@ -12,12 +14,17 @@ internal sealed class ContextualTrainer : IContextualTrainingState
     public int Step { get; private set; }
     public DeterministicRandom Random { get; }
     public Dictionary<string, int> ParameterUpdates { get; }
+    private readonly Dictionary<string, float[]> _accumulatedGradients = [];
+    private readonly List<Dictionary<string, Tensor>> _workers = [];
+    internal int SampleWorkers { get; }
 
     public ContextualTrainer(ContextualNetwork network, int step = 0, ulong? randomState = null,
         IReadOnlyDictionary<string, float[]>? first = null, IReadOnlyDictionary<string, float[]>? second = null,
-        IReadOnlyDictionary<string, int>? parameterUpdates = null)
+        IReadOnlyDictionary<string, int>? parameterUpdates = null, int sampleWorkers = 1)
     {
         Architecture = network;
+        if (sampleWorkers is < 1 or > 6) throw new ArgumentOutOfRangeException(nameof(sampleWorkers), "Training supports 1-6 sample workers.");
+        SampleWorkers = sampleWorkers;
         var weights = network.Snapshot();
         Parameters = network.Shapes.ToDictionary(s => s.Name, s => new Tensor(s.Rows, s.Columns, weights[s.Name], true));
         FirstMoments = weights.ToDictionary(x => x.Key, x => first is null ? new float[x.Value.Length] : (float[])first[x.Key].Clone());
@@ -30,10 +37,10 @@ internal sealed class ContextualTrainer : IContextualTrainingState
 
     public static ContextualPhase Phase(int step) => ContextualSchedule.Phase(step);
 
-    public static ContextualTrainer Restore((ContextualNetwork Model, ContextualCheckpointHeader Header, ContextualTrainingState? TrainingState) loaded)
+    public static ContextualTrainer Restore((ContextualNetwork Model, ContextualCheckpointHeader Header, ContextualTrainingState? TrainingState) loaded, int sampleWorkers = 1)
     {
         var state = loaded.TrainingState ?? throw new InvalidDataException("Checkpoint contains no training state.");
-        return new(loaded.Model, loaded.Header.CompletedSteps, state.RandomState, state.FirstMoments, state.SecondMoments, state.ParameterUpdates);
+        return new(loaded.Model, loaded.Header.CompletedSteps, state.RandomState, state.FirstMoments, state.SecondMoments, state.ParameterUpdates, sampleWorkers);
     }
 
     public ContextualNetwork Snapshot() => new(Architecture.Config, Architecture.Vocabulary, Architecture.Domain,
@@ -43,43 +50,96 @@ internal sealed class ContextualTrainer : IContextualTrainingState
     {
         if (examples.Count == 0) throw new ArgumentException("Training needs a nonempty microbatch sequence.");
         var phase = overridePhase ?? Phase(Step);
-        var gradients = Parameters.ToDictionary(x => x.Key, x => new float[x.Value.Data.Length]);
-        var loss = 0f;
-        foreach (var example in examples)
+        var active = Parameters.Where(x => Active(x.Key, phase)).ToArray();
+        foreach (var (name, parameter) in active)
         {
-            foreach (var p in Parameters.Values) Array.Clear(p.Gradient!);
-            loss += Loss(example, phase);
-            foreach (var (name, p) in Parameters)
+            if (!_accumulatedGradients.TryGetValue(name, out var buffer))
+                _accumulatedGradients[name] = new float[parameter.Data.Length];
+            else Array.Clear(buffer);
+        }
+        var loss = 0f;
+        if (SampleWorkers == 1)
+        {
+            foreach (var example in examples)
             {
-                if (!Active(name, phase)) continue;
-                var accumulator = gradients[name];
-                for (var i = 0; i < accumulator.Length; i++) accumulator[i] += p.Gradient![i] / examples.Count;
+                foreach (var (_, p) in active) Array.Clear(p.Gradient!);
+                loss += Loss(example, phase);
+                Accumulate(Parameters);
             }
         }
-        Apply(gradients, phase);
+        else
+        {
+            var workerCount = Math.Min(SampleWorkers, examples.Count);
+            while (_workers.Count < workerCount)
+                _workers.Add(Parameters.ToDictionary(x => x.Key, x => new Tensor(x.Value.Rows, x.Value.Columns, x.Value.Data, true)));
+            for (var start = 0; start < examples.Count; start += workerCount)
+            {
+                var count = Math.Min(workerCount, examples.Count - start);
+                var states = new ulong[count];
+                // Assign masking RNG states in sample order before any worker runs.
+                for (var i = 0; i < count; i++)
+                {
+                    states[i] = Random.State;
+                    if (phase != ContextualPhase.MaskedLanguage) continue;
+                    var example = examples[start + i];
+                    var input = StructuredInput.Pack(example.Request!, Architecture.Tokenizer, Architecture.Config.ContextLength,
+                        example.Contextual?.RelevantFacts ?? [], Architecture.Domain);
+                    _ = MaskPositions(input, Random);
+                }
+                var losses = new float[count];
+                Parallel.For(0, count, new ParallelOptions { MaxDegreeOfParallelism = workerCount }, i =>
+                {
+                    using var serialKernels = new TensorParallelism();
+                    var parameters = _workers[i];
+                    foreach (var (name, _) in active) Array.Clear(parameters[name].Gradient!);
+                    var random = new DeterministicRandom(Architecture.Config.Seed) { State = states[i] };
+                    losses[i] = Loss(examples[start + i], phase, true, parameters, random);
+                });
+                // Floating-point sums retain the same sample order as sequential accumulation.
+                for (var i = 0; i < count; i++) { loss += losses[i]; Accumulate(_workers[i]); }
+            }
+        }
+        Apply(_accumulatedGradients, phase);
         return loss / examples.Count;
+
+        void Accumulate(Dictionary<string, Tensor> parameters)
+        {
+            foreach (var (name, _) in active)
+            {
+                var p = parameters[name];
+                var accumulator = _accumulatedGradients[name];
+                var i = 0;
+                var divisor = new Vector<float>(examples.Count);
+                for (; i <= accumulator.Length - Vector<float>.Count; i += Vector<float>.Count)
+                    (new Vector<float>(accumulator, i) + new Vector<float>(p.Gradient!, i) / divisor).CopyTo(accumulator, i);
+                for (; i < accumulator.Length; i++) accumulator[i] += p.Gradient![i] / examples.Count;
+            }
+        }
     }
 
-    internal float Loss(TrainingExample example, ContextualPhase phase, bool backward = true)
+    internal float Loss(TrainingExample example, ContextualPhase phase, bool backward = true,
+        Dictionary<string, Tensor>? parameters = null, DeterministicRandom? random = null)
     {
+        // All temporary tensors remain alive through backward, then return to the bounded pool.
+        // Parameters and optimizer arrays are allocated outside this scope and never rented.
+        using var scratch = new InferenceScratch();
         var model = Architecture;
         var request = example.Request ?? throw new InvalidDataException("Contextual training requires complete structured requests.");
         var facts = request.PlayerProfile.Facts.Concat(request.State.SessionFacts).Distinct().ToArray();
         var selected = example.Contextual?.RelevantFacts ?? Array.Empty<DialogueFact>();
         var input = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, selected, model.Domain);
         var graph = new TensorGraph(backward);
-        var p = Parameters;
+        var p = parameters ?? Parameters;
         var loss = 0f;
         if (phase == ContextualPhase.MaskedLanguage)
         {
             var tokens = (int[])input.Tokens.Clone();
             var segments = (int[])input.Segments.Clone();
-            var positions = input.CurrentPositions.Where(_ => Random.NextDouble() < .15).ToArray();
-            if (positions.Length == 0) positions = [input.CurrentPositions[Random.NextInt(input.CurrentPositions.Length)]];
+            var positions = MaskPositions(input, random ?? Random);
             var targets = positions.Select(i => tokens[i]).ToArray();
             foreach (var position in positions) { tokens[position] = Tokenizer.Unknown; segments[position] = (int)InputSegment.Mask; }
             var encoded = model.Encode(graph, p, input with { Tokens = tokens, Segments = segments });
-            var logits = graph.MatMul(graph.Gather(encoded, positions), graph.Transpose(p["encoder.embedding"]));
+            var logits = graph.MatMulRightTranspose(graph.Gather(encoded, positions), p["encoder.embedding"]);
             for (var i = 0; i < positions.Length; i++) loss += graph.CrossEntropy(logits, i, targets[i], 1f / positions.Length);
         }
         else
@@ -209,6 +269,12 @@ internal sealed class ContextualTrainer : IContextualTrainingState
         return loss;
     }
 
+    private static int[] MaskPositions(PackedInput input, DeterministicRandom random)
+    {
+        var positions = input.CurrentPositions.Where(_ => random.NextDouble() < .15).ToArray();
+        return positions.Length == 0 ? [input.CurrentPositions[random.NextInt(input.CurrentPositions.Length)]] : positions;
+    }
+
     internal static bool ProjectResponse(TrainingExample example) => example.Source.StartsWith("PROJECT_", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(example.Response);
     private static bool Active(string name, ContextualPhase phase) => phase switch
     {
@@ -221,14 +287,17 @@ internal sealed class ContextualTrainer : IContextualTrainingState
     private void Apply(Dictionary<string, float[]> gradients, ContextualPhase phase)
     {
         double norm = 0;
-        foreach (var (name, values) in gradients)
-            if (Active(name, phase)) foreach (var value in values) { if (!float.IsFinite(value)) throw new ArithmeticException("Nonfinite training gradient."); norm += (double)value * value; }
+        // Cached buffers may have been added in different phase orders after a resume.
+        // Always reduce in model parameter order, independent of cache history.
+        foreach (var name in Parameters.Keys)
+            if (Active(name, phase)) foreach (var value in gradients[name]) { if (!float.IsFinite(value)) throw new ArithmeticException("Nonfinite training gradient."); norm += (double)value * value; }
         var scale = (float)(norm > 1 ? 1 / Math.Sqrt(norm) : 1);
         var start = Step < 40_000 ? 0 : Step < 220_000 ? 40_000 : 220_000;
         var length = start == 40_000 ? 180_000 : 40_000;
         var local = Step - start;
         var peak = phase == ContextualPhase.DecoderPolish ? .0001 : .0003;
         var rate = (float)(peak * Math.Min(1, (local + 1) / 2000.0) * (.1 + .9 * .5 * (1 + Math.Cos(Math.PI * Math.Min(1, local / (double)length)))));
+        var work = new List<Action>();
         foreach (var (name, parameter) in Parameters)
         {
             if (!Active(name, phase)) continue;
@@ -236,14 +305,27 @@ internal sealed class ContextualTrainer : IContextualTrainingState
             var firstCorrection = 1 - Math.Pow(.9, update);
             var secondCorrection = 1 - Math.Pow(.999, update);
             var m = FirstMoments[name]; var v = SecondMoments[name]; var gradient = gradients[name];
-            for (var i = 0; i < parameter.Data.Length; i++)
+            const int blockSize = 65536;
+            for (var block = 0; block < parameter.Data.Length; block += blockSize)
             {
-                var value = gradient[i] * scale;
-                m[i] = .9f * m[i] + .1f * value;
-                v[i] = .999f * v[i] + .001f * value * value;
-                parameter.Data[i] -= rate * ((float)(m[i] / firstCorrection / (Math.Sqrt(v[i] / secondCorrection) + 1e-8)) + .01f * parameter.Data[i]);
+                var first = block;
+                var last = Math.Min(block + blockSize, parameter.Data.Length);
+                work.Add(() =>
+                {
+                    for (var i = first; i < last; i++)
+                    {
+                        var value = gradient[i] * scale;
+                        m[i] = .9f * m[i] + .1f * value;
+                        v[i] = .999f * v[i] + .001f * value * value;
+                        parameter.Data[i] -= rate * ((float)(m[i] / firstCorrection / (Math.Sqrt(v[i] / secondCorrection) + 1e-8)) + .01f * parameter.Data[i]);
+                    }
+                });
             }
         }
+        // Workers own disjoint weights and moments; clipping and sample reductions retain their order.
+        if (work.Count >= 32)
+            Parallel.ForEach(work, new ParallelOptions { MaxDegreeOfParallelism = Math.Min(6, Environment.ProcessorCount) }, update => update());
+        else foreach (var update in work) update();
         Step++;
     }
 }

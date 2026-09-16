@@ -108,10 +108,16 @@ generalization to unseen conversational structures.
 | Joint understanding/realization, 7:3 updates | 180,000 | Peak 0.0003 |
 | Decoder-only polishing | 40,000 | Peak 0.0001 |
 
-Training uses seed 42, effective batch 32 with sequential microbatches, AdamW,
+Training uses seed 42, effective batch 32 with sequential microbatches by default, AdamW,
 global norm clipping at 1, and phase-local warmup/cosine schedules. The sampler
 deterministically permutes semantic families and rotates family members. Complete
 optimizer, update counters, next phase, sampler identity and RNG state are saved.
+
+`FISHBRAIN_TRAINING_WORKERS=1..6` optionally processes samples concurrently with
+separate gradient buffers. Masking RNG states are assigned in sample order before
+dispatch, and gradient accumulation retains that order. This trades training memory
+for throughput without changing batch size or checkpoint compatibility. Each sample
+worker disables nested kernel parallelism.
 
 Every 5,000 updates, calibration and scoring use disjoint validation families.
 A candidate is retained only when automated gates pass and its operational score

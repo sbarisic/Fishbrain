@@ -33,7 +33,7 @@ internal static class TensorKernels
         if (a.Length != checked(rows * inner) || b.Length != checked(inner * columns) || output.Length != checked(rows * columns))
             throw new ArgumentException("Invalid matrix storage.");
         var blocks = (rows + 3) / 4;
-        if (allowParallel && (long)rows * inner * columns >= 8_000_000 && rows >= 32)
+        if (allowParallel && TensorParallelism.AllowWorkers && (long)rows * inner * columns >= 8_000_000 && rows >= 32)
         {
             var workers = Math.Min(6, Math.Min(Environment.ProcessorCount, blocks));
             Parallel.For(0, workers, new ParallelOptions { MaxDegreeOfParallelism = workers }, worker =>
@@ -115,7 +115,7 @@ internal static class TensorKernels
 
     internal static float[] Transpose(float[] x, int rows, int columns)
     {
-        var y = new float[x.Length];
+        var y = InferenceScratch.Allocate(x.Length);
         const int block = 32;
         for (var rr = 0; rr < rows; rr += block) for (var cc = 0; cc < columns; cc += block)
             for (var r = rr; r < Math.Min(rows, rr + block); r++) for (var c = cc; c < Math.Min(columns, cc + block); c++) y[c * rows + r] = x[r * columns + c];

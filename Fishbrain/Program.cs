@@ -68,6 +68,10 @@ internal static class Program
                 case "profile-contextual":
                     Count(args, 2, 3);
                     return ContextualPerformance.Run(args[1], args.Length == 3 ? Steps(args[2]) : 32);
+                case "benchmark-training":
+                    Count(args, 4, 5);
+                    ContextualTrainingBenchmark.Run(args[1], args[2], args[3], args.Length == 5 ? Steps(args[4]) : 3);
+                    break;
                 case "acceptance-contextual":
                     Count(args, 3, 3);
                     return ContextualAcceptance.Run(args[1], args[2]);
@@ -192,6 +196,7 @@ internal static class Program
         Console.WriteLine("  conversation-gate SAMPLE.jsonl REVIEWED.jsonl");
         Console.WriteLine("  acceptance-contextual MODEL.fbm REPORT.json");
         Console.WriteLine("  selftest");
+        Console.WriteLine("  benchmark-training CORPUS_DIRECTORY CHECKPOINT REPORT.json [UPDATES_PER_PHASE]");
     }
 
     private static string FindProjectPath()

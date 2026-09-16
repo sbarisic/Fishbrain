@@ -18,19 +18,20 @@ internal static class ContextualTraining
         // A second trainer must never race checkpoint writes or consume the same sampler position.
         using var lease = new FileStream(checkpointPath + ".lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
         var corpusHash = CorpusHash(corpusDirectory);
+        var sampleWorkers = ConfiguredSampleWorkers();
         ContextualTrainer trainer;
         Dictionary<string, double> thresholds = [];
         if (File.Exists(checkpointPath))
         {
             var loaded = ContextualCheckpoint.Load(checkpointPath, DemoDialogueDomains.Merchant, training: true);
             if (loaded.Header.CorpusHash != corpusHash) throw new InvalidDataException("Training corpus differs from the checkpoint.");
-            trainer = ContextualTrainer.Restore(loaded);
+            trainer = ContextualTrainer.Restore(loaded, sampleWorkers);
             thresholds = loaded.Header.ExecutionThresholds;
         }
         else
         {
             var vocabulary = BuildVocabulary(Path.Combine(corpusDirectory, "train.jsonl"));
-            trainer = new(new ContextualNetwork(new(), vocabulary, DemoDialogueDomains.Merchant));
+            trainer = new(new ContextualNetwork(new(), vocabulary, DemoDialogueDomains.Merchant), sampleWorkers: sampleWorkers);
         }
         if (final <= trainer.Step) throw new ArgumentException("Training endpoint must exceed completed updates.");
         var data = TrainingData.Load(Path.Combine(corpusDirectory, "train.jsonl"), trainer.Architecture.Tokenizer).StructuredSamples;
@@ -114,6 +115,7 @@ internal static class ContextualTraining
                 CompletedSteps = trainer.Step,
                 RequestedEndpoint = final,
                 NextPhase = trainer.Step == 260000 ? "COMPLETE" : ContextualTrainer.Phase(trainer.Step).ToString(),
+                SampleWorkers = trainer.SampleWorkers,
                 CorpusHash = corpusHash,
                 UpdatedUtc = DateTimeOffset.UtcNow,
                 Loss = loss,
@@ -163,6 +165,14 @@ internal static class ContextualTraining
             while ((count = stream.Read(buffer)) > 0) hash.AppendData(buffer, 0, count);
         }
         return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+    }
+
+    internal static int ConfiguredSampleWorkers()
+    {
+        var value = Environment.GetEnvironmentVariable("FISHBRAIN_TRAINING_WORKERS");
+        if (value is null) return 1;
+        return int.TryParse(value, out var workers) && workers is >= 1 and <= 6 ? workers
+            : throw new ArgumentException("FISHBRAIN_TRAINING_WORKERS must be an integer within 1-6.");
     }
 
     internal static bool CalibrationFamily(string family) => SHA256.HashData(Encoding.UTF8.GetBytes(family))[0] < 128;
