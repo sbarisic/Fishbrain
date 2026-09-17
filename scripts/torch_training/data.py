@@ -30,14 +30,25 @@ class Corpus:
     def __init__(self, directory, split="train"):
         self.directory = Path(directory)
         self.manifest = json.loads((self.directory / "manifest.json").read_text())
-        if self.manifest["format"] != 1 or self.manifest["sampler"] != "COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION":
+        self.conversation = self.manifest['format'] == 4 and self.manifest['sampler'] == 'CONVERSATION_V4_BALANCED'
+        if not self.conversation and (self.manifest["format"] != 1 or self.manifest["sampler"] != "COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION"):
             raise ValueError("Unsupported packed corpus schema or sampler")
+        sampling = None
+        if self.conversation:
+            data = (self.directory / 'sampling.json').read_bytes()
+            if hashlib.sha256(data).hexdigest() != self.manifest['samplingHash']:
+                raise ValueError('Conversation sampler fingerprint mismatch')
+            sampling = json.loads(data)
+            if sampling['config']['version'] != 4 or sampling['config']['seed'] != 42:
+                raise ValueError('Unsupported conversation sampler configuration')
         self.path = self.directory / (split + ".jsonl")
         self.stream = self.path.open("rb")
         digest = hashlib.sha256()
         self.offsets = []
         full = collections.defaultdict(list)
         language = collections.defaultdict(list)
+        semantic = collections.defaultdict(lambda: collections.defaultdict(list))
+        realization = collections.defaultdict(list)
         while True:
             offset = self.stream.tell()
             line = self.stream.readline()
@@ -51,6 +62,15 @@ class Corpus:
             full[row["semanticFamilyId"]].append((key, index))
             if row["projectResponse"]:
                 language[row["semanticFamilyId"]].append((key, index))
+            if self.conversation:
+                meta=row['training']
+                pool=meta['pool']
+                if pool != 'public' and (row['targets'] or row['multi'] or row['memoryTargets'] is not None):
+                    semantic[pool][meta['augmentationFamily']].append((key,index))
+                if meta['responseEligible']:
+                    mass=sampling['weights'].get(split,{}).get(meta['exampleId'])
+                    if mass is None and split == 'train': raise ValueError('Missing training realization mass')
+                    realization[pool].append((index, mass if mass is not None else 1.0))
         if digest.hexdigest() != self.manifest["splitHashes"][split]:
             raise ValueError("Packed corpus digest mismatch")
         if len(self.offsets) != self.manifest["counts"][split]:
@@ -60,6 +80,17 @@ class Corpus:
                     for f in sorted(groups, key=lambda key: key.encode("utf-16-be"))]
         self.families = families(full)
         self.language_families = families(language)
+        if self.conversation:
+            self.semantic = {pool:families(group) for pool,group in semantic.items()}
+            if split=='train' and set(self.semantic) != set(sampling['config']['semanticPools']):
+                raise ValueError('Required semantic sampling pool is empty')
+            self.realization={}
+            for pool,group in realization.items():
+                indices,masses=zip(*group)
+                cumulative=np.cumsum(np.asarray(masses,dtype=float))
+                self.realization[pool]=(indices,cumulative/cumulative[-1])
+            if set(self.realization) != {'public','authored'}:
+                raise ValueError('Required realization pool is empty')
 
     @functools.lru_cache(maxsize=2048)
     def row(self, index):
@@ -67,6 +98,22 @@ class Corpus:
         return json.loads(self.stream.readline())
 
     def batch(self, step, phase, size=32):
+        if self.conversation and phase != 'MaskedLanguage':
+            rng=RandomState((42 + step * 0x9E3779B97F4A7C15) & ((1<<64)-1) or 42)
+            if phase in ('JointRealization','DecoderPolish'):
+                # Three of every five realization updates are public. Each batch is homogeneous.
+                # Joint realization occupies residues 7,8,9 in the ten-update curriculum.
+                ordinal=((step-40000)//10*3 + max(0,(step-40000)%10-7)) if step>=40000 else step
+                pool='public' if ordinal % 5 < 3 else 'authored'
+                indices,cumulative=self.realization[pool]
+                return [self.row(indices[min(len(indices)-1,int(np.searchsorted(cumulative,rng.double())))]) for _ in range(size)]
+            pools=sorted(self.semantic)
+            result=[]
+            for i in range(size):
+                families=self.semantic[pools[(step*size+i)%len(pools)]]
+                family=families[rng.next()%len(families)]
+                result.append(self.row(family[rng.next()%len(family)]))
+            return result
         families = self.language_families if phase in ("JointRealization", "DecoderPolish") else self.families
         stride = max(1, 85 % len(families))
         while math.gcd(stride, len(families)) != 1:

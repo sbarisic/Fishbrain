@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Diagnostics;
 using Fishbrain.Neural;
 
 namespace Fishbrain;
@@ -6,7 +8,7 @@ namespace Fishbrain;
 internal sealed record ContextualAcceptanceCase(string Id, ReplyRequest Request, SemanticFrame[] Frames,
     PlannedResponseAct[] Plan, string? ExpectedTool, DialogueFact[]? SelectedFacts = null,
     DialogueFact[]? ExpectedFacts = null, DialogueAgendaEntry[]? ExpectedAgenda = null,
-    PendingDialogueAction[]? ExpectedPending = null);
+    PendingDialogueAction[]? ExpectedPending = null, KnowledgeTarget? ExpectedKnowledge = null);
 
 /// <summary>Authored evaluation fixtures. These examples are never supplied to the compiler or trainer.</summary>
 internal static class ContextualAcceptance
@@ -108,15 +110,45 @@ internal static class ContextualAcceptance
     }
 
     internal static int Run(string modelPath, string outputPath)
+        => RunCases(modelPath, outputPath, Cases(), null);
+
+    internal static int RunChallenge(string modelPath, string suitePath, string outputPath)
     {
+        var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+        options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper));
+        var suite = JsonSerializer.Deserialize<ChallengeEntry[]>(File.ReadAllText(suitePath), options)
+            ?? throw new InvalidDataException("Empty challenge suite.");
+        if (suite.Length != 120 || suite.Count(x => x.Case.Request.Utterances.Count >= 3) < 40 ||
+            suite.Select(x => x.Case.Id).Distinct().Count() != suite.Length)
+            throw new InvalidDataException("The frozen challenge requires 120 unique cases and at least 40 multi-turn contexts.");
+        foreach (var entry in suite)
+        {
+            entry.Case.Request.State.Validate();
+            new ContextualSupervision(entry.Case.Frames, entry.Case.Plan, entry.Case.SelectedFacts, entry.Case.ExpectedAgenda)
+                .Validate(entry.Case.Request.Utterances[^1].Text);
+        }
+        return RunCases(modelPath, outputPath, suite.Select(x => x.Case).ToArray(), suite.ToDictionary(x => x.Case.Id, x => x.Category));
+    }
+
+    private sealed record ChallengeEntry(string Category, ContextualAcceptanceCase Case);
+
+    private static int RunCases(string modelPath, string outputPath, IReadOnlyList<ContextualAcceptanceCase> cases,
+        IReadOnlyDictionary<string, string>? categories)
+    {
+        var elapsed = Stopwatch.StartNew();
         var brain = Brain.Load(modelPath);
-        var rows = Cases().Select(test =>
+        var coldLoad = elapsed.Elapsed.TotalMilliseconds;
+        var rows = cases.Select(test =>
         {
             var world = new DemoWorldState();
+            var inventoryBefore = world.Inventory.OrderBy(x => x.Key).ToArray();
+            var timer = Stopwatch.StartNew();
             var result = brain.Reply(test.Request, DemoGameTools.CreateMerchant(world));
+            var replyMs = timer.Elapsed.TotalMilliseconds;
             var actual = result.Contextual!;
             var frame = ContextualEvaluation.FramesEqual(test.Frames, actual.Frames);
             var plan = test.Plan.SequenceEqual(actual.Acts);
+            var knowledge = test.ExpectedKnowledge is null ? (bool?)null : result.Perception.KnowledgeTarget == test.ExpectedKnowledge;
             var tool = test.ExpectedTool == result.Diagnostics.ToolInvocation?.ToolName;
             if (tool && test.ExpectedTool is { } expectedTool)
             {
@@ -135,7 +167,7 @@ internal static class ContextualAcceptance
             var agenda = test.ExpectedAgenda is null ? (bool?)null : test.ExpectedAgenda.SequenceEqual(result.State.Agenda);
             var pending = test.ExpectedPending is null ? (bool?)null :
                 test.ExpectedPending.Select(PendingKey).SequenceEqual(result.State.PendingActions.Select(PendingKey));
-            var unintendedMutation = !tool && world.Balance != 100;
+            var unintendedMutation = !tool && (world.Balance != 100 || !inventoryBefore.SequenceEqual(world.Inventory.OrderBy(x => x.Key)));
             var authority = true;
             if (result.Diagnostics.ToolInvocation is { } invocation)
             {
@@ -143,11 +175,20 @@ internal static class ContextualAcceptance
                 authority = oracle.TryGet(invocation.ToolName, out var implementation) &&
                     result.Text.Contains(GameToolRegistry.Render(implementation.Schema, GameToolRegistry.InvokeValidated(implementation, invocation)), StringComparison.Ordinal);
             }
+            string? screeningReason = null;
+            bool? screeningPassed = result.Diagnostics.ResponseSource == ResponseSource.ConversationalGenerated
+                ? ConversationalOutputValidator.IsSafe(result.Text, test.Request.Persona,
+                    test.Request.PlayerProfile.Facts.Concat(test.Request.State.SessionFacts).ToArray(), out screeningReason) : null;
             return new
             {
                 test.Id,
+                Category = categories?.GetValueOrDefault(test.Id) ?? "legacy-acceptance",
+                ReplyMilliseconds = replyMs,
+                GeneratedTextScreenPassed = screeningPassed,
+                GeneratedTextScreenReason = screeningReason,
                 Frame = frame,
                 Plan = plan,
+                Knowledge = knowledge,
                 Tool = tool,
                 Memory = memory,
                 Facts = facts,
@@ -164,7 +205,7 @@ internal static class ContextualAcceptance
         var memoryRate = Rate(rows.Select(x => x.Memory));
         var correctionRate = Rate(rows.Where(x => x.Expected.Frames.Any(f => f.Fact?.Act is DiscourseAct.Correct or DiscourseAct.RejectAssumption)).Select(x => x.Facts));
         var pass = frameRate >= .90 && planRate >= .90 && memoryRate >= .95 && correctionRate >= .95 &&
-            rows.All(x => x.Tool && x.Facts != false && x.Agenda != false && x.Pending != false && !x.UnintendedMutation && x.Authority);
+            rows.All(x => x.Tool && x.Knowledge != false && x.Facts != false && x.Agenda != false && x.Pending != false && !x.UnintendedMutation && x.Authority);
         var report = new
         {
             Rows = rows.Length,
@@ -172,7 +213,22 @@ internal static class ContextualAcceptance
             PlanExact = planRate,
             MemoryExact = memoryRate,
             CorrectionExact = correctionRate,
+            AgendaExact = Rate(rows.Select(x => x.Agenda)),
+            UnintendedMutations = rows.Count(x => x.UnintendedMutation),
+            AuthorityAlterations = rows.Count(x => !x.Authority),
             Passed = pass,
+            ColdLoadMilliseconds = coldLoad,
+            ElapsedSeconds = elapsed.Elapsed.TotalSeconds,
+            ReplyP95Milliseconds = rows.Select(x => x.ReplyMilliseconds).Order().ElementAt((int)Math.Ceiling(rows.Length * .95)-1),
+            UnderstandingP95Milliseconds = rows.Select(x => x.Actual.Contextual!.UnderstandingMilliseconds).Order().ElementAt((int)Math.Ceiling(rows.Length * .95)-1),
+            RepeatedResponseFraction = 1 - rows.Select(x => x.Actual.Text).Distinct().Count() / (double)rows.Length,
+            Categories = rows.GroupBy(x => x.Category).Select(g => new { Category = g.Key, Rows = g.Count(),
+                FrameExact = g.Count(x => x.Frame) / (double)g.Count(), PlanExact = g.Count(x => x.Plan) / (double)g.Count(),
+                MemoryExact = g.Any(x => x.Memory.HasValue) ? Rate(g.Select(x => x.Memory)) : (double?)null,
+                CorrectionExact = g.Any(x => x.Expected.Frames.Any(f => f.Fact?.Act == DiscourseAct.Correct))
+                    ? Rate(g.Where(x => x.Expected.Frames.Any(f => f.Fact?.Act == DiscourseAct.Correct)).Select(x => x.Facts)) : (double?)null,
+                AgendaExact = g.Any(x => x.Agenda.HasValue) ? Rate(g.Select(x => x.Agenda)) : (double?)null,
+                UnintendedMutations = g.Count(x => x.UnintendedMutation), AuthorityAlterations = g.Count(x => !x.Authority) }).ToArray(),
             Cases = rows
         };
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);

@@ -79,6 +79,11 @@ def learning_rate(step):
 
 
 def train_update(model, optimizer, batch, phase, step, precision="fp32", mine_claims=None):
+    if phase == 'JointRealization':
+        public = [(r.get('training') or {}).get('pool') == 'public' for r in batch['rows']]
+        if any(public):
+            if not all(public): raise ValueError('Public realization batches must be homogeneous')
+            phase = 'DecoderPolish'  # Same decoder loss; joint LR, no encoder/planner gradients or AdamW decay.
     parameters = set_phase(model, phase)
     optimizer.zero_grad(set_to_none=True)
     for group in optimizer.param_groups:

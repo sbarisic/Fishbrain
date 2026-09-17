@@ -27,6 +27,8 @@ def validate(model, corpus, phase, precision):
         row = corpus.row(index)
         if phase in ("JointRealization", "DecoderPolish") and not row["projectResponse"]:
             continue
+        if phase == 'JointUnderstanding' and corpus.conversation and not (row['targets'] or row['multi'] or row['memoryTargets'] is not None):
+            continue
         pending.append(row)
         if len(pending) == 32:
             total += measure(pending) * len(pending)
@@ -64,6 +66,8 @@ def main():
     torch.use_deterministic_algorithms(True)
     with lease(output / "training.lock"):
         corpus = Corpus(args.corpus)
+        if corpus.conversation and args.until > 50000:
+            raise ValueError('Conversation v4 is approved only for the bounded 50000-update pilot; full retraining is a separate decision')
         validation = Corpus(args.corpus, "validation")
         binding = fingerprint(args.corpus)
         header, weights = read_fbm(Path(args.corpus) / "initial.fbm")
@@ -74,7 +78,7 @@ def main():
         step, best = 0, {}
         rejected = 0
         if checkpoint.exists():
-            state = restore(checkpoint, model, optimizer, rng, binding, args.precision)
+            state = restore(checkpoint, model, optimizer, rng, binding, args.precision, corpus.manifest['sampler'])
             step, best = state["completedSteps"], state["bestValidation"]
             rejected = state["generatedRejectedCandidates"]
             del state
@@ -102,7 +106,7 @@ def main():
                         updatedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat(),
                         generatedRejectedCandidates=miner.rejected))
         def durable():
-            save(checkpoint, model, optimizer, rng, step, binding, args.precision, best, miner.rejected)
+            save(checkpoint, model, optimizer, rng, step, binding, args.precision, best, miner.rejected, corpus.manifest['sampler'])
         try:
             if not checkpoint.exists():
                 durable()
@@ -141,7 +145,7 @@ def main():
                     if score < best.get(key, float("inf")):
                         best[key] = score
                         export_fbm(model, output / ("best-" + key + ".fbm"), step)
-                        save(output / ("best-" + key + ".pt"), model, optimizer, rng, step, binding, args.precision, best, miner.rejected)
+                        save(output / ("best-" + key + ".pt"), model, optimizer, rng, step, binding, args.precision, best, miner.rejected, corpus.manifest['sampler'])
                     durable()
                     status = "RUNNING"
                     progress()

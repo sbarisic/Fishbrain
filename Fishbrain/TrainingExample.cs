@@ -28,4 +28,5 @@ internal sealed record TrainingExample(
     public ReplyRequest? Request { get; init; }
     public ContextualSupervision? Contextual { get; init; }
     public string? Response { get; init; }
+    public TrainingEligibility? Training { get; init; }
 }

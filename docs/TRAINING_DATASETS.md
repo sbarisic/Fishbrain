@@ -1,5 +1,10 @@
 # Fishbrain training datasets
 
+**Current experiment:** see [conversation-v4](../CONVERSATION_V4.md) for the revised
+corpus, explicit public-response eligibility, source pins, audits and bounded pilot.
+It replaces the fixed total/source quotas for this experiment. The sections below
+record the earlier 80,000-row curriculum and remain historical context.
+
 This plan adds game-grounded dialogue, general-purpose banter and small talk, task
 semantics, social goals, and mature language without treating a generic assistant
 corpus as the target product.

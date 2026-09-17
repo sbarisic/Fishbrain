@@ -5,6 +5,12 @@ update. Python and PyTorch are training dependencies only. Exported `.fbm` files
 load in the existing dependency-free .NET CPU runtime. The native C# trainer remains
 available. Old CPU optimizer checkpoints are not converted; this run starts fresh.
 
+For the revised dataset, use the [conversation-v4 guide](../../CONVERSATION_V4.md).
+It adds explicit loss eligibility, 60/40 public/authored realization sampling,
+frozen encoder/planner state for public batches and a hard 50,000-update pilot cap.
+The v3 preparation/full-training commands below remain historical reproduction
+instructions; they are not the conversation-v4 pilot workflow.
+
 ## Setup
 
 Validated on Windows with Python 3.14.4, PyTorch 2.13.0+rocm10.0.0, NumPy 2.5.3,

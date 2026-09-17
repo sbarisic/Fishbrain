@@ -76,6 +76,21 @@ internal static class Program
                     Count(args, 3, 3);
                     TorchTrainingBridge.Prepare(args[1], args[2]);
                     break;
+                case "normalize-conversation":
+                    Count(args, 1, 1);
+                    TorchTrainingBridge.NormalizeConversation();
+                    break;
+                case "audit-conversation":
+                    Count(args, 3, 3);
+                    TorchTrainingBridge.AuditConversation(args[1], args[2]);
+                    break;
+                case "challenge-conversation":
+                    Count(args, 4, 4);
+                    return ContextualAcceptance.RunChallenge(args[1], args[2], args[3]);
+                case "calibrate-pilot":
+                    Count(args, 4, 4);
+                    TorchTrainingBridge.CalibratePilot(args[1], args[2], args[3]);
+                    break;
                 case "torch-reference":
                     Count(args, 4, 4);
                     TorchTrainingBridge.Reference(args[1], args[2], args[3]);
@@ -210,6 +225,9 @@ internal static class Program
         Console.WriteLine("  conversation-sample MODEL.fbm SCENARIOS.jsonl REVIEW.jsonl");
         Console.WriteLine("  conversation-gate SAMPLE.jsonl REVIEWED.jsonl");
         Console.WriteLine("  acceptance-contextual MODEL.fbm REPORT.json");
+        Console.WriteLine("  challenge-conversation MODEL.fbm SUITE.json REPORT.json");
+        Console.WriteLine("  audit-conversation CORPUS REPORT.json");
+        Console.WriteLine("  calibrate-pilot CORPUS MODEL.fbm OUTPUT.fbm");
         Console.WriteLine("  selftest");
         Console.WriteLine("  benchmark-training CORPUS_DIRECTORY CHECKPOINT REPORT.json [UPDATES_PER_PHASE]");
         Console.WriteLine("  prepare-torch CORPUS_DIRECTORY EMPTY_OUTPUT_DIRECTORY");

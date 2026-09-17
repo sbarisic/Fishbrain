@@ -7,6 +7,61 @@ namespace Fishbrain;
 /// <summary>Exports canonical packed inputs and masked targets; Python never reparses dialogue roles or spans.</summary>
 internal static class TorchTrainingBridge
 {
+    internal static void NormalizeConversation()
+    {
+        string? line;
+        while ((line = Console.ReadLine()) is not null)
+        {
+            var values = JsonSerializer.Deserialize<string[]>(line) ?? [];
+            Console.WriteLine(JsonSerializer.Serialize(values.Select(value =>
+            {
+                try { return new { Text = (string?)DialogueText.Normalize(value), Error = (string?)null }; }
+                catch (ArgumentException error) { return new { Text = (string?)null, Error = (string?)error.Message }; }
+            })));
+        }
+    }
+
+    internal static void AuditConversation(string corpus, string report)
+    {
+        var model = new ContextualNetwork(new(), ContextualTraining.BuildVocabulary(Path.Combine(corpus, "train.jsonl")), DemoDialogueDomains.Merchant);
+        var rejected = new List<object>();
+        var histories = new Dictionary<string, object>();
+        var counts = new Dictionary<string, int>();
+        foreach (var split in new[] { "train", "validation", "test" })
+        {
+            var rows = TrainingData.Load(Path.Combine(corpus, split + ".jsonl"), model.Tokenizer).StructuredSamples;
+            counts[split] = rows.Count;
+            foreach (var row in rows)
+            {
+                if (row.Training is null) throw new InvalidDataException("Conversation v4 requires explicit eligibility metadata.");
+                try
+                {
+                    var packed = StructuredInput.Pack(row.Request!, model.Tokenizer, 512, row.Contextual?.RelevantFacts ?? [], model.Domain);
+                    if (row.Training.ResponseEligible) histories[row.Training.ExampleId] = new { Turns = packed.Utterances.Length, Tokens = packed.Tokens.Length };
+                    if (row.Training.ResponseEligible && model.Tokenizer.Encode(row.Response!).Length + 1 > 64)
+                        throw new ArgumentException("RESPONSE_TOKEN_BUDGET");
+                }
+                catch (ArgumentException error) { rejected.Add(new { Id = row.Request!.TurnId, Reason = error.Message }); }
+            }
+        }
+        File.WriteAllText(report, JsonSerializer.Serialize(new { Counts = counts, Rejected = rejected, Histories = histories }));
+    }
+
+    internal static void CalibratePilot(string corpus, string input, string output)
+    {
+        var loaded = ContextualCheckpoint.Load(input);
+        if (loaded.Header.CorpusHash != ContextualTraining.CorpusHash(corpus))
+            throw new InvalidDataException("Pilot calibration corpus mismatch.");
+        var rows = TrainingData.Load(Path.Combine(corpus, "validation.jsonl"), loaded.Model.Tokenizer).StructuredSamples
+            .Where(x => x.Contextual?.Frames is not null && ContextualTraining.CalibrationFamily(x.SemanticFamilyId)).ToArray();
+        var metrics = ContextualEvaluation.Measure(loaded.Model, rows, loaded.Header.CompletedSteps, loaded.Header.ExecutionThresholds);
+        var thresholds = ContextualEvaluation.Calibrate(metrics.ToolDecisions, loaded.Model.Domain);
+        ContextualCheckpoint.Save(output, loaded.Model, loaded.Header.CorpusHash, loaded.Header.CompletedSteps, thresholds);
+        File.WriteAllText(output + ".calibration.json", JsonSerializer.Serialize(new { Rows = rows.Length, Thresholds = thresholds,
+            Coverage = metrics.ToolDecisions.GroupBy(x => x.Tool).ToDictionary(g => g.Key, g => new { Candidates = g.Count(), Correct = g.Count(x => x.Correct) }),
+            Method = "VALIDATION_FAMILIES_ONLY; existing minimum 30 decisions and 99% mutating / 95% read-only precision", Promoted = false }, Json));
+        Console.WriteLine($"PILOT CALIBRATED {rows.Length} HELD-OUT ROWS; NO MODEL PROMOTED");
+    }
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     internal sealed record Target(string Name, int Row, int Label, float Weight);
     internal sealed record MultiTarget(string Name, int[] Labels);
@@ -35,6 +90,8 @@ internal static class TorchTrainingBridge
 
     internal static void Prepare(string corpus, string directory)
     {
+        var conversation = File.Exists(Path.Combine(corpus, "conversation-v4.json"));
+        if (conversation) ValidateConversationBinding(corpus);
         directory = Path.GetFullPath(directory);
         if (Directory.Exists(directory) && Directory.EnumerateFileSystemEntries(directory).Any())
             throw new ArgumentException("Use an empty output directory for a fresh GPU training dataset.");
@@ -44,6 +101,10 @@ internal static class TorchTrainingBridge
         ContextualCheckpoint.Save(Path.Combine(directory, "initial.fbm"), model, corpusHash, 0, new Dictionary<string, double>());
         var counts = new Dictionary<string, int>();
         var hashes = new Dictionary<string, string>();
+        if (conversation)
+        {
+            File.Copy(Path.Combine(corpus, "sampling.json"), Path.Combine(directory, "sampling.json"), false);
+        }
         foreach (var split in new[] { "train", "validation", "test" })
         {
             var examples = TrainingData.Load(Path.Combine(corpus, split + ".jsonl"), model.Tokenizer).StructuredSamples;
@@ -57,7 +118,7 @@ internal static class TorchTrainingBridge
         }
         File.WriteAllText(Path.Combine(directory, "manifest.json"), JsonSerializer.Serialize(new
         {
-            Format = 1,
+            Format = conversation ? 4 : 1,
             CorpusHash = corpusHash,
             Config = model.Config,
             Counts = counts,
@@ -70,8 +131,28 @@ internal static class TorchTrainingBridge
             OutputToInput = Enumerable.Range(0, model.Vocabulary.OutputSize).Select(model.Vocabulary.InputIdFromOutput).ToArray(),
             GeneratedOutputs = model.Vocabulary.GeneratedTextOutputs.Order().ToArray(),
             InitialRandomState = new DeterministicRandom(42).State,
-            Sampler = "COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION"
+            Sampler = conversation ? "CONVERSATION_V4_BALANCED" : "COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION",
+            CorpusMetadataHash = conversation ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(corpus, "conversation-v4.json")))).ToLowerInvariant() : null
+            , SamplingHash = conversation ? Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Path.Combine(corpus, "sampling.json")))).ToLowerInvariant() : null
         }, Json));
+    }
+
+    internal static void ValidateConversationBinding(string corpus)
+    {
+        using var metadata = JsonDocument.Parse(File.ReadAllText(Path.Combine(corpus, "conversation-v4.json")));
+        var root = metadata.RootElement;
+        if (root.GetProperty("schema").GetString() != "conversation-v4" ||
+            root.GetProperty("preparationStatus").GetString() != "READY_FOR_DATA_REVIEW")
+            throw new InvalidDataException("Conversation corpus did not pass preparation gates.");
+        foreach (var split in new[] { "train", "validation", "test" })
+            Verify(split + ".jsonl", root.GetProperty("splitHashes").GetProperty(split).GetString());
+        Verify("sampling.json", root.GetProperty("samplingHash").GetString());
+        void Verify(string file, string? expected)
+        {
+            using var stream = File.OpenRead(Path.Combine(corpus, file));
+            var actual = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+            if (expected != actual) throw new InvalidDataException($"Reviewed conversation corpus changed: {file}.");
+        }
     }
 
     internal static object Pack(ContextualNetwork model, TrainingExample example)
@@ -164,8 +245,9 @@ internal static class TorchTrainingBridge
             TeacherPlan = example.Contextual?.Plan?.Select(p => (int)p.Act).ToArray(),
             Response = response,
             ResponseTargets = response.Select(model.Vocabulary.OutputId).ToArray(),
-            ClaimPositive = project ? model.Tokenizer.Encode(example.Response!) : [],
-            ClaimNegative = project && example.RejectedResponse is { } rejected ? model.Tokenizer.Encode(rejected) : [],
+            ClaimPositive = ContextualTrainer.ClaimPositive(example) ? model.Tokenizer.Encode(example.Response!) : [],
+            ClaimNegative = ContextualTrainer.ClaimNegative(example) ? model.Tokenizer.Encode(example.RejectedResponse!) : [],
+            Training = example.Training,
             ClaimContext = new { request.Persona, Facts = selected },
             ProjectResponse = project
         };

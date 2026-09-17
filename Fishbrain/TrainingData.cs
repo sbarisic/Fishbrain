@@ -91,8 +91,9 @@ internal sealed class TrainingData
         if (row.Input is null || row.State is null || row.Perception is null || row.Action is null)
             throw new InvalidDataException("Input, state, perception, and action are required.");
         var input = Tokenizer.Normalize(row.Input);
-        if (input != row.Input || input.Length is < 1 or > 1024)
-            throw new InvalidDataException("Input must be canonical and contain 1-1024 characters.");
+        var maximumInput = row.Training?.Version == 4 ? 32768 : 1024;
+        if (input != row.Input || input.Length < 1 || input.Length > maximumInput)
+            throw new InvalidDataException($"Input must be canonical and contain 1-{maximumInput} characters.");
         row.State.Validate();
         var perception = row.Perception;
         var decision = new TurnDecision(row.Action.Value);
@@ -121,11 +122,11 @@ internal sealed class TrainingData
 
         var rowKey = DialogueKeys.StateInput(input, row.State);
         var rowValue = $"{perception}|{decision.Action}|{response ?? "<NULL>"}";
-        if (rows.TryGetValue(rowKey, out var existing) && existing != rowValue)
+        if (row.Training is null && rows.TryGetValue(rowKey, out var existing) && existing != rowValue)
             throw new InvalidDataException("The same state and input cannot have competing supervision.");
         rows[rowKey] = rowValue;
 
-        samples.Add(CreatePerceptionSample(input, perception, bucket, source, row.Family, tokenizer));
+        samples.Add(CreatePerceptionSample(input, perception, bucket, source, row.Family, tokenizer, row.Turns is { Length: > 0 } ? row.Turns[^1].Text : null));
         if (row.StructuredPerception is not null)
         {
             var structured = row.StructuredPerception;
@@ -142,7 +143,8 @@ internal sealed class TrainingData
                 throw new InvalidDataException("Structured perception contains an unknown label.");
             if (string.IsNullOrWhiteSpace(row.SemanticFamilyId))
                 throw new InvalidDataException("Structured rows require semanticFamilyId.");
-            var supervisedNames = row.SupervisedHeads ?? ModelSchemas.Labels.Keys.Concat(["tool", "responseCandidate"]).ToArray();
+            var supervisedNames = row.SupervisedHeads ?? (row.Training is null
+                ? ModelSchemas.Labels.Keys.Concat(["tool", "responseCandidate"]).ToArray() : []);
             if (supervisedNames.Distinct(StringComparer.Ordinal).Count() != supervisedNames.Length ||
                 supervisedNames.Any(head => !KnownStructuredHeads.Contains(head)))
                 throw new InvalidDataException("Structured supervision contains an unknown or duplicate head.");
@@ -153,7 +155,7 @@ internal sealed class TrainingData
             var candidateName = structured.ResponseCandidateId ?? "ACKNOWLEDGE";
             if (supervised.Contains("responseCandidate") && !KnownResponseCandidates.Contains(candidateName))
                 throw new InvalidDataException($"Unknown response candidate target '{candidateName}'.");
-            var currentTurn = LegacyBrain.ExtractCurrentPlayerTurn(input);
+            var currentTurn = row.Turns is { Length: > 0 } ? DialogueText.Normalize(row.Turns[^1].Text) : LegacyBrain.ExtractCurrentPlayerTurn(input);
             var currentOffset = input.LastIndexOf(currentTurn, StringComparison.Ordinal);
             var normalizedSlots = structured.Slots.Select(slot => NormalizeSlot(slot, currentTurn, currentOffset)).ToArray();
             structured.Discourse?.FactValueSpan?.Validate(currentTurn);
@@ -202,8 +204,12 @@ internal sealed class TrainingData
                 Request = new ReplyRequest(row.GroupId ?? source, row.SemanticFamilyId ?? source, turns, initialState,
                     row.Persona ?? NpcPersona.Default, initialProfile, turns[^1].Sequence + 1, 42),
                 Contextual = row.Contextual,
-                Response = response
+                Response = response,
+                Training = row.Training
             });
+            row.Training?.Validate(response, row.RejectedResponse);
+            if (row.Training?.Pool == "public" && (supervised.Count != 0 || row.Contextual is not null))
+                throw new InvalidDataException("Public language-only examples cannot invent semantic supervision.");
             row.Contextual?.Validate(currentTurn);
         }
 
@@ -274,9 +280,9 @@ internal sealed class TrainingData
 
     private static TrainingSample CreatePerceptionSample(
         string input, TurnPerception perception, string bucket, string source, string? family,
-        DialogueTokenizer tokenizer)
+        DialogueTokenizer tokenizer, string? explicitCurrentTurn = null)
     {
-        var currentTurn = LegacyBrain.ExtractCurrentPlayerTurn(input);
+        var currentTurn = explicitCurrentTurn ?? LegacyBrain.ExtractCurrentPlayerTurn(input);
         var encoded = tokenizer.Encode(currentTurn);
         var maximumText = 254;
         if (encoded.Length > maximumText) encoded = encoded[^maximumText..];
@@ -415,6 +421,7 @@ internal sealed class TrainingData
         int? UnlikelihoodToken = null);
     private sealed class TrainingRow
     {
+        public TrainingEligibility? Training { get; set; }
         public ContextualSupervision? Contextual { get; set; }
         public string? Input { get; set; }
         public NpcState? State { get; set; }

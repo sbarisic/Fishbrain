@@ -70,15 +70,17 @@ internal sealed class WordVocabulary
             if (string.IsNullOrWhiteSpace(line)) continue;
             using var document = JsonDocument.Parse(line);
             var root = document.RootElement;
+            var explicitEligibility = root.TryGetProperty("training", out var training) && training.ValueKind == JsonValueKind.Object;
+            var canGenerate = !explicitEligibility || training.GetProperty("responseEligible").GetBoolean();
             AddProperty(root, "input", words, null);
-            AddProperty(root, "response", words, outputWords);
-            AddProperty(root, "result", words, outputWords);
-            AddProperty(root, "tool", words, outputWords);
+            AddProperty(root, "response", words, canGenerate ? outputWords : null);
+            AddProperty(root, "result", words, explicitEligibility ? null : outputWords);
+            AddProperty(root, "tool", words, explicitEligibility ? null : outputWords);
             if (root.TryGetProperty("arguments", out var arguments) && arguments.ValueKind == JsonValueKind.Array)
             {
                 foreach (var argument in arguments.EnumerateArray())
                     if (argument.ValueKind == JsonValueKind.String)
-                        AddText(argument.GetString()!, words, outputWords);
+                        AddText(argument.GetString()!, words, explicitEligibility ? null : outputWords);
             }
         }
         return new WordVocabulary(words, outputWords);

@@ -1,0 +1,347 @@
+{
+  "status": "READY_FOR_DATA_REVIEW",
+  "failures": [],
+  "rows": 64528,
+  "bySplit": {
+    "validation": 6186,
+    "train": 52224,
+    "test": 6118
+  },
+  "byPool": {
+    "public": 2350,
+    "authored": 296,
+    "focused": 41882,
+    "classification": 20000
+  },
+  "authoredEpisodes": 260,
+  "authoredRows": 296,
+  "behavioralCoverage": {
+    "openings": 20,
+    "feelings": 20,
+    "small_talk": 20,
+    "preferences": 20,
+    "clarification": 20,
+    "repair": 20,
+    "topic_changes": 20,
+    "follow_ups": 20,
+    "memory": 20,
+    "corrections": 20,
+    "tools": 20,
+    "compound": 20,
+    "identity": 20,
+    "fresh_clarification": 20,
+    "agenda": 16
+  },
+  "realizationHistoryCounts": {
+    "short": 1025,
+    "fresh": 86,
+    "long": 1455
+  },
+  "supervision": {
+    "speechActs": 53178,
+    "domains": 57178,
+    "goals": 57178,
+    "policy": 42178,
+    "slots": 49178,
+    "tool": 42178,
+    "knowledgeTarget": 42178,
+    "discourseAct": 37284,
+    "discourseSubject": 37284,
+    "discourseTarget": 37284,
+    "factKind": 27728,
+    "factPolarity": 27728,
+    "factSpan": 27728,
+    "antecedent": 33728,
+    "affect": 43882,
+    "stance": 41882,
+    "content": 44882,
+    "responseCandidate": 41882
+  },
+  "responseCounts": [
+    [
+      "THANKS FOR CORRECTING THAT.",
+      21
+    ],
+    [
+      "THANKS FOR COMING BACK TO MY QUESTION.",
+      16
+    ],
+    [
+      "WHERE DO YOU LIVE?",
+      7
+    ],
+    [
+      "WHAT DO YOU DO FOR WORK?",
+      6
+    ],
+    [
+      "DO YOU PLAY ANY INSTRUMENTS?",
+      5
+    ],
+    [
+      "WHAT KIND OF MUSIC DO YOU LIKE?",
+      5
+    ],
+    [
+      "DO YOU LIKE MUSEUMS?",
+      5
+    ],
+    [
+      "WHAT DO YOU DO FOR FUN?",
+      5
+    ],
+    [
+      "WHAT DO YOU LIKE TO DO?",
+      4
+    ],
+    [
+      "WHAT KIND OF DOG DO YOU HAVE?",
+      4
+    ],
+    [
+      "THAT SOUNDS LIKE A NICE BALANCE. DO YOU ENJOY YOUR OWN WORK?",
+      4
+    ],
+    [
+      "HOW OLD ARE THEY?",
+      4
+    ],
+    [
+      "WHAT DO YOU DO?",
+      4
+    ],
+    [
+      "WHAT ARE YOU STUDYING?",
+      4
+    ],
+    [
+      "DO YOU HAVE A DOG?",
+      3
+    ],
+    [
+      "OH THAT'S COOL. WHERE DO YOU STUDY?",
+      3
+    ],
+    [
+      "HOW OLD ARE YOUR CHILDREN?",
+      3
+    ],
+    [
+      "WHAT KIND OF VIDEO GAMES ARE YOU INTO?",
+      3
+    ],
+    [
+      "ARE THERE ANY OTHER TYPES OF SEAFOOD YOU LIKE?",
+      3
+    ],
+    [
+      "OH THAT IS NICE. DO YOU HAVE A WEBSITE FOR YOUR BUSINESS?",
+      3
+    ],
+    [
+      "DO YOU HAVE ANY HOBBIES?",
+      3
+    ],
+    [
+      "HAVE YOU EVER BEEN TO A CONCERT?",
+      3
+    ],
+    [
+      "WHERE ARE YOU FROM?",
+      3
+    ],
+    [
+      "HOW MANY KIDS DO YOU HAVE?",
+      3
+    ],
+    [
+      "THANKS FOR THE EXTRA MOTIVATION!",
+      3
+    ]
+  ],
+  "responseQuestionFraction": 0.896726422447389,
+  "distinctCurrentWording": 42081,
+  "frozenChallengeOverlapComponentsRemoved": 0,
+  "exclusions": {
+    "duplicate_release_message": 95929,
+    "normalization_rejected": 12205,
+    "response_char_budget": 5670,
+    "missing_or_low_quality": 41554,
+    "missing_or_high_failure_to_answer": 26961,
+    "missing_or_nonzero_spam": 15308,
+    "not_english": 48117,
+    "missing_or_nonzero_pii": 10735,
+    "not_accepted": 6400,
+    "flagged_ancestor_context": 3802,
+    "missing_or_nonzero_lang_mismatch": 13089,
+    "deleted": 3285,
+    "unbound_declarative_claim": 2418,
+    "unbound_speaker_identity": 13129,
+    "technical_or_assistant_identity": 105,
+    "not_conversational_response": 5883,
+    "synthetic": 7575,
+    "unsupported_biography_or_possession": 7126,
+    "invalid_or_incomplete_role_chain": 13,
+    "authority_or_service_claim": 76,
+    "out_of_domain_response": 115,
+    "low_information_response": 334,
+    "identity_assignment_or_out_of_domain_context": 5,
+    "unsuitable_response": 3,
+    "out_of_domain_context": 49,
+    "contact_or_link": 12,
+    "unaccepted_ancestor_response": 44,
+    "unlabelled_memory_claim": 56,
+    "normalization_rejected_history": 4601,
+    "flagged_worker": 956,
+    "episode_contains_review_rejected_response": 5,
+    "data_review:Malformed and unclear follow-up question.": 1,
+    "data_review:Real-world electoral question is unsuitable for the NPC corpus.": 1,
+    "data_review:Unmotivated Civil War wedding-cake follow-up; unrelated to the player's stated goal.": 1,
+    "data_review:Malformed question and unnecessary factual sports claim.": 1,
+    "data_review:Unsupported and insulting assumption of homelessness.": 1,
+    "data_review:Malformed personal question.": 1,
+    "data_review:Malformed question with spelling errors.": 1,
+    "data_review:Unnatural and unclear phrasing of the follow-up.": 1,
+    "published_split_component_conflict": 3012
+  },
+  "isolation": {
+    "nearDuplicatePairs": 7686,
+    "exactPublicDuplicates": 0,
+    "quarantinedSplitComponents": 243
+  },
+  "finalUtteranceOverlap": {
+    "validation": {
+      "rows": 6186,
+      "finalUtterancesSeenInTrain": 1977
+    },
+    "test": {
+      "rows": 6118,
+      "finalUtterancesSeenInTrain": 1966
+    }
+  },
+  "sampling": {
+    "train": {
+      "config": {
+        "version": 4,
+        "seed": 42,
+        "batchSize": 32,
+        "responsePool": {
+          "public": 0.6,
+          "authored": 0.4
+        },
+        "history": {
+          "fresh": 0.25,
+          "short": 0.35,
+          "long": 0.4
+        },
+        "exactResponseCap": 0.005,
+        "semanticPools": [
+          "authored",
+          "focused",
+          "classification"
+        ],
+        "publicBatchFreezes": "encoder_and_planner"
+      },
+      "eligibleRows": 1843,
+      "distinctResponses": 1735,
+      "sourceMass": {
+        "public": 0.5999999999350846,
+        "authored": 0.40000000006491543
+      },
+      "historyMass": {
+        "fresh": 0.25000000000000006,
+        "short": 0.34999999999999987,
+        "long": 0.4
+      },
+      "maximumExactResponseMass": 0.004169970635332585,
+      "mostWeightedResponses": [
+        [
+          "A CHANCE TO SLOW DOWN SOUNDS WELCOME.",
+          0.004169970635332585
+        ],
+        [
+          "A LITTLE COMPANY CAN MAKE A LONG DAY EASIER.",
+          0.004169970635332585
+        ],
+        [
+          "A LITTLE SPACE CAN HELP THOUGHTS SETTLE.",
+          0.004169970635332585
+        ],
+        [
+          "A SMALL KINDNESS CAN CHANGE THE WAY A DAY FEELS.",
+          0.004169970635332585
+        ],
+        [
+          "A SMALL KINDNESS CAN MATTER A GREAT DEAL TO THE PERSON RECEIVING IT.",
+          0.004169970635332585
+        ],
+        [
+          "A WELL-TOLD STORY IS HARD TO RESIST.",
+          0.004169970635332585
+        ],
+        [
+          "ARGUMENTS CAN STAY WITH YOU AFTER THE WORDS ARE OVER.",
+          0.004169970635332585
+        ],
+        [
+          "BEING APART FROM FRIENDS CAN BE HARD.",
+          0.004169970635332585
+        ],
+        [
+          "BUSY DAYS CAN SEEM TO DISAPPEAR QUICKLY.",
+          0.004169970635332585
+        ],
+        [
+          "CERTAINLY. WE CAN TAKE OUR TIME.",
+          0.004169970635332585
+        ],
+        [
+          "CERTAINLY. WHAT IS YOUR QUESTION?",
+          0.004169970635332585
+        ],
+        [
+          "EITHER CAN WORK IF THERE IS SOMETHING WORTH TELLING.",
+          0.004169970635332585
+        ],
+        [
+          "FEELING OUT OF PLACE CAN BE LONELY. YOU DO NOT NEED TO PRETEND OTHERWISE.",
+          0.004169970635332585
+        ],
+        [
+          "GLAD THE WALK HELPED YOU FEEL A LITTLE BETTER.",
+          0.004169970635332585
+        ],
+        [
+          "GOOD EVENING. COME AND TAKE A MOMENT TO REST.",
+          0.004169970635332585
+        ],
+        [
+          "GOOD MORNING TO YOU.",
+          0.004169970635332585
+        ],
+        [
+          "HAVING SOMETHING TO LOOK FORWARD TO CAN BRIGHTEN A DAY.",
+          0.004169970635332585
+        ],
+        [
+          "HELLO. A BIT OF COMPANY IS WELCOME.",
+          0.004169970635332585
+        ],
+        [
+          "HELLO. A FRIENDLY VISIT IS ALWAYS WELCOME.",
+          0.004169970635332585
+        ],
+        [
+          "HELLO. A QUIET CONVERSATION SOUNDS WELCOME.",
+          0.004169970635332585
+        ]
+      ]
+    },
+    "validation": {
+      "error": "Insufficient distinct responses: capacity 0.1300 for required mass 0.4"
+    },
+    "test": {
+      "error": "Insufficient distinct responses: capacity 0.0900 for required mass 0.4"
+    }
+  }
+}

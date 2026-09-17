@@ -238,11 +238,9 @@ internal sealed class ContextualTrainer : IContextualTrainingState
                         loss += graph.CrossEntropy(output.Agenda[i].Subject, 0, model.AgendaSubjectIndex(agenda[i].Subject, input.Agenda), 1f / agenda.Length);
                     }
                 }
-                if (ProjectResponse(example))
+                if (ClaimPositive(example))
                 {
                     loss += graph.CrossEntropy(model.ClaimScores(graph, p, output.PlanMemory, example.Response!), 0, 0);
-                    if (example.RejectedResponse is { } rejected)
-                        loss += graph.CrossEntropy(model.ClaimScores(graph, p, output.PlanMemory, rejected), 0, 1);
                     if (Step % 10 == 0)
                     {
                         var candidate = Brain.GenerateContextual(model, p, output.PlanMemory, unchecked(model.Config.Seed + Step));
@@ -250,6 +248,8 @@ internal sealed class ContextualTrainer : IContextualTrainingState
                             loss += graph.CrossEntropy(model.ClaimScores(graph, p, output.PlanMemory, candidate), 0, 1);
                     }
                 }
+                if (ClaimNegative(example))
+                    loss += graph.CrossEntropy(model.ClaimScores(graph, p, output.PlanMemory, example.RejectedResponse!), 0, 1);
 
                 void Multi(string name, IEnumerable<int> targets) { if (supervised.Contains(name)) loss += graph.BinaryCrossEntropy(output.Heads[name], 0, targets.ToHashSet()); }
                 void Exclusive(string name, int target) { if (supervised.Contains(name)) loss += graph.CrossEntropy(output.Heads[name], 0, target); }
@@ -275,7 +275,12 @@ internal sealed class ContextualTrainer : IContextualTrainingState
         return positions.Length == 0 ? [input.CurrentPositions[random.NextInt(input.CurrentPositions.Length)]] : positions;
     }
 
-    internal static bool ProjectResponse(TrainingExample example) => example.Source.StartsWith("PROJECT_", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(example.Response);
+    // Explicit v4 eligibility governs new data. Retain v3 reproduction for existing fixtures/corpora only.
+    internal static bool ProjectResponse(TrainingExample example) => example.Training?.ResponseEligible ??
+        (example.Source.StartsWith("PROJECT_", StringComparison.Ordinal) && !string.IsNullOrWhiteSpace(example.Response));
+    internal static bool ClaimPositive(TrainingExample example) => example.Training?.ClaimPositiveEligible ?? ProjectResponse(example);
+    internal static bool ClaimNegative(TrainingExample example) => example.Training?.ClaimNegativeEligible ??
+        (ProjectResponse(example) && example.RejectedResponse is not null);
     private static bool Active(string name, ContextualPhase phase) => phase switch
     {
         ContextualPhase.MaskedLanguage => name.StartsWith("encoder.", StringComparison.Ordinal),

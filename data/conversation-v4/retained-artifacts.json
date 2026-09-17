@@ -1,0 +1,21 @@
+{
+  "artifacts": {
+    "data\\training\\conversation-v4-pilot-final\\step-45000-calibrated.fbm": {
+      "bytes": 68261484,
+      "sha256": "453263fb1b158fd8d68827cd38bddebfcd460d83da0960eae72dc15c3671c577"
+    },
+    "data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm": {
+      "bytes": 68261484,
+      "sha256": "e3f40485cb13ad26b013f1ae798cef099e478dcf2eec6aa7c71a686e83177b0f"
+    },
+    "data\\training\\conversation-v4-pilot-final\\checkpoints\\step-45000.pt": {
+      "bytes": 204175435,
+      "sha256": "caab1f002890fa230ec1a3986ca39d762183fd3d1e6e0e43f600cda99046e374"
+    },
+    "data\\training\\conversation-v4-pilot-final\\checkpoints\\step-50000.pt": {
+      "bytes": 204175435,
+      "sha256": "00177af30751ae5fb65b09dee4517ca3b68b4cbe1fc2cfb640921f515d0baefb"
+    }
+  },
+  "promoted": false
+}

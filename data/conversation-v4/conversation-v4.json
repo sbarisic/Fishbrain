@@ -1,0 +1,91 @@
+{
+  "authoredHash": "27be1bb0dffea91f09dd73dac5ba340dcd8636cbde671f017a97b5d8654e8984",
+  "challengeHash": "87866b5a34d1126ca7ca30220cf8d691279d434251691fec062dbd21b445a3dd",
+  "dataReviewDecisionsHash": "3018ce32d2f6d63dd4ebb80a219226c0e3940b246530e9d92d1f8b699500713f",
+  "preparationFiles": {
+    "annotations.py": "913d5c4acf8c2b2507a42856a1736e78ea912809c13fddfd0423939e0b8199cc",
+    "common.py": "c2bfccd525e4ce8d9433cf7654d839cae60126f92a685bd27772656b38b086d7",
+    "compile.py": "5b1f7bc839e48c11119a4f3e830408099036498e1411a8504f1fac655fedd84d",
+    "episodes.py": "b0f7f18046e054d1d456c73f2b45ef33d9e749ef5835ca087da03126d35d1589",
+    "public.py": "7464ad532396a82c4519abc5eca83431a137fa96046aed12eaa85d05fdf68a4c",
+    "sampling.py": "760fbead0068fa264053e446dcbee110a4d0c65aa764c03a83f8ac473352cb8a"
+  },
+  "preparationStatus": "READY_FOR_DATA_REVIEW",
+  "releaseEligible": false,
+  "sampler": {
+    "batchSize": 32,
+    "exactResponseCap": 0.005,
+    "history": {
+      "fresh": 0.25,
+      "long": 0.4,
+      "short": 0.35
+    },
+    "publicBatchFreezes": "encoder_and_planner",
+    "responsePool": {
+      "authored": 0.4,
+      "public": 0.6
+    },
+    "seed": 42,
+    "semanticPools": [
+      "authored",
+      "focused",
+      "classification"
+    ],
+    "version": 4
+  },
+  "samplingHash": "f6f019656497d3c9de6b146a034e8c57c78c8c9f3548a9a8e3dbc6fbafd8b8e2",
+  "schema": "conversation-v4",
+  "seed": 42,
+  "sourceCorpusHashes": {
+    "test": "dae3d79ddf6b560e49a3d6e9a67cb9d046f686355d612ef6f9c47cf41c7cc28e",
+    "train": "c4f0009883c9256d09da92705181ca4f1e9cc5973365e51024a243befe22c118",
+    "validation": "bda1b5ec139fc3b960aa63ff8dec44d4c987036bf71e55ad3ff971e217b7c6e5"
+  },
+  "sources": [
+    {
+      "attribution": "OpenAssistant Conversations Dataset (OASST1), OpenAssistant contributors",
+      "files": [
+        {
+          "path": "oasst1.jsonl.gz",
+          "sha256": "2ff4aa8999c911ffec7972ddf70359f220b3da184b731f3649f68b1391e19341",
+          "url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/fd7dd3fc13915d6a3bba7e4e854b940b651a4032/2023-04-12_oasst_all.messages.jsonl.gz"
+        }
+      ],
+      "license": "Apache-2.0",
+      "name": "OASST1",
+      "revision": "fd7dd3fc13915d6a3bba7e4e854b940b651a4032"
+    },
+    {
+      "attribution": "OpenAssistant Conversations Dataset (OASST2), OpenAssistant contributors",
+      "files": [
+        {
+          "path": "oasst2-ready.jsonl.gz",
+          "sha256": "a9f240c4c77aa1378364f70d37e753c07ba284e247b019d700e1947a0e5da751",
+          "url": "https://huggingface.co/datasets/OpenAssistant/oasst2/resolve/179dd21fc55192153d94adb0e0ce8f69e222bf75/2023-11-05_oasst2_ready.messages.jsonl.gz?download=true"
+        }
+      ],
+      "license": "Apache-2.0",
+      "name": "OASST2",
+      "revision": "179dd21fc55192153d94adb0e0ce8f69e222bf75"
+    },
+    {
+      "attribution": "Blended Skill Talk, Smith et al., Facebook AI Research; conversation contributors",
+      "documentation": "https://raw.githubusercontent.com/facebookresearch/ParlAI/main/parlai/tasks/blended_skill_talk/README.md",
+      "files": [
+        {
+          "path": "blended_skill_talk.tar.gz",
+          "sha256": "5fbed0068ee89e2d43b93c3ecb341e784617033efa5e8e911a219d4eda6134a6",
+          "url": "https://parl.ai/downloads/blended_skill_talk/blended_skill_talk.tar.gz"
+        }
+      ],
+      "license": "CC-BY-4.0",
+      "name": "BLENDED_SKILL_TALK",
+      "revision": "5fbed0068ee89e2d43b93c3ecb341e784617033efa5e8e911a219d4eda6134a6"
+    }
+  ],
+  "splitHashes": {
+    "test": "c23c4b16c52ed9d771a3b417208ac6a41a0673a19b0a667a8d80ba62c146c3a3",
+    "train": "5f0e206f4f1523e4a9aee02503a838a3d645f52d8b843d33cee63f49e692e16e",
+    "validation": "5687aeddfd84688b4f9bfa9bb0f0e6619a87e5187332fe1ec8f7352b95f86fb3"
+  }
+}

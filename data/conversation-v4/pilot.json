@@ -1,0 +1,190 @@
+{
+  "status": "PILOT_QUALITY_GATES_FAILED",
+  "seed": 42,
+  "batchSize": 32,
+  "endpoint": 50000,
+  "maskedLanguageUpdates": 40000,
+  "jointUpdates": 10000,
+  "decoderPolishingUpdates": 0,
+  "promoted": false,
+  "humanReviewComplete": false,
+  "baseline": "E:\\Projects\\Fishbrain\\data\\training\\torch-run-v1\\calibrated.fbm",
+  "baselineHash": "76fcd49d77a9d6e3ddd7f2a7d5cefba91dbf9bae67997c24d7ed89d73a0fdcf8",
+  "corpusMetadataHash": "200ab5f94eda494482d513894a4b2802249d50362c154ae56b343066826ae259",
+  "challengeHash": "87866b5a34d1126ca7ca30220cf8d691279d434251691fec062dbd21b445a3dd",
+  "startedUtc": "2026-09-17T21:47:57.147306+00:00",
+  "commands": [
+    {
+      "stage": "train-45000",
+      "command": [
+        "E:\\Projects\\Fishbrain\\data\\training\\torch-env\\Scripts\\python.exe",
+        "E:\\Projects\\Fishbrain\\scripts\\torch_training\\train.py",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-packed-release",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final",
+        "--cli",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "--until",
+        "45000"
+      ],
+      "exitCode": 0
+    },
+    {
+      "stage": "calibrate-45000",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "calibrate-pilot",
+        "E:\\Projects\\Fishbrain\\data\\compiled-conversation-v4-release",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\latest.fbm",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-45000-calibrated.fbm"
+      ],
+      "exitCode": 0
+    },
+    {
+      "stage": "challenge-45000",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "challenge-conversation",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-45000-calibrated.fbm",
+        "data/conversation-v4/challenge.json",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\challenge-45000.json"
+      ],
+      "exitCode": 1
+    },
+    {
+      "stage": "train-50000",
+      "command": [
+        "E:\\Projects\\Fishbrain\\data\\training\\torch-env\\Scripts\\python.exe",
+        "E:\\Projects\\Fishbrain\\scripts\\torch_training\\train.py",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-packed-release",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final",
+        "--cli",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "--until",
+        "50000"
+      ],
+      "exitCode": 0
+    },
+    {
+      "stage": "calibrate-50000",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "calibrate-pilot",
+        "E:\\Projects\\Fishbrain\\data\\compiled-conversation-v4-release",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\latest.fbm",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm"
+      ],
+      "exitCode": 0
+    },
+    {
+      "stage": "challenge-50000",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "challenge-conversation",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm",
+        "data/conversation-v4/challenge.json",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\challenge-50000.json"
+      ],
+      "exitCode": 1
+    },
+    {
+      "stage": "baseline-challenge",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "challenge-conversation",
+        "data/training/torch-run-v1/calibrated.fbm",
+        "data/conversation-v4/challenge.json",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\baseline-challenge.json"
+      ],
+      "exitCode": 1
+    },
+    {
+      "stage": "legacy-acceptance",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "acceptance-contextual",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\acceptance.json"
+      ],
+      "exitCode": 1
+    },
+    {
+      "stage": "baseline-legacy-acceptance",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "acceptance-contextual",
+        "data/training/torch-run-v1/calibrated.fbm",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\baseline-acceptance.json"
+      ],
+      "exitCode": 1
+    },
+    {
+      "stage": "artifact-smoke",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "artifact-smoke",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm"
+      ],
+      "exitCode": 0
+    },
+    {
+      "stage": "resources",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "profile-contextual",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm",
+        "32"
+      ],
+      "exitCode": 1
+    },
+    {
+      "stage": "baseline-resources",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "profile-contextual",
+        "data/training/torch-run-v1/calibrated.fbm",
+        "32"
+      ],
+      "exitCode": 1
+    },
+    {
+      "stage": "review-export",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "conversation-sample",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm",
+        "data/conversation-v4/review-scenarios.jsonl",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\review-50-conversations.jsonl"
+      ],
+      "exitCode": 0
+    },
+    {
+      "stage": "baseline-review-export",
+      "command": [
+        "dotnet",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+        "conversation-sample",
+        "data/training/torch-run-v1/calibrated.fbm",
+        "data/conversation-v4/review-scenarios.jsonl",
+        "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\baseline-review-50-conversations.jsonl"
+      ],
+      "exitCode": 0
+    }
+  ],
+  "activeStage": "baseline-review-export",
+  "elapsedSeconds": 3772.195546699688,
+  "completedSteps": 50000,
+  "candidate": "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot-final\\step-50000-calibrated.fbm",
+  "candidateHash": "e3f40485cb13ad26b013f1ae798cef099e478dcf2eec6aa7c71a686e83177b0f",
+  "naturalness": "Unrated: review the exported conversations; neither loss nor overlap proves naturalness."
+}

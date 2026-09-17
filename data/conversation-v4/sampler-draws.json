@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "batchSize": 32,
+  "updates": 10000,
+  "realizationDraws": 96000,
+  "realizationDrawsByPool": {
+    "public": 57600,
+    "authored": 38400
+  },
+  "historyDraws": {
+    "short": 33489,
+    "long": 38570,
+    "fresh": 23941
+  },
+  "historyFractions": {
+    "short": 0.34884375,
+    "long": 0.40177083333333335,
+    "fresh": 0.24938541666666666
+  },
+  "semanticDrawsByPool": {
+    "focused": 74667,
+    "authored": 74667,
+    "classification": 74666
+  },
+  "maximumObservedExactResponseFraction": 0.004572916666666667,
+  "note": "Observed frequencies of the fixed seed-42 draws. The 0.5% constraint applies to sampling probability, not random realized counts."
+}

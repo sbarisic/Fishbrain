@@ -3,6 +3,10 @@
 Recorded on 2026-09-15. **The full plan is still incomplete.** The implementation is
 a development candidate; the checked-in model remains incompatible and unchanged.
 
+For the later dataset revision and bounded GPU experiment, see
+[conversation-v4](CONVERSATION_V4.md). The historical corpus counts and training
+milestones below describe the earlier implementation, not that revised dataset.
+
 ## Completed in this continuation
 
 - Separate runtime, training, CLI and demo-domain assemblies. The runtime has no

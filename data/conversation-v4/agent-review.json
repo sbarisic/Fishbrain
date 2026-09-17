@@ -1,0 +1,45 @@
+{
+  "reviewType": "Agent inspection of all 50 paired rollouts (170 turns per model); not independent human release approval",
+  "humanReleaseApproval": false,
+  "naturalness": "FAILED_AGENT_INSPECTION",
+  "scope": "Read the complete paired Markdown export. The findings below are concrete examples and lower bounds, not calibrated per-turn unsupported-claim rates.",
+  "pilotFindings": [
+    {
+      "sessionId": "correction-03",
+      "turnIndex": 1,
+      "kind": "unsupported_conversation_presupposition",
+      "response": "THANKS FOR COMING BACK TO MY QUESTION.",
+      "reason": "This is a fresh session. No NPC question preceded this response."
+    },
+    {
+      "sessionId": "agenda-03",
+      "turnIndex": 2,
+      "kind": "unsupported_conversation_presupposition",
+      "response": "THANKS FOR CLEARING UP THE TIMING.",
+      "reason": "The user mentioned drawing; the preceding exchange supplied no timing clarification."
+    }
+  ],
+  "baselineFindings": [
+    {
+      "sessionId": "compound-01",
+      "turnIndex": 1,
+      "kind": "unsupported_player_preference",
+      "response": "I WILL REMEMBER THAT YOU PREFER RAINY MORNINGS DURING VOYAGE.",
+      "reason": "The user apologized and asked about the NPC occupation; no player preference was supplied."
+    },
+    {
+      "sessionId": "topic_change-09",
+      "turnIndex": 2,
+      "kind": "unsupported_npc_biography",
+      "response": "UNDERSTOOD. I WILL REMEMBER THE CORRECTION ABOUT MY FATHER GARRICK FROM CRYSTAL CAVE.",
+      "reason": "Neither caller persona nor this conversation supplies that father or origin claim."
+    }
+  ],
+  "limitations": [
+    "Human scoring fields remain unset in the JSONL exports.",
+    "Automated text-screen flags were zero but do not establish claim correctness.",
+    "Most pilot replies are generic fallbacks; this is not natural conversation."
+  ],
+  "pilotExportHash": "37157e07cca5cbb5195f4a212093c926d5ea9334f2a78512cedad193af037100",
+  "baselineExportHash": "15ba19131820f77351dda513a01fb5e2e3f99a7d94a4aba22e00ff97813f729b"
+}

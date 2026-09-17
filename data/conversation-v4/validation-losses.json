@@ -1,0 +1,70 @@
+{
+  "10000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 3.9472486638749182
+    }
+  },
+  "15000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 3.6393883609767874
+    }
+  },
+  "20000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 3.477967651860805
+    }
+  },
+  "25000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 3.1941164535085793
+    }
+  },
+  "30000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 3.0468979890229746
+    }
+  },
+  "35000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 2.908489747010557
+    }
+  },
+  "40000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 2.738352086758762
+    }
+  },
+  "45000": {
+    "JointUnderstanding": {
+      "rows": 5824,
+      "loss": 0.46849117961144177
+    },
+    "JointRealization": {
+      "rows": 390,
+      "loss": 4.356980106158134
+    }
+  },
+  "5000": {
+    "MaskedLanguage": {
+      "rows": 6186,
+      "loss": 4.402378885174815
+    }
+  },
+  "50000": {
+    "JointUnderstanding": {
+      "rows": 5824,
+      "loss": 0.40893321238767744
+    },
+    "JointRealization": {
+      "rows": 390,
+      "loss": 4.83075166115394
+    }
+  }
+}

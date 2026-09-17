@@ -1,0 +1,17 @@
+{
+  "rows": 120,
+  "variantHash": "807677a7c85bc3fac1260c020f68b78d3d9f3f93f261978d1b10a3a934716497",
+  "results": {
+    "baseline": {
+      "Frame": 0.0,
+      "Plan": 0.24166666666666667,
+      "Tool": 0.8666666666666667
+    },
+    "pilot": {
+      "Frame": 0.06666666666666667,
+      "Plan": 0.48333333333333334,
+      "Tool": 0.8666666666666667
+    }
+  },
+  "interpretation": "Deterministic transformations of the frozen suite, not additional independent unseen cases."
+}

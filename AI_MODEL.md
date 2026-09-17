@@ -93,7 +93,13 @@ negative examples for claim training during the joint understanding phase.
 
 ## Data and optimization
 
-The corpus contains 100,000 rows: all original source quotas plus four project-owned
+The current [conversation-v4 experiment](CONVERSATION_V4.md) has no fixed row quota.
+It uses vetted public responses, authored NPC episodes and focused supervision,
+with explicit loss eligibility and a bounded 40,000-MLM/10,000-joint GPU pilot.
+Public realization batches freeze the encoder and planner. Full retraining and
+promotion require a separate decision.
+
+The historical v3 corpus contains 100,000 rows: all original source quotas plus four project-owned
 5,000-row groups for action modality, contextual memory, compound plans, and agenda.
 Existing authored single-act annotations also supply frame/plan targets. External
 rows do not receive invented contextual supervision.
@@ -101,6 +107,8 @@ rows do not receive invented contextual supervision.
 Family/conversation split isolation and held-out input exclusion are audited.
 The additional groups are template-generated and do not by themselves establish
 generalization to unseen conversational structures.
+
+The original full-training schedule, retained for v3 reproduction, is:
 
 | Phase | Updates | Learning rate |
 |---|---:|---:|

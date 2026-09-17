@@ -1,5 +1,13 @@
 # Fishbrain model evaluation notes
 
+**Current experiment:** the [conversation-v4 guide](../CONVERSATION_V4.md) describes
+the frozen 120-case suite, existing 17 acceptance cases and bounded pilot.
+The older release conditions below do not prevent retaining and publishing a failed
+experiment's implementation and measurements. Model promotion still requires all
+release gates and independent human review.
+The completed [50k pilot results](../CONVERSATION_V4_RESULTS.md) record failed gates,
+paired uncertainty, resource measurements and actual conversation exports.
+
 Evaluation dates: 2026-08-08 baseline; 2026-08-09 discourse revision in progress
 
 ## Discourse revision status

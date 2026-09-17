@@ -1,0 +1,136 @@
+{
+  "frameComponentExact": {
+    "bounds": 0.5,
+    "speechActs": 0.675,
+    "participants": 0.9083333333333333,
+    "tools": 0.775,
+    "antecedents": 0.5583333333333333,
+    "status": 0.825
+  },
+  "singleRelevantMemoryCases": 40,
+  "correctTopRankedMemory": 30,
+  "selectedExtraMemories": 40,
+  "extraMemoryExamples": [
+    {
+      "id": "memory-00",
+      "expected": [
+        {
+          "Subject": 0,
+          "Kind": 4,
+          "Value": "BRAMBLE POINT",
+          "Negated": false,
+          "SourceUtterance": 0,
+          "Confidence": 1,
+          "Provenance": 0
+        }
+      ],
+      "actual": [
+        {
+          "Fact": {
+            "Subject": 0,
+            "Kind": 4,
+            "Value": "BRAMBLE POINT",
+            "Negated": false,
+            "SourceUtterance": 0,
+            "Confidence": 1,
+            "Provenance": 0
+          },
+          "Score": 0.9999752044677734
+        },
+        {
+          "Fact": {
+            "Subject": 1,
+            "Kind": 4,
+            "Value": "GULL POINT",
+            "Negated": false,
+            "SourceUtterance": 0,
+            "Confidence": 1,
+            "Provenance": 0
+          },
+          "Score": 2.4774521079962142e-05
+        }
+      ]
+    },
+    {
+      "id": "correction-00",
+      "expected": [
+        {
+          "Subject": 0,
+          "Kind": 4,
+          "Value": "BRAMBLE POINT",
+          "Negated": false,
+          "SourceUtterance": 0,
+          "Confidence": 1,
+          "Provenance": 0
+        }
+      ],
+      "actual": [
+        {
+          "Fact": {
+            "Subject": 0,
+            "Kind": 4,
+            "Value": "BRAMBLE POINT",
+            "Negated": false,
+            "SourceUtterance": 0,
+            "Confidence": 1,
+            "Provenance": 0
+          },
+          "Score": 0.9999812841415405
+        },
+        {
+          "Fact": {
+            "Subject": 1,
+            "Kind": 4,
+            "Value": "GULL POINT",
+            "Negated": false,
+            "SourceUtterance": 0,
+            "Confidence": 1,
+            "Provenance": 0
+          },
+          "Score": 1.8675935280043632e-05
+        }
+      ]
+    },
+    {
+      "id": "memory-01",
+      "expected": [
+        {
+          "Subject": 0,
+          "Kind": 4,
+          "Value": "OTTER LAKE",
+          "Negated": false,
+          "SourceUtterance": 0,
+          "Confidence": 1,
+          "Provenance": 0
+        }
+      ],
+      "actual": [
+        {
+          "Fact": {
+            "Subject": 0,
+            "Kind": 4,
+            "Value": "OTTER LAKE",
+            "Negated": false,
+            "SourceUtterance": 0,
+            "Confidence": 1,
+            "Provenance": 0
+          },
+          "Score": 0.9999047517776489
+        },
+        {
+          "Fact": {
+            "Subject": 1,
+            "Kind": 4,
+            "Value": "GULL POINT",
+            "Negated": false,
+            "SourceUtterance": 0,
+            "Confidence": 1,
+            "Provenance": 0
+          },
+          "Score": 9.519216837361455e-05
+        }
+      ]
+    }
+  ],
+  "note": "Exploratory decomposition added after the 45k checkpoint. These diagnostics are not substituted for exact-set memory or exact-frame release metrics."
+}

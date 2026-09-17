@@ -6,8 +6,12 @@ frames, an ordered dialogue planner, and a separate generative decoder.
 
 **Release status:** the replacement is implemented as a development candidate.
 The checked-in `data/models/model-latest.fbm` is incompatible. It has not been
-replaced. The fresh 260,000-update GPU training run completed in about 6 hours 2
-minutes. Native evaluation and two-human review remain required before release.
+replaced. The previous 260,000-update GPU model failed quality gates.
+The [conversation-v4 dataset and bounded pilot](CONVERSATION_V4.md) revise its
+training data and compare actual conversations before another full training decision.
+The 50,000-update pilot also failed its gates; see the
+[results and 50 paired conversations](CONVERSATION_V4_RESULTS.md).
+Native acceptance and two-human review remain required before release.
 Long-context inference currently exceeds the 100 ms engineering target.
 
 See [implementation status](CONTEXTUAL_IMPLEMENTATION.md) for evidence and remaining
@@ -67,13 +71,21 @@ character fallback with exact normalized source offsets. The current utterance
 and required persona/state must fit the input budget; an oversized request throws
 instead of silently truncating its meaning.
 
-## Compile and train
+## Conversation dataset and pilot
+
+Use [the conversation-v4 guide](CONVERSATION_V4.md) to reproduce the revised data,
+audits, frozen challenge suite and bounded 50,000-update pilot. It uses explicit
+response eligibility, balanced sampling and frozen public-response batches.
+Another full training run is a separate decision.
+
+## Historical v3 training
 
 GPU training is available through [PyTorch/ROCm](scripts/torch_training/README.md),
 with the same dependency-free C# inference runtime. The RX 9070 XT development
 benchmark projects about 7.7 hours for all 260,000 updates, before validation,
 checkpoint and native evaluation overhead. This is a throughput estimate, not
-a quality guarantee. The commands below remain the native C# CPU alternative.
+a quality guarantee. The commands below reproduce the older v3 workflow. The native
+C# sampler does not support conversation-v4.
 
 The source manifest and existing preparation scripts govern source provenance.
 After the raw data is available:

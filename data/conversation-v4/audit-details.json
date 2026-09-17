@@ -1,0 +1,277 @@
+{
+  "corpusMetadataHash": "200ab5f94eda494482d513894a4b2802249d50362c154ae56b343066826ae259",
+  "sourceCounts": {
+    "AUTHORED_CONVERSATION_V4": 296,
+    "PROJECT_DISCOURSE_FACTS": 7896,
+    "PROJECT_DISCOURSE_REFERENCES": 6000,
+    "PROJECT_CONVERSATION": 3556,
+    "PROJECT_DISCOURSE_NEGATIVES": 2000,
+    "PROJECT_CONTEXTUAL_ACTIONS": 4704,
+    "PROJECT_CONTRAST": 1579,
+    "PROJECT_CONTEXTUAL_MEMORY": 4696,
+    "PROJECT_CONTEXTUAL_COMPOUND": 3136,
+    "PROJECT_CONTEXTUAL_AGENDA": 5000,
+    "TASKMASTER1": 2000,
+    "PROJECT_FANTASY": 1000,
+    "TASKMASTER2": 1000,
+    "TASKMASTER3": 1000,
+    "MULTIWOZ24": 3000,
+    "ABCD": 3000,
+    "BANKING77": 1000,
+    "PROJECT_SCIFI": 1000,
+    "NLUPP": 1000,
+    "CLINC150": 1000,
+    "SLURP_TEXT": 1000,
+    "MASSIVE_EN": 1000,
+    "GOEMOTIONS": 2000,
+    "CIVIL_COMMENTS": 3000,
+    "PROJECT_PERSONA_MEMORY": 455,
+    "PROJECT_TOOL_WORLD": 860,
+    "OASST1": 9,
+    "OASST2": 6,
+    "BLENDED_SKILL_TALK": 2335
+  },
+  "sourceProportions": {
+    "AUTHORED_CONVERSATION_V4": 0.0045871559633027525,
+    "PROJECT_DISCOURSE_FACTS": 0.12236548475080586,
+    "PROJECT_DISCOURSE_REFERENCES": 0.09298289114802877,
+    "PROJECT_CONVERSATION": 0.055107860153731716,
+    "PROJECT_DISCOURSE_NEGATIVES": 0.030994297049342923,
+    "PROJECT_CONTEXTUAL_ACTIONS": 0.07289858666005455,
+    "PROJECT_CONTRAST": 0.024469997520456237,
+    "PROJECT_CONTEXTUAL_MEMORY": 0.07277460947185718,
+    "PROJECT_CONTEXTUAL_COMPOUND": 0.0485990577733697,
+    "PROJECT_CONTEXTUAL_AGENDA": 0.0774857426233573,
+    "TASKMASTER1": 0.030994297049342923,
+    "PROJECT_FANTASY": 0.015497148524671461,
+    "TASKMASTER2": 0.015497148524671461,
+    "TASKMASTER3": 0.015497148524671461,
+    "MULTIWOZ24": 0.046491445574014384,
+    "ABCD": 0.046491445574014384,
+    "BANKING77": 0.015497148524671461,
+    "PROJECT_SCIFI": 0.015497148524671461,
+    "NLUPP": 0.015497148524671461,
+    "CLINC150": 0.015497148524671461,
+    "SLURP_TEXT": 0.015497148524671461,
+    "MASSIVE_EN": 0.015497148524671461,
+    "GOEMOTIONS": 0.030994297049342923,
+    "CIVIL_COMMENTS": 0.046491445574014384,
+    "PROJECT_PERSONA_MEMORY": 0.007051202578725515,
+    "PROJECT_TOOL_WORLD": 0.013327547731217457,
+    "OASST1": 0.00013947433672204315,
+    "OASST2": 9.298289114802877e-05,
+    "BLENDED_SKILL_TALK": 0.03618584180510786
+  },
+  "effectiveRealizationMassBySource": {
+    "AUTHORED_CONVERSATION_V4": 0.4000000000649157,
+    "PROJECT_DISCOURSE_FACTS": 0.0,
+    "PROJECT_DISCOURSE_REFERENCES": 0.0,
+    "PROJECT_CONVERSATION": 0.0,
+    "PROJECT_DISCOURSE_NEGATIVES": 0.0,
+    "PROJECT_CONTEXTUAL_ACTIONS": 0.0,
+    "PROJECT_CONTRAST": 0.0,
+    "PROJECT_CONTEXTUAL_MEMORY": 0.0,
+    "PROJECT_CONTEXTUAL_COMPOUND": 0.0,
+    "PROJECT_CONTEXTUAL_AGENDA": 0.0,
+    "TASKMASTER1": 0.0,
+    "PROJECT_FANTASY": 0.0,
+    "TASKMASTER2": 0.0,
+    "TASKMASTER3": 0.0,
+    "MULTIWOZ24": 0.0,
+    "ABCD": 0.0,
+    "BANKING77": 0.0,
+    "PROJECT_SCIFI": 0.0,
+    "NLUPP": 0.0,
+    "CLINC150": 0.0,
+    "SLURP_TEXT": 0.0,
+    "MASSIVE_EN": 0.0,
+    "GOEMOTIONS": 0.0,
+    "CIVIL_COMMENTS": 0.0,
+    "PROJECT_PERSONA_MEMORY": 0.0,
+    "PROJECT_TOOL_WORLD": 0.0,
+    "OASST1": 0.004192107213735103,
+    "OASST2": 0.0026741336288561603,
+    "BLENDED_SKILL_TALK": 0.5931337590924795
+  },
+  "effectiveRealizationMassByPoolAndHistory": {
+    "authored:long": 0.03611130042284005,
+    "authored:short": 0.11786043215745284,
+    "authored:fresh": 0.24602826748462261,
+    "focused:short": 0.0,
+    "focused:long": 0.0,
+    "classification:short": 0.0,
+    "classification:fresh": 0.0,
+    "classification:long": 0.0,
+    "public:short": 0.23213956784254866,
+    "public:fresh": 0.003971732515377458,
+    "public:long": 0.3638886995771558
+  },
+  "supervisionCoverage": {
+    "authored": {
+      "rows": 296,
+      "responseEligible": 216,
+      "semanticHeadSupervision": 296,
+      "frameSupervision": 296,
+      "memorySupervision": 296,
+      "agendaSupervision": 296,
+      "claimPositiveSupervision": 216,
+      "claimNegativeSupervision": 0
+    },
+    "focused": {
+      "rows": 41882,
+      "responseEligible": 0,
+      "semanticHeadSupervision": 41882,
+      "frameSupervision": 39981,
+      "memorySupervision": 17536,
+      "agendaSupervision": 17536,
+      "claimPositiveSupervision": 0,
+      "claimNegativeSupervision": 19536
+    },
+    "classification": {
+      "rows": 20000,
+      "responseEligible": 0,
+      "semanticHeadSupervision": 20000,
+      "frameSupervision": 0,
+      "memorySupervision": 0,
+      "agendaSupervision": 0,
+      "claimPositiveSupervision": 0,
+      "claimNegativeSupervision": 0
+    },
+    "public": {
+      "rows": 2350,
+      "responseEligible": 2350,
+      "semanticHeadSupervision": 0,
+      "frameSupervision": 0,
+      "memorySupervision": 0,
+      "agendaSupervision": 0,
+      "claimPositiveSupervision": 0,
+      "claimNegativeSupervision": 0
+    }
+  },
+  "distinctWordingPatterns": 30978,
+  "unmatchedAnnotatedSpans": 0,
+  "mostCommonWordingPatterns": [
+    [
+      "DO YOU REMEMBER WHERE I LIVE?",
+      2348
+    ],
+    [
+      "DO YOU REMEMBER YOUR HOME?",
+      2348
+    ],
+    [
+      "BUY VALUE VALUE.",
+      1841
+    ],
+    [
+      "I PREFER VALUE.",
+      1396
+    ],
+    [
+      "ACTUALLY I DISLIKE VALUE.",
+      1250
+    ],
+    [
+      "I AM STUDYING VALUE.",
+      1250
+    ],
+    [
+      "I FINISHED STUDYING VALUE.",
+      1250
+    ],
+    [
+      "DO NOT BUY VALUE VALUE.",
+      938
+    ],
+    [
+      "IF I BUY VALUE VALUE, WHAT WOULD IT COST?",
+      938
+    ],
+    [
+      "SHOW ME YOUR WARES.",
+      903
+    ],
+    [
+      "WHAT IS THE PRICE OF VALUE?",
+      903
+    ],
+    [
+      "SELL VALUE VALUE.",
+      903
+    ],
+    [
+      "WHERE IS VALUE?",
+      902
+    ],
+    [
+      "DO NOT BUY VALUE VALUE. SELL VALUE VALUE.",
+      704
+    ],
+    [
+      "BUY VALUE VALUE. SELL VALUE VALUE.",
+      704
+    ],
+    [
+      "DO NOT BUY VALUE VALUE. WHAT IS THE PRICE OF VALUE?",
+      704
+    ],
+    [
+      "BUY VALUE VALUE. WHAT IS THE PRICE OF VALUE?",
+      704
+    ],
+    [
+      "CANCEL THE PURCHASE I REQUESTED.",
+      238
+    ],
+    [
+      "IF I CONFIRMED THE PURCHASE, WOULD THAT HELP?",
+      238
+    ],
+    [
+      "SOMEONE SAID \"YES, GO AHEAD\".",
+      238
+    ],
+    [
+      "ACTUALLY MY HOME IS VALUE. YOUR OCCUPATION IS VALUE.",
+      160
+    ],
+    [
+      "ACTUALLY YOUR HOME IS VALUE. MY OCCUPATION IS VALUE.",
+      160
+    ],
+    [
+      "I LIVE IN VALUE.",
+      147
+    ],
+    [
+      "I AM FROM VALUE.",
+      146
+    ],
+    [
+      "FOR CONTEXT, I AM FROM VALUE.",
+      146
+    ],
+    [
+      "I AM FROM VALUE, IF THAT HELPS.",
+      146
+    ],
+    [
+      "PLEASE REMEMBER THIS: I AM FROM VALUE.",
+      146
+    ],
+    [
+      "FOR CONTEXT, I PREFER VALUE.",
+      146
+    ],
+    [
+      "I PREFER VALUE, IF THAT HELPS.",
+      146
+    ],
+    [
+      "PLEASE REMEMBER THIS: I PREFER VALUE.",
+      146
+    ]
+  ],
+  "patternDefinition": "Current wording with annotated entity/fact spans replaced by VALUE; descriptive, not evidence of independent scenario diversity.",
+  "nearDuplicateDefinition": "Exact contexts plus word-trigram Jaccard >= .85 with exact verification; short contexts use exact matching. This does not establish semantic novelty."
+}

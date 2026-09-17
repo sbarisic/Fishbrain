@@ -1,0 +1,107 @@
+{
+  "baseline": {
+    "turns": 170,
+    "sessions": 50,
+    "responseSources": {
+      "CONVERSATIONAL_GENERATED": 136,
+      "CLARIFICATION_TEMPLATE": 9,
+      "FALLBACK": 24,
+      "PERSONA_TEMPLATE": 1
+    },
+    "repeatedResponseFraction": 0.5058823529411764,
+    "mostCommonResponses": [
+      [
+        "I WILL HANDLE ONE ACTION AT A TIME.",
+        24
+      ],
+      [
+        "I AM NOT SURE HOW TO RESPOND TO THAT.",
+        11
+      ],
+      [
+        "I AM NOT CERTAIN ABOUT THAT.",
+        7
+      ],
+      [
+        "UNDERSTOOD. I WILL REMEMBER THE CORRECTION ABOUT HIDDEN ARCHIVIST.",
+        7
+      ],
+      [
+        "I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST.",
+        6
+      ],
+      [
+        "UNDERSTOOD. I WILL REMEMBER THE CORRECTION ABOUT.",
+        5
+      ],
+      [
+        "PLEASE SPECIFY ITEM AND QUANTITY.",
+        5
+      ],
+      [
+        "I CANNOT TRADE WITHOUT ACCESS TO WARES.",
+        5
+      ],
+      [
+        "I UNDERSTAND.",
+        3
+      ],
+      [
+        "COULD YOU EXPLAIN WHAT YOU MEAN?",
+        3
+      ]
+    ]
+  },
+  "pilot": {
+    "turns": 170,
+    "sessions": 50,
+    "responseSources": {
+      "FALLBACK": 128,
+      "CLARIFICATION_TEMPLATE": 27,
+      "CONVERSATIONAL_GENERATED": 15
+    },
+    "repeatedResponseFraction": 0.8823529411764706,
+    "mostCommonResponses": [
+      [
+        "I UNDERSTAND.",
+        121
+      ],
+      [
+        "COULD YOU EXPLAIN WHAT YOU MEAN?",
+        27
+      ],
+      [
+        "I AM NOT CERTAIN ABOUT THAT.",
+        4
+      ],
+      [
+        "YOU MENTIONED RIDDLE.",
+        2
+      ],
+      [
+        "SURE. THE QUESTION. ARE SOME IN THE RETURN TO.",
+        1
+      ],
+      [
+        "YOU MENTIONED COVE.",
+        1
+      ],
+      [
+        "THANKS FOR COMING BACK TO MY QUESTION.",
+        1
+      ],
+      [
+        "THAT SOUNDS GREAT. DO YOU HAVE A HARD TO.",
+        1
+      ],
+      [
+        "SURE. THE QUESTION. ARE SOME OF SOME CLOUDS.",
+        1
+      ],
+      [
+        "WHAT WOULD YOU LIKE TO DO.",
+        1
+      ]
+    ]
+  }
+}

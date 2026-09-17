@@ -83,7 +83,7 @@ public sealed partial class Brain
             var pointerIndex = ContextualNetwork.ArgMax(output.PlanFrames[i]);
             int? frameIndex = pointerIndex > 0 && pointerIndex <= frames.Length ? pointerIndex - 1 : null;
             var subject = act == DialogueResponseAct.AskFollowUp
-                ? (frameIndex is { } index ? frames[index].Fact?.FactKind : discourse.FactKind)?.ToString().ToUpperInvariant() : null;
+                ? FollowUpSubject(frameIndex is { } index ? frames[index].Fact?.FactKind : discourse.FactKind, request.State.Agenda) : null;
             return new PlannedResponseAct(act, frameIndex, subject);
         }).TakeWhile(x => x.Act != DialogueResponseAct.None).ToArray();
         var planConfidence = output.Plans.Take(Math.Max(1, acts.Length)).Concat(output.PlanFrames.Take(acts.Length))
@@ -287,6 +287,13 @@ public sealed partial class Brain
             { Fact = fact });
         }
         return frames.ToArray();
+    }
+
+    internal static string? FollowUpSubject(DialogueFactKind? kind, IReadOnlyList<DialogueAgendaEntry> agenda)
+    {
+        if (kind is { } factKind) return factKind.ToString().ToUpperInvariant();
+        var subjects = agenda.Where(x => x.Status == AgendaStatus.Active).Select(x => x.Subject).Distinct().Take(2).ToArray();
+        return subjects.Length == 1 ? subjects[0] : null;
     }
 
     private static DiscourseFrame ActFact(PlannedResponseAct act, DiscourseFrame discourse, IReadOnlyList<SemanticFrame> frames) =>

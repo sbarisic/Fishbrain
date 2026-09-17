@@ -47,7 +47,7 @@ def lease(path):
             msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
 
 
-def save(path, model, optimizer, rng, step, binding, precision, best, rejected=0):
+def save(path, model, optimizer, rng, step, binding, precision, best, rejected=0, sampler="COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION"):
     path = Path(path)
     temporary = path.with_name(path.name + ".tmp")
     state = dict(format=1, trainerSchema=TRAINER_SCHEMA, torchVersion=str(torch.__version__),
@@ -55,7 +55,7 @@ def save(path, model, optimizer, rng, step, binding, precision, best, rejected=0
                  model=model.state_dict(), optimizer=optimizer.state_dict(), maskingRng=rng.state,
                  cpuRng=torch.get_rng_state(), cudaRng=torch.cuda.get_rng_state_all(),
                  bestValidation=best, generatedRejectedCandidates=rejected,
-                 sampler="COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION", effectiveBatchSize=32)
+                 sampler=sampler, effectiveBatchSize=32)
     with temporary.open("wb") as stream:
         torch.save(state, stream)
         stream.flush()
@@ -63,7 +63,7 @@ def save(path, model, optimizer, rng, step, binding, precision, best, rejected=0
     temporary.replace(path)
 
 
-def restore(path, model, optimizer, rng, binding, precision):
+def restore(path, model, optimizer, rng, binding, precision, sampler="COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION"):
     state = torch.load(path, map_location="cuda", weights_only=True)
     if state["format"] != 1 or state["binding"] != binding or state["precision"] != precision:
         raise ValueError("GPU checkpoint schema, corpus, initial model or precision mismatch")
@@ -71,7 +71,7 @@ def restore(path, model, optimizer, rng, binding, precision):
         raise ValueError("GPU trainer schema or PyTorch version mismatch")
     if not 0 <= state["completedSteps"] <= 260000:
         raise ValueError("GPU checkpoint step is outside the curriculum")
-    if state["sampler"] != "COPRIME_FAMILY_PERMUTATION_MEMBER_ROTATION" or state["effectiveBatchSize"] != 32:
+    if state["sampler"] != sampler or state["effectiveBatchSize"] != 32:
         raise ValueError("GPU checkpoint sampler mismatch")
     model.load_state_dict(state["model"], strict=True)
     optimizer.load_state_dict(state["optimizer"])

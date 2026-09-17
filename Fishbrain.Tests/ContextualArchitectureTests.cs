@@ -8,6 +8,7 @@ internal static class ContextualArchitectureTests
     internal static void Run()
     {
         QuotedActionBoundaries();
+        ConversationMetadata();
         foreach (var input in new[] { "DO NOT BUY 2 ROPE", "IF I BUY 2 ROPE", "I DO NOT WANT TO BUY 2 ROPE", "CANCEL BUY 2 ROPE", "HE SAID BUY 2 ROPE" })
         {
             var world = new DemoWorldState();
@@ -34,6 +35,84 @@ internal static class ContextualArchitectureTests
         StructuredBoundaries();
         ContextualLearningAndResume();
         DomainPlanning();
+    }
+
+    private static void ConversationMetadata()
+    {
+        var eligible = new TrainingEligibility(4, "public", true, "EPISODE", "FAMILY", "CC-BY-4.0", "PINNED", new string('a', 64), "EXAMPLE");
+        eligible.Validate("HELLO THERE.");
+        foreach (var invalid in new[] { eligible with { Pool = "focused" }, eligible with { License = "UNKNOWN" },
+            eligible with { SourceChecksum = "UNPINNED" }, eligible with { ExampleId = "" },
+            eligible with { ClaimPositiveEligible = true }, eligible with { ClaimNegativeEligible = true } })
+        {
+            var rejected = false;
+            try { invalid.Validate("HELLO THERE."); } catch (InvalidDataException) { rejected = true; }
+            Assert(rejected, "Invalid response provenance was accepted.");
+        }
+        var active = new DialogueAgendaEntry(AgendaKind.Goal, "A QUIET CONVERSATION", 0, AgendaStatus.Active);
+        Assert(Brain.FollowUpSubject(null, [active]) == active.Subject, "Follow-up lost its unique active agenda topic.");
+        Assert(Brain.FollowUpSubject(null, [active, active with { Subject = "A DIFFERENT GOAL" }]) is null,
+            "Ambiguous agenda should not invent a follow-up subject.");
+        Assert(Brain.FollowUpSubject(null, [active with { Status = AgendaStatus.Completed }]) is null,
+            "Completed agenda should not license a follow-up.");
+        Assert(Brain.FollowUpSubject(DialogueFactKind.Home, [active]) == "HOME", "Explicit fact topic lost precedence.");
+        var path = Path.Combine(Path.GetTempPath(), "fishbrain-conversation-" + Guid.NewGuid().ToString("N") + ".jsonl");
+        try
+        {
+            var row = new
+            {
+                input = "PLAYER THE WORD NPC IS JUST A WORD.", state = NpcState.Initial,
+                perception = new TurnPerception(DialogueIntent.Statement, UserAffect.Neutral, true), action = ResponseAction.Respond,
+                response = "THAT MAKES SENSE.", source = "PUBLIC_TEST", semanticFamilyId = "PUBLIC-FAMILY", groupId = "PUBLIC-EPISODE",
+                turns = new[] { new DialogueUtterance(0, DialogueRole.Player, "THE WORD NPC IS JUST A WORD.") },
+                structuredPerception = new { speechActs = Array.Empty<SpeechAct>(), domains = Array.Empty<DialogueDomain>(), goals = Array.Empty<DialogueGoal>(),
+                    affect = UserAffect.Neutral, stance = DialogueStance.Neutral, policy = ResponsePolicy.Answer, slots = Array.Empty<DialogueSlot>(),
+                    contentFlags = Array.Empty<ContentFlag>(), knowledgeTarget = KnowledgeTarget.None, confidence = new Dictionary<string, double>() },
+                supervisedHeads = Array.Empty<string>(), training = eligible
+            };
+            File.WriteAllText(path, System.Text.Json.JsonSerializer.Serialize(row, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase }));
+            var vocab = WordVocabulary.Build(path);
+            var examples = TrainingData.Load(path, new DialogueTokenizer(vocab)).StructuredSamples;
+            Assert(examples.Single().Input == "THE WORD NPC IS JUST A WORD.", "Literal role word changed structured current utterance.");
+            Assert(examples.Single().SupervisedHeads.Count == 0 && examples.Single().Contextual is null, "Public missing supervision was filled with negatives.");
+            Assert(ContextualTrainer.ProjectResponse(examples.Single()), "Approved public response was not eligible.");
+            Assert(!ContextualTrainer.ClaimPositive(examples.Single()) && !ContextualTrainer.ClaimNegative(examples.Single()),
+                "Unlabelled public responses must not acquire claim supervision.");
+            var withoutHeads = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(path))!.AsObject();
+            withoutHeads.Remove("supervisedHeads");
+            File.WriteAllText(path, withoutHeads.ToJsonString());
+            Assert(TrainingData.Load(path, new DialogueTokenizer(vocab)).StructuredSamples.Single().SupervisedHeads.Count == 0,
+                "Missing v4 semantic annotations must remain masked.");
+            var negative = examples.Single() with { Training = eligible with { Pool = "focused", ResponseEligible = false, ClaimNegativeEligible = true },
+                RejectedResponse = "I GAVE YOU TEN GOLD." };
+            negative.Training.Validate(negative.Response, negative.RejectedResponse);
+            Assert(!ContextualTrainer.ProjectResponse(negative) && ContextualTrainer.ClaimNegative(negative),
+                "Explicit negative claim target was coupled to decoder eligibility.");
+            File.WriteAllText(path, "{\"input\":\"HELLO\",\"response\":\"OBSOLETE CLAIM\",\"training\":{\"responseEligible\":false}}\n");
+            vocab = WordVocabulary.Build(path);
+            Assert(vocab.Words.Contains("OBSOLETE") && !vocab.OutputWords.Contains("OBSOLETE"), "Ineligible text leaked into decoder vocabulary.");
+        }
+        finally { File.Delete(path); }
+        var directory = Path.Combine(Path.GetTempPath(), "fishbrain-binding-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(directory);
+        try
+        {
+            var hashes = new Dictionary<string, string>();
+            foreach (var split in new[] { "train", "validation", "test", "sampling" })
+            {
+                var name = split == "sampling" ? "sampling.json" : split + ".jsonl";
+                File.WriteAllText(Path.Combine(directory, name), "{}");
+                hashes[split] = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(Path.Combine(directory, name)))).ToLowerInvariant();
+            }
+            File.WriteAllText(Path.Combine(directory, "conversation-v4.json"), System.Text.Json.JsonSerializer.Serialize(new
+            { schema = "conversation-v4", preparationStatus = "READY_FOR_DATA_REVIEW", splitHashes = hashes, samplingHash = hashes["sampling"] }));
+            TorchTrainingBridge.ValidateConversationBinding(directory);
+            File.AppendAllText(Path.Combine(directory, "train.jsonl"), " ");
+            var rejected = false;
+            try { TorchTrainingBridge.ValidateConversationBinding(directory); } catch (InvalidDataException) { rejected = true; }
+            Assert(rejected, "Changed conversation split was accepted for GPU packing.");
+        }
+        finally { Directory.Delete(directory, true); }
     }
 
     private static void QuotedActionBoundaries()

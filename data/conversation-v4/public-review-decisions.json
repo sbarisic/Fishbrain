@@ -1,0 +1,16 @@
+{
+  "reviewType": "agent data review, not independent human release approval",
+  "rejectedExamples": {
+    "BST:train:4310:3": "Unmotivated Civil War wedding-cake follow-up; unrelated to the player's stated goal.",
+    "BST:train:4330:1": "Malformed question and unnecessary factual sports claim.",
+    "BST:train:389:3": "Unsupported continuation of the source speaker's family biography.",
+    "BST:validation:914:11": "Incoherent dialogue and unsupported assumption about a place.",
+    "BST:test:652:7": "Invents a future job change not supported by the dialogue.",
+    "BST:train:676:1": "Real-world electoral question is unsuitable for the NPC corpus.",
+    "BST:train:112:7": "Malformed and unclear follow-up question.",
+    "BST:validation:595:7": "Unsupported and insulting assumption of homelessness.",
+    "BST:test:116:3": "Malformed personal question.",
+    "BST:test:961:11": "Unnatural and unclear phrasing of the follow-up.",
+    "BST:test:555:7": "Malformed question with spelling errors."
+  }
+}

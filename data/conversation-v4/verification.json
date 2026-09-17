@@ -1,0 +1,40 @@
+{
+  "unitSuites": 37,
+  "unitPassed": true,
+  "unitScope": "Fishbrain.Tests --unit; incompatible shipped artifact excluded",
+  "dataTests": 6,
+  "dataTestsPassed": true,
+  "gpu": {
+    "passed": true,
+    "checks": [
+      "masked public supervision",
+      "frozen encoder and planner weights",
+      "frozen optimizer moments",
+      "decoder updated",
+      "authored encoder learning restored",
+      "explicit negative claim labels retained",
+      "deterministic sampler",
+      "exact public-batch resume",
+      "incompatible binding rejected"
+    ]
+  },
+  "packedBinding": "1537ec3c0b61e6ce3bc80d8bf2d6811849849c32c4ca65fee226ae3b97805c18",
+  "corpusMetadataHash": "200ab5f94eda494482d513894a4b2802249d50362c154ae56b343066826ae259",
+  "additionalChecks": [
+    "public claim labels masked",
+    "explicit focused negative claim labels retained without decoder targets",
+    "corpus content hash mismatch rejected",
+    "all revised corpus content unchanged except explicit claim eligibility",
+    "native tokenizer response and input budget audit passed",
+    "Missing v4 supervisedHeads remains masked; all pilot rows already had explicit masks"
+  ],
+  "releaseApproved": false,
+  "candidateArtifactSmoke": true,
+  "shippedArtifactReplaced": false,
+  "fullTrainingStarted": false,
+  "pilotUpdates": 50000,
+  "qualityGatesPassed": false,
+  "resourceGatesPassed": false,
+  "finalBuildWarnings": 0,
+  "finalBuildErrors": 0
+}

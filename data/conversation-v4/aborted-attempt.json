@@ -1,0 +1,53 @@
+{
+  "reason": "Stopped before joint training to separate explicit claim supervision from decoder eligibility; final pilot restarted fresh",
+  "run": {
+    "status": "PILOT_INTERRUPTED_OR_FAILED",
+    "seed": 42,
+    "batchSize": 32,
+    "endpoint": 50000,
+    "maskedLanguageUpdates": 40000,
+    "jointUpdates": 10000,
+    "decoderPolishingUpdates": 0,
+    "promoted": false,
+    "humanReviewComplete": false,
+    "baseline": "E:\\Projects\\Fishbrain\\data\\training\\torch-run-v1\\calibrated.fbm",
+    "baselineHash": "76fcd49d77a9d6e3ddd7f2a7d5cefba91dbf9bae67997c24d7ed89d73a0fdcf8",
+    "corpusMetadataHash": "55b8bb621213eff34bb0fb726bca89ac7157812d4b5decff129297fe9383d3fc",
+    "challengeHash": "87866b5a34d1126ca7ca30220cf8d691279d434251691fec062dbd21b445a3dd",
+    "startedUtc": "2026-09-17T21:30:59.069709+00:00",
+    "commands": [
+      {
+        "stage": "train-45000",
+        "command": [
+          "E:\\Projects\\Fishbrain\\data\\training\\torch-env\\Scripts\\python.exe",
+          "E:\\Projects\\Fishbrain\\scripts\\torch_training\\train.py",
+          "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-packed",
+          "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot",
+          "--cli",
+          "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-tools\\Fishbrain.dll",
+          "--until",
+          "45000"
+        ],
+        "exitCode": 0
+      }
+    ],
+    "activeStage": "train-45000",
+    "elapsedSeconds": 653.8091091001406
+  },
+  "progress": {
+    "status": "STOPPED",
+    "processId": 27332,
+    "completedSteps": 13058,
+    "endpoint": 45000,
+    "nextPhase": "MaskedLanguage",
+    "secondsPerUpdate": 0.04909322670391173,
+    "loss": 5.3046875,
+    "gpu": "AMD Radeon RX 9070 XT",
+    "precision": "fp32",
+    "binding": "366c9a8adf93531cfa5297c8cd9fac536263d239d5f19332d4cc52c4908e2ff7",
+    "checkpoint": "E:\\Projects\\Fishbrain\\data\\training\\conversation-v4-pilot\\training.pt",
+    "lastDurableCheckpointUtc": "2026-09-17T21:41:50.052339+00:00",
+    "updatedUtc": "2026-09-17T21:41:50.337406+00:00",
+    "generatedRejectedCandidates": 0
+  }
+}

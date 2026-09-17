@@ -10,6 +10,8 @@ internal static class ContextualTraining
 {
     public static void Run(string corpusDirectory, string checkpointPath, int? planned, int? until)
     {
+        if (File.Exists(Path.Combine(corpusDirectory, "conversation-v4.json")))
+            throw new InvalidDataException("Conversation v4 requires the GPU trainer's balanced sampler and frozen public-response batches. Use the bounded conversation pilot command.");
         if (planned is { } steps && steps != 260_000) throw new ArgumentException("The contextual curriculum has exactly 260000 updates.");
         var final = until ?? 260_000;
         if (final is < 1 or > 260_000) throw new ArgumentException("Training endpoint must be within 1-260000.");
