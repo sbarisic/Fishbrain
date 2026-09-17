@@ -6,8 +6,8 @@ frames, an ordered dialogue planner, and a separate generative decoder.
 
 **Release status:** the replacement is implemented as a development candidate.
 The checked-in `data/models/model-latest.fbm` is incompatible. It has not been
-replaced. Small learning tests and full-size training updates pass; the 260,000
-update training run, held-out quality gates, and two-human review remain unfinished.
+replaced. The fresh 260,000-update GPU training run completed in about 6 hours 2
+minutes. Native evaluation and two-human review remain required before release.
 Long-context inference currently exceeds the 100 ms engineering target.
 
 See [implementation status](CONTEXTUAL_IMPLEMENTATION.md) for evidence and remaining

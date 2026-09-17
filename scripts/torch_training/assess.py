@@ -2,6 +2,7 @@
 import argparse
 import datetime
 import json
+import os
 import subprocess
 from pathlib import Path
 
@@ -15,7 +16,7 @@ def assess(cli, corpus, output, scenarios):
     progress = json.loads(progress_path.read_text()) if progress_path.exists() else {}
 
     def status(value, gate=None):
-        progress.update(status=value, activeGate=gate, updatedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat())
+        progress.update(status=value, processId=os.getpid(), activeGate=gate, updatedUtc=datetime.datetime.now(datetime.timezone.utc).isoformat())
         atomic_json(progress_path, progress)
 
     def run(name, arguments, stdout=None):

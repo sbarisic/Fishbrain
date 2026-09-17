@@ -225,7 +225,21 @@ Reproduction and stop/resume commands are in the
 
 ## Remaining acceptance work
 
-1. Complete the fresh 260,000-update curriculum and retain the best eligible candidate.
+The fresh GPU run completed all 260,000 updates on 2026-09-17 in about 6 hours 2
+minutes including checkpointing and validation. Final teacher-forced validation
+losses were 0.264122 for understanding and 0.000134 for decoder polishing. These
+losses are not operational accuracy or evidence of general conversation quality.
+The run retained 6,105 rejected generated candidates as claim-detector supervision.
+
+The first native assessment stopped because a predicted frame's surrounding sentence
+split a quotation at internal punctuation. The resulting unmatched quote threw
+during safety normalization. Runtime sentence extraction now respects quoted
+punctuation; partial quoted fragments are vetoed before tokenizer validation.
+Regression tests cover inner quoted sentences, partial quotes, surrounding negation,
+and separate affirmative requests after a quoted sentence. Trained weights are
+unchanged; native evaluation must be rerun with the repaired runtime.
+
+1. Select and retain a candidate that passes all required quality and release gates.
 2. Pass the full held-out metrics and authored acceptance suite. Expand coverage
    when failures expose gaps; do not add input-specific routing fixes.
 3. Meet the 100 ms maximum-context understanding target and repeat resource checks

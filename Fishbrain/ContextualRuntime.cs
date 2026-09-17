@@ -124,10 +124,7 @@ public sealed partial class Brain
             }
             var binding = model.Domain.Tools.Single(x => x.Schema.Name == frame.ToolName);
             // Include the whole surrounding sentence so a span prediction cannot omit a preceding negation.
-            var sentenceStart = frame.Start == 0 ? 0 : current.LastIndexOfAny(['.', '?', '!', ';'], frame.Start - 1) + 1;
-            var frameEnd = frame.Start + frame.Length;
-            var sentenceEnd = ".?!;".Contains(current[frameEnd - 1]) ? frameEnd - 1 : current.IndexOfAny(['.', '?', '!', ';'], frameEnd);
-            var clause = current[sentenceStart..(sentenceEnd < 0 ? current.Length : sentenceEnd + 1)];
+            var clause = ActionLanguage.SurroundingSentence(current, frame.Start, frame.Length);
             var eligible = frame.Status == ActionStatus.Affirmative || !binding.Schema.MutatesWorldState && frame.Status == ActionStatus.Question;
             if (!eligible || frame.Subject != DialogueParticipant.Player || ActionLanguage.ExecutionVeto(clause) is { })
             { vetoes.Add($"FRAME_{index}_NON_EXECUTABLE"); continue; }

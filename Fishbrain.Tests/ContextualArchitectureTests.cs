@@ -7,6 +7,7 @@ internal static class ContextualArchitectureTests
 {
     internal static void Run()
     {
+        QuotedActionBoundaries();
         foreach (var input in new[] { "DO NOT BUY 2 ROPE", "IF I BUY 2 ROPE", "I DO NOT WANT TO BUY 2 ROPE", "CANCEL BUY 2 ROPE", "HE SAID BUY 2 ROPE" })
         {
             var world = new DemoWorldState();
@@ -33,6 +34,25 @@ internal static class ContextualArchitectureTests
         StructuredBoundaries();
         ContextualLearningAndResume();
         DomainPlanning();
+    }
+
+    private static void QuotedActionBoundaries()
+    {
+        foreach (var text in new[] { "HE SAID \"BUY ROPE.", "BUY ROPE.\"", "\u201cBUY ROPE." })
+            Assert(ActionLanguage.ExecutionVeto(text) == "QUOTED_ACTION", "A partial quotation must veto execution without throwing.");
+        foreach (var raw in new[] { "HE SAID \"BUY ROPE.\"", "\"HELLO. BUY ROPE. GOODBYE.\"", "HELLO. HE SAID \"BUY ROPE? YES!\" GOODBYE." })
+        {
+            var text = DialogueText.Normalize(raw);
+            var start = text.IndexOf("BUY", StringComparison.Ordinal);
+            var clause = ActionLanguage.SurroundingSentence(text, start, "BUY ROPE".Length);
+            Assert(ActionLanguage.ExecutionVeto(clause) == "QUOTED_ACTION", "Quoted punctuation must not expose an executable inner sentence.");
+            Assert(DialogueText.IsCanonical(clause.Trim()), "Sentence extraction split a quotation.");
+        }
+        var compound = DialogueText.Normalize("HE SAID \"HELLO.\" GOODBYE. BUY ROPE.");
+        var action = ActionLanguage.SurroundingSentence(compound, compound.IndexOf("BUY", StringComparison.Ordinal), "BUY ROPE".Length);
+        Assert(ActionLanguage.ExecutionVeto(action) is null, "An earlier quoted sentence vetoed a separate explicit request.");
+        var negated = "DO NOT BUY ROPE. HELLO.";
+        Assert(ActionLanguage.ExecutionVeto(ActionLanguage.SurroundingSentence(negated, 7, 8)) == "NEGATED_ACTION", "Frame extraction dropped surrounding negation.");
     }
 
     private static void AttentionGradients(bool causal)
