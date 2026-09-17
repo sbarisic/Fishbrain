@@ -239,6 +239,17 @@ Regression tests cover inner quoted sentences, partial quotes, surrounding negat
 and separate affirmative requests after a quoted sentence. Trained weights are
 unchanged; native evaluation must be rerun with the repaired runtime.
 
+A first authored acceptance run of the final, uncalibrated checkpoint failed all
+quality thresholds: 0/17 exact semantic frames, 4/17 exact response plans, 0% memory
+selection and 0% correction-state accuracy. No unintended mutations occurred in
+these 17 scenarios, but affirmative tool requests also failed. Generated replies
+included irrelevant repeated words and unsupported recalled locations. This is
+evidence against release despite low teacher-forced losses. The retained earlier
+candidate and final weights still require the complete native assessment. Evidence:
+`data/training/torch-run-v1/final-uncalibrated-acceptance.json`. The first failure logs
+are preserved in `assessment-first-failure`; the repaired assessment runs from
+`assessment-job-v2` without changing training weights.
+
 1. Select and retain a candidate that passes all required quality and release gates.
 2. Pass the full held-out metrics and authored acceptance suite. Expand coverage
    when failures expose gaps; do not add input-specific routing fixes.
