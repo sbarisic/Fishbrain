@@ -66,7 +66,7 @@ internal static class ContextualPerformance
                 .Append(longRequest.Utterances[^1] with { Text = longRequest.Utterances[^1].Text + string.Concat(Enumerable.Repeat(" THE", extra)) }).ToArray()
             };
             PackedInput packed;
-            try { packed = StructuredInput.Pack(trial, model.Tokenizer, model.Config.ContextLength, stressFacts, model.Domain); }
+            try { packed = StructuredInput.Pack(trial, model.Tokenizer, model.Config.ContextLength, stressFacts, model.Domain, model.Config.CurrentUtteranceFirst); }
             catch (ArgumentException) { break; }
             if (packed.Facts.Count == 8 && packed.Tokens.Length > stressTokens) { stressTokens = packed.Tokens.Length; stressRequest = trial; }
             if (stressTokens == model.Config.ContextLength) break;
@@ -129,7 +129,7 @@ internal static class ContextualPerformance
         {
             using var scratch = new InferenceScratch();
             var parameters = model.Parameters();
-            var packed = StructuredInput.Pack(input, model.Tokenizer, model.Config.ContextLength, facts, model.Domain);
+            var packed = StructuredInput.Pack(input, model.Tokenizer, model.Config.ContextLength, facts, model.Domain, model.Config.CurrentUtteranceFirst);
             var output = model.Understand(new TensorGraph(false), parameters, packed);
             var clock = Stopwatch.StartNew();
             var cache = model.CreateDecoderSession(parameters, output.PlanMemory);

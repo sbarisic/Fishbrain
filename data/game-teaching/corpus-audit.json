@@ -1,0 +1,41 @@
+{
+  "schema": "STATEFUL_GAME_TEACHING_V1",
+  "counts": {
+    "train": 20193,
+    "validation": 6157,
+    "test": 1217
+  },
+  "states": {
+    "train": {
+      "withSummaries": 15203,
+      "withMultipleFacts": 2073,
+      "compound": 784
+    },
+    "validation": {
+      "withSummaries": 4669,
+      "withMultipleFacts": 709,
+      "compound": 192
+    },
+    "test": {
+      "withSummaries": 829,
+      "withMultipleFacts": 177,
+      "compound": 64
+    }
+  },
+  "excludedRows": 457,
+  "splitHashes": {
+    "train": "68ffb2bc5a25083254332e4fcbc9024323f2ac90ed90027326848e7e4d84b9ea",
+    "validation": "93a7220fa3ce0efa0353fa716309039edfa480a12cdb946f1f7a7d0d45f7a8e0",
+    "test": "6ad9f12bd90fcb22777252edf7eb9eca5892cc6a9657dea4ae72cd592d4d806f"
+  },
+  "frozenChallengeHash": "87866b5a34d1126ca7ca30220cf8d691279d434251691fec062dbd21b445a3dd",
+  "familyOverlap": 0,
+  "exactCrossSplitContexts": 0,
+  "finalUtteranceOverlap": {
+    "train_validation": 0,
+    "train_test": 0,
+    "validation_test": 0
+  },
+  "nearDuplicatePolicy": "Related template/semantic families intentionally span development wording sets. No independent unseen quality claim; frozen release contexts excluded exactly.",
+  "promotionAllowed": false
+}

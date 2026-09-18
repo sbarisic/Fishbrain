@@ -1,0 +1,3619 @@
+{
+  "train": {
+    "heads": {
+      "head.affect": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.stance": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.policy": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.knowledgeTarget": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.discourseAct": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.discourseSubject": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.discourseTarget": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.factKind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.factPolarity": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "antecedents": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "slots": {
+        "correct": 707,
+        "total": 707,
+        "accuracy": 1.0
+      },
+      "factSpans": {
+        "correct": 705,
+        "total": 707,
+        "accuracy": 0.9971711456859972
+      },
+      "frame.0.active": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factAct": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factKind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factPolarity": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factSubject": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factTarget": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factSpans": {
+        "correct": 704,
+        "total": 707,
+        "accuracy": 0.9957567185289957
+      },
+      "frame.0.act": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.subject": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.target": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.status": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.tool": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.start": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.end": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.antecedent": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.1.active": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.2.active": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "plan.0": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "planFrame.0": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "plan.1": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "planFrame.1": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "plan.2": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "planFrame.2": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.0.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.1.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.2.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.3.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.1.factAct": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.factKind": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.factPolarity": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.factSubject": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.factTarget": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.factSpans": {
+        "correct": 370,
+        "total": 370,
+        "accuracy": 1.0
+      },
+      "frame.1.act": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.subject": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.target": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.status": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.tool": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.start": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.end": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      },
+      "frame.1.antecedent": {
+        "correct": 37,
+        "total": 37,
+        "accuracy": 1.0
+      }
+    },
+    "errors": [
+      {
+        "input": "MY HOME TOWN IS COPPER BAY. LET ME SEE YOUR STOCK",
+        "errors": [
+          {
+            "head": "factSpans",
+            "expected": 1,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 1,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "MY HOME TOWN IS MARBLE PORT.",
+        "errors": [
+          {
+            "head": "frame.0.factSpans",
+            "expected": 1,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "THE PLACE I CALL HOME IS WILLOW QUAY",
+        "errors": [
+          {
+            "head": "factSpans",
+            "expected": 1,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 1,
+            "actual": 2
+          }
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "heads": {
+      "head.affect": {
+        "correct": 86,
+        "total": 96,
+        "accuracy": 0.8958333333333334
+      },
+      "head.stance": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "head.policy": {
+        "correct": 80,
+        "total": 96,
+        "accuracy": 0.8333333333333334
+      },
+      "head.knowledgeTarget": {
+        "correct": 78,
+        "total": 96,
+        "accuracy": 0.8125
+      },
+      "head.discourseAct": {
+        "correct": 59,
+        "total": 96,
+        "accuracy": 0.6145833333333334
+      },
+      "head.discourseSubject": {
+        "correct": 63,
+        "total": 96,
+        "accuracy": 0.65625
+      },
+      "head.discourseTarget": {
+        "correct": 69,
+        "total": 96,
+        "accuracy": 0.71875
+      },
+      "head.factKind": {
+        "correct": 62,
+        "total": 96,
+        "accuracy": 0.6458333333333334
+      },
+      "head.factPolarity": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "antecedents": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "slots": {
+        "correct": 809,
+        "total": 816,
+        "accuracy": 0.991421568627451
+      },
+      "factSpans": {
+        "correct": 772,
+        "total": 816,
+        "accuracy": 0.946078431372549
+      },
+      "frame.0.active": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factAct": {
+        "correct": 69,
+        "total": 96,
+        "accuracy": 0.71875
+      },
+      "frame.0.factKind": {
+        "correct": 65,
+        "total": 96,
+        "accuracy": 0.6770833333333334
+      },
+      "frame.0.factPolarity": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.factSubject": {
+        "correct": 69,
+        "total": 96,
+        "accuracy": 0.71875
+      },
+      "frame.0.factTarget": {
+        "correct": 69,
+        "total": 96,
+        "accuracy": 0.71875
+      },
+      "frame.0.factSpans": {
+        "correct": 779,
+        "total": 816,
+        "accuracy": 0.9546568627450981
+      },
+      "frame.0.act": {
+        "correct": 60,
+        "total": 96,
+        "accuracy": 0.625
+      },
+      "frame.0.subject": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.target": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.status": {
+        "correct": 76,
+        "total": 96,
+        "accuracy": 0.7916666666666666
+      },
+      "frame.0.tool": {
+        "correct": 83,
+        "total": 96,
+        "accuracy": 0.8645833333333334
+      },
+      "frame.0.start": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.0.end": {
+        "correct": 90,
+        "total": 96,
+        "accuracy": 0.9375
+      },
+      "frame.0.antecedent": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.1.active": {
+        "correct": 94,
+        "total": 96,
+        "accuracy": 0.9791666666666666
+      },
+      "frame.2.active": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "plan.0": {
+        "correct": 80,
+        "total": 96,
+        "accuracy": 0.8333333333333334
+      },
+      "planFrame.0": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "plan.1": {
+        "correct": 87,
+        "total": 96,
+        "accuracy": 0.90625
+      },
+      "planFrame.1": {
+        "correct": 93,
+        "total": 96,
+        "accuracy": 0.96875
+      },
+      "plan.2": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "planFrame.2": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.0.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.1.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.2.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "agenda.3.kind": {
+        "correct": 96,
+        "total": 96,
+        "accuracy": 1.0
+      },
+      "frame.1.factAct": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      },
+      "frame.1.factKind": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      },
+      "frame.1.factPolarity": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      },
+      "frame.1.factSubject": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      },
+      "frame.1.factTarget": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      },
+      "frame.1.factSpans": {
+        "correct": 430,
+        "total": 430,
+        "accuracy": 1.0
+      },
+      "frame.1.act": {
+        "correct": 23,
+        "total": 34,
+        "accuracy": 0.6764705882352942
+      },
+      "frame.1.subject": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      },
+      "frame.1.target": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      },
+      "frame.1.status": {
+        "correct": 22,
+        "total": 34,
+        "accuracy": 0.6470588235294118
+      },
+      "frame.1.tool": {
+        "correct": 24,
+        "total": 34,
+        "accuracy": 0.7058823529411765
+      },
+      "frame.1.start": {
+        "correct": 19,
+        "total": 34,
+        "accuracy": 0.5588235294117647
+      },
+      "frame.1.end": {
+        "correct": 16,
+        "total": 34,
+        "accuracy": 0.47058823529411764
+      },
+      "frame.1.antecedent": {
+        "correct": 34,
+        "total": 34,
+        "accuracy": 1.0
+      }
+    },
+    "errors": [
+      {
+        "input": "CHECK HOW MUCH A HEALTH POTION COSTS. WHAT GOLD DO I HAVE LEFT",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 10,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 3,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 14,
+            "actual": 21
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 24,
+            "actual": 15
+          }
+        ]
+      },
+      {
+        "input": "MANY THANKS. WHERE ARE WE AT THE MOMENT",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 12,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "slots",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 15,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 0,
+            "actual": 4
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 3,
+            "actual": 2
+          },
+          {
+            "head": "plan.0",
+            "expected": 1,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "MANY THANKS. CAN YOU TELL ME WHERE I AM",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 12,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "slots",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 15,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 0,
+            "actual": 4
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 3,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 8,
+            "actual": 4
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 14,
+            "actual": 13
+          },
+          {
+            "head": "plan.0",
+            "expected": 1,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "POINT ME TOWARD THE INN?",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "slots",
+            "expected": 3,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 3,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 6,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 5,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "HELLO, FRIEND. WHAT NAME DO YOU USE",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 19,
+            "actual": 12
+          },
+          {
+            "head": "plan.1",
+            "expected": 3,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "I MISSPOKE, MY HOME IS EAST TOWER.",
+        "errors": [
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "factSpans",
+            "expected": 1,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 1,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "SEE YOU ANOTHER TIME.",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 1,
+            "actual": 6
+          },
+          {
+            "head": "plan.0",
+            "expected": 8,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "HELLO, FRIEND. WHAT NAME DO YOU USE",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 19,
+            "actual": 12
+          },
+          {
+            "head": "plan.1",
+            "expected": 3,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "LIST THE THINGS I CARRY?",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 11,
+            "actual": 0
+          }
+        ]
+      },
+      {
+        "input": "HELLO, FRIEND. WHAT NAME DO YOU USE",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 19,
+            "actual": 12
+          },
+          {
+            "head": "plan.1",
+            "expected": 3,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "I WANT YOU TO PURCHASE 2 ROPE. SELL 2 ROPE FOR ME",
+        "errors": [
+          {
+            "head": "frame.1.end",
+            "expected": 12,
+            "actual": 10
+          }
+        ]
+      },
+      {
+        "input": "TIME FOR ME TO GO.",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 0,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A ROPE COSTS. WHAT GOLD DO I HAVE LEFT",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 10,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 3,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 13,
+            "actual": 20
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 23,
+            "actual": 14
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A HEALTH POTION COSTS. WHAT GOLD DO I HAVE LEFT",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 10,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 3,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 14,
+            "actual": 21
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 24,
+            "actual": 15
+          }
+        ]
+      },
+      {
+        "input": "IS YOUR DAY GOING WELL",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 3,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "HELLO, FRIEND. SHOW ME THE GOODS FOR SALE",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          }
+        ]
+      },
+      {
+        "input": "HOW ARE YOU FEELING TODAY",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.end",
+            "expected": 12,
+            "actual": 10
+          },
+          {
+            "head": "plan.0",
+            "expected": 3,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "A GOOD MORNING TO YOU. SHOW ME THE GOODS FOR SALE",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 15
+          }
+        ]
+      },
+      {
+        "input": "SHOW ME THE GOODS FOR SALE",
+        "errors": [
+          {
+            "head": "frame.0.tool",
+            "expected": 5,
+            "actual": 6
+          }
+        ]
+      },
+      {
+        "input": "HELLO, FRIEND.",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.active",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "plan.1",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "planFrame.1",
+            "expected": 0,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "SUPPOSE I PURCHASED ONE ROPE",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.end",
+            "expected": 14,
+            "actual": 9
+          }
+        ]
+      },
+      {
+        "input": "CAN YOU TELL ME THE PRICE OF ROPE. CAN YOU TELL ME MY BALANCE",
+        "errors": [
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 9,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "THE LETTER SAYS \"BUY 1 IRON SWORD\".",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 5,
+            "actual": 2
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 3,
+            "actual": 0
+          },
+          {
+            "head": "plan.1",
+            "expected": 0,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "POINT ME TOWARD THE MARKET?",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "slots",
+            "expected": 3,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 3,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 6,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 5,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "COULD I SEE YOUR WARES?",
+        "errors": [
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          }
+        ]
+      },
+      {
+        "input": "HOW HAVE YOU BEEN",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 6
+          },
+          {
+            "head": "plan.0",
+            "expected": 3,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "POINT ME TOWARD THE INN?",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "slots",
+            "expected": 3,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 3,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 6,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 5,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "A GOOD MORNING TO YOU. WHAT MERCHANDISE DO YOU HAVE",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          }
+        ]
+      },
+      {
+        "input": "WHAT IS THE COST OF A HEALTH POTION. PLEASE CHECK HOW MUCH GOLD I HAVE",
+        "errors": [
+          {
+            "head": "frame.1.act",
+            "expected": 3,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 0,
+            "actual": 4
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 9,
+            "actual": 11
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A ROPE COSTS. TELL ME HOW MUCH MONEY I HAVE",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 13,
+            "actual": 15
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 19,
+            "actual": 14
+          }
+        ]
+      },
+      {
+        "input": "HOW MUCH DOES THE IRON SWORD COST. WHAT GOLD DO I HAVE LEFT",
+        "errors": [
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 18,
+            "actual": 12
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A HEALTH POTION COSTS",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.end",
+            "expected": 12,
+            "actual": 9
+          },
+          {
+            "head": "plan.1",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "planFrame.1",
+            "expected": 0,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "WHAT IS THE COST OF A HEALTH POTION. PLEASE CHECK HOW MUCH GOLD I HAVE",
+        "errors": [
+          {
+            "head": "frame.1.act",
+            "expected": 3,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 0,
+            "actual": 4
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 9,
+            "actual": 11
+          }
+        ]
+      },
+      {
+        "input": "THANKS, THAT WAS USEFUL",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 15,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.end",
+            "expected": 11,
+            "actual": 6
+          }
+        ]
+      },
+      {
+        "input": "WHAT IS IN MY PACK?",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 11,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 5,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "I MISSPOKE, MY HOME IS SOUTH BANK. SHOW ME THE GOODS FOR SALE",
+        "errors": [
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "factSpans",
+            "expected": 1,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 1,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "CAN YOU TELL ME MY BALANCE?",
+        "errors": [
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          }
+        ]
+      },
+      {
+        "input": "WHAT GOLD DO I HAVE LEFT?",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 10,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 5,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "GOOD TO MEET YOU. WHAT NAME DO YOU USE",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 13,
+            "actual": 11
+          },
+          {
+            "head": "plan.1",
+            "expected": 3,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "MY HOME IS IN SOUTH BANK. WHICH GOODS DO YOU SELL",
+        "errors": [
+          {
+            "head": "factSpans",
+            "expected": 1,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 1,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 22,
+            "actual": 19
+          }
+        ]
+      },
+      {
+        "input": "WHAT IS THE COST OF A HEALTH POTION. PLEASE CHECK HOW MUCH GOLD I HAVE",
+        "errors": [
+          {
+            "head": "frame.1.status",
+            "expected": 0,
+            "actual": 4
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 9,
+            "actual": 11
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 15,
+            "actual": 13
+          }
+        ]
+      },
+      {
+        "input": "WHAT IS THE COST OF A ROPE. CAN YOU TELL ME MY BALANCE",
+        "errors": [
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A HEALTH POTION COSTS. PLEASE CHECK HOW MUCH GOLD I HAVE",
+        "errors": [
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 3,
+            "actual": 2
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 0,
+            "actual": 4
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 14,
+            "actual": 16
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 20,
+            "actual": 14
+          }
+        ]
+      },
+      {
+        "input": "IF I DECIDED TO BUY TWO IRON SWORD",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 2,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "CAN YOU DIRECT ME TO THE MARKET?",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "slots",
+            "expected": 3,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 6,
+            "actual": 0
+          }
+        ]
+      },
+      {
+        "input": "SUPPOSE I PURCHASED TWO ROPE",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.end",
+            "expected": 14,
+            "actual": 9
+          }
+        ]
+      },
+      {
+        "input": "THANKS, THAT WAS USEFUL. WHICH PLACE ARE WE IN",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 12,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 15,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 3,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 13,
+            "actual": 8
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 17,
+            "actual": 16
+          }
+        ]
+      },
+      {
+        "input": "HEY THERE, TRAVELER. COULD YOU GIVE ME YOUR NAME",
+        "errors": [
+          {
+            "head": "head.affect",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.policy",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 0,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.tool",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 14,
+            "actual": 18
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 19,
+            "actual": 15
+          },
+          {
+            "head": "plan.1",
+            "expected": 3,
+            "actual": 5
+          }
+        ]
+      },
+      {
+        "input": "PLEASE CANCEL THAT PURCHASE.",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 5,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 11,
+            "actual": 3
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 1,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 1,
+            "actual": 4
+          }
+        ]
+      },
+      {
+        "input": "WHAT MERCHANDISE DO YOU HAVE?",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 5,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 5,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "LIST THE THINGS I CARRY",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 11,
+            "actual": 0
+          }
+        ]
+      },
+      {
+        "input": "CAN YOU TELL ME THE PRICE OF ROPE. CAN YOU TELL ME MY BALANCE",
+        "errors": [
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 9,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "WHAT IS IN MY PACK?",
+        "errors": [
+          {
+            "head": "head.policy",
+            "expected": 2,
+            "actual": 5
+          },
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 11,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 6
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.tool",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "plan.0",
+            "expected": 5,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "I MUST LEAVE NOW.",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 1,
+            "actual": 6
+          },
+          {
+            "head": "plan.0",
+            "expected": 8,
+            "actual": 1
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A ROPE COSTS. WHAT GOLD DO I HAVE LEFT",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 10,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.act",
+            "expected": 3,
+            "actual": 6
+          },
+          {
+            "head": "frame.1.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.1.status",
+            "expected": 4,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 13,
+            "actual": 20
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 23,
+            "actual": 14
+          }
+        ]
+      },
+      {
+        "input": "IF I DECIDED TO BUY 1 HEALTH POTION",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.discourseSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "head.discourseTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "slots",
+            "expected": 9,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "frame.0.factSubject",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.0.factTarget",
+            "expected": 2,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 2,
+            "actual": 0
+          },
+          {
+            "head": "frame.1.active",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "plan.1",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "planFrame.1",
+            "expected": 0,
+            "actual": 2
+          }
+        ]
+      },
+      {
+        "input": "GOODBYE FOR NOW",
+        "errors": [
+          {
+            "head": "frame.0.act",
+            "expected": 1,
+            "actual": 2
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 0,
+            "actual": 4
+          },
+          {
+            "head": "plan.0",
+            "expected": 8,
+            "actual": 3
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A ROPE COSTS. TELL ME HOW MUCH MONEY I HAVE",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "head.factKind",
+            "expected": 0,
+            "actual": 5
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.1.start",
+            "expected": 13,
+            "actual": 15
+          },
+          {
+            "head": "frame.1.end",
+            "expected": 19,
+            "actual": 14
+          }
+        ]
+      },
+      {
+        "input": "WHERE ARE WE AT THE MOMENT",
+        "errors": [
+          {
+            "head": "head.knowledgeTarget",
+            "expected": 12,
+            "actual": 0
+          }
+        ]
+      },
+      {
+        "input": "CHECK HOW MUCH A ROPE COSTS",
+        "errors": [
+          {
+            "head": "head.discourseAct",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.factSpans",
+            "expected": 0,
+            "actual": 1
+          },
+          {
+            "head": "frame.0.end",
+            "expected": 11,
+            "actual": 8
+          }
+        ]
+      },
+      {
+        "input": "CAN YOU SHOW MY INVENTORY",
+        "errors": [
+          {
+            "head": "frame.0.act",
+            "expected": 2,
+            "actual": 3
+          },
+          {
+            "head": "frame.0.status",
+            "expected": 4,
+            "actual": 0
+          }
+        ]
+      }
+    ]
+  }
+}

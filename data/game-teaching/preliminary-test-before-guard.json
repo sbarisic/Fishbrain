@@ -1,0 +1,1260 @@
+{
+  "Rows": 1196,
+  "FrameExact": 0.19983277591973245,
+  "PlanExact": 0.5877926421404682,
+  "MemoryExact": 0.8503344481605352,
+  "CorrectionExact": 0.16666666666666666,
+  "AgendaExact": 1,
+  "UnintendedMutations": 39,
+  "AuthoritativeAlterations": 0,
+  "InvalidResponses": 0,
+  "UnderstandingP95": 119.1991,
+  "ReplyP95": 126.7957,
+  "AutomatedPass": false,
+  "ToolDecisions": [
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9984859824180603,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997689127922058,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997625946998596,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.8167037963867188,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.5740110874176025,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.5620898008346558,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997331500053406,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9984859824180603,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997813105583191,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997051358222961,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.998666524887085,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9985032081604004,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997643828392029,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8821185827255249,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5131024718284607,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9985032081604004,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9984859824180603,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7640281915664673,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.6632441282272339,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9644641280174255,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.7305997014045715,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.7838432192802429,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.6000769138336182,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.5648300051689148,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9994078874588013,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9993196725845337,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5742064714431763,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7295783162117004,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9688206315040588,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9437381625175476,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9773316979408264,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5246996879577637,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9835489392280579,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5802587270736694,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9032459855079651,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9978238344192505,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9964706897735596,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.7592853307723999,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.931006908416748,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.9180931448936462,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.5428076386451721,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_INVENTORY",
+      "Confidence": 0.46236011385917664,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.5546337366104126,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997703433036804,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.5665044784545898,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_INVENTORY",
+      "Confidence": 0.988696813583374,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_INVENTORY",
+      "Confidence": 0.9912449717521667,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_INVENTORY",
+      "Confidence": 0.9624688625335693,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_INVENTORY",
+      "Confidence": 0.9471422433853149,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_INVENTORY",
+      "Confidence": 0.9036005139350891,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_INVENTORY",
+      "Confidence": 0.740539014339447,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.939950168132782,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8018054366111755,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5306835770606995,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.535133421421051,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8583561182022095,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997263550758362,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997302889823914,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9868550300598145,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9935823082923889,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997689127922058,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.948495090007782,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9934161901473999,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9706705808639526,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997625946998596,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9976385831832886,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9999246597290039,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.999933123588562,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9940531849861145,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9992213249206543,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9994915723800659,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8523992896080017,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.6141501665115356,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8822234869003296,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9997534155845642,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9995860457420349,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9996997117996216,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9989977478981018,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9990988969802856,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9831687211990356,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9994365572929382,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9745473265647888,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.8449341654777527,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9973757266998291,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9964697360992432,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997643828392029,
+      "Correct": false
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9983012080192566,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9993789196014404,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9992830157279968,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9915557503700256,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9913215041160583,
+      "Correct": false
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.6932463049888611,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.664126992225647,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6540009379386902,
+      "Correct": false
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.5288335084915161,
+      "Correct": false
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.8922948241233826,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.43560725450515747,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.9996541738510132,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.9994008541107178,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.9908921122550964,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997302889823914,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9985237717628479,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997703433036804,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.8481175899505615,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.8447782397270203,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997302889823914,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9510772824287415,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997643828392029,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9985032081604004,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.7535969614982605,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.8447782397270203,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9465138912200928,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.8447782397270203,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5577692985534668,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5005095601081848,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7978264093399048,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7502264380455017,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7373332381248474,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7506711483001709,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9923567771911621,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997703433036804,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9923567771911621,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.835433840751648,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.8093376755714417,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.727911651134491,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9959529638290405,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997575879096985,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.46433761715888977,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9978000521659851,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.55018550157547,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997575879096985,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9992192983627319,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9932979941368103,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9958004355430603,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.55018550157547,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9760689735412598,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9989219903945923,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9941231608390808,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9954044818878174,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9972475171089172,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9963550567626953,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.8476322889328003,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.999036431312561,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9844912886619568,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.511599600315094,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9997643828392029,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.6678745746612549,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.4933945834636688,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.5396804809570312,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.5854542255401611,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6450834274291992,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.996582567691803,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9957797527313232,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5271477103233337,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9801637530326843,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9985864162445068,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9904417991638184,
+      "Correct": true
+    }
+  ],
+  "Operational": {
+    "speechActs": 0.4289234479749066,
+    "domains": 0.3786171774162163,
+    "goals": 0.5628793183940243,
+    "content": 0,
+    "affect": 0.8887959866220736,
+    "policy": 0.681438127090301,
+    "slots": 0.9578163771712159,
+    "tool": 0.8837792642140468,
+    "mutatingToolPrecision": 0.8378378378378378,
+    "knowledgeTarget": 0.8837792642140468,
+    "discourseAct": 0.524247491638796,
+    "speakerAttribution": 0.6863636363636364,
+    "factSpan": 0.1989247311827957,
+    "antecedent": 0.2222222222222222,
+    "correctionState": 0.16666666666666666
+  },
+  "RetiredMetrics": [
+    "CATALOG_RESPONSE_TOP1",
+    "CATALOG_RESPONSE_TOP3",
+    "VARIATION_RECALL_AT10",
+    "VARIATION_MRR"
+  ],
+  "UnintendedWorldMutations": 1,
+  "UnintendedToolInvocations": 39,
+  "ExecutionViolations": [
+    {
+      "Family": "GAME:test:clarify:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "48197c0f54cd7b141b1ef0711377f1cb1ef7b41f3f8064f599d0b0e92d3b827a"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:clarify:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "5702ea232bb41cd7f7a0a594e4459dd4e2810f7e5a57d9b504ffd5055c1c0242"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:unsupported:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "9379f58c5860ee2478114c278c3290cf1c3db7ed16bcb6d9b5df42aa0d641d59"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:unsupported:1",
+      "Input": "CAN YOU REPAIR THIS ARMOR",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "4bbe1ce40dfb5a0ab0948345e6dbac1387f4b2c5031efbb396ce9c0a93d373ba"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:unsupported:1",
+      "Input": "CAN YOU REPAIR THIS ARMOR.",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "5e4d0d30dc0b1c3788a45da083c2324e151d48495de2c6887888bc7723ef9e3f"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:unsupported:1",
+      "Input": "CAN YOU REPAIR THIS ARMOR",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "c797b25db07d292ff4b0b309855276294389438574d420b1c370040588ecf4a3"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:cancel:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "ec8d369bce1c253c598ddf18567a3445e8cff68f3925f70767c2ab4c955e3b8b"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:greet:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "ba97494c7f911e032e6b4aa35d100e5aba7f8948be3540dc76ee16b7abbd7aab"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:wellbeing:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "6a4128e215a52356d6401856db4f354709fd4544171ae39705dac1184b184707"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:wellbeing:1",
+      "Input": "HOW ARE YOU THIS MORNING?",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "c916f327112c23125907892e5fe2635e8625420ef67e611e6fc7fd971b2a737d"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:wellbeing:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "fdd0d9858388b4296376e0eb6e9d5eaf6238214701bec8219b8e12305181563a"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:wellbeing:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "019c763bd2e6d5f14231defb21bcc1cc2248523f91d6c5b3580cf02e1cffb4cb"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:tired:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "0b9f31046dc1d49e06791042222b798b14c633f125b37f2f4cd3e47e43c6a1f1"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:bye:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "38b4fc7eba07fee58f237bf156314be4e26cfa7bce4128c90647dbc7c5d39541"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:name:3",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "b7806343286021de1eec210920703da777a4de799f9932d85ab1dcca89a21e6e"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:inventory:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "b02e414ae7396ffa7f72bb468badff0dc77869135c129c7884193762d36e5c5a"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:directions:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "6f796cf766e628e664cbec876985836932e208774066eb2478b7775ce0ade588"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:directions:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "2ac41b45134b340cfda8f9ab4a3f7958bf59ace00167dd5905364edcf6d859f3"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:directions:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "15d85be9a67f3d3a45149305a9a1a0dd28fd1b784cca8012707daf0430b0187e"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:directions:3",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "f31d7a5f797bf2daecc46bcb0010c56cdf1ed11273b8d5ef948f7716c0759c01"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:buy:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "74297ac48af88c218d1fbf9c18e2b34623cb138e1f576964113759bc72374617"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:sell:0",
+      "Input": "I WOULD LIKE YOU TO SELL 2 ROPE.",
+      "ExpectedTool": "SELL",
+      "Invocation": {
+        "ToolName": "BUY",
+        "Arguments": {
+          "ITEM": "ROPE",
+          "QUANTITY": "2"
+        },
+        "IdempotencyKey": "f0f75c32525f114fa7251ab9b3c9de7bc4b82beb2783aaf23ffc4e9c9bb1a991"
+      },
+      "WorldChanged": true
+    },
+    {
+      "Family": "GAME:test:hypothetical:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "2c30824c07c2de7e768f1a6e8c266fa6c5ed866a6bd4843c2e7e61b724a24152"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:hypothetical:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "b52680b9affb66249582712425521dc22049670f45ff155714c5689eddc91719"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:hypothetical:3",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "3772cf6aaa012e0c08518a83ac57e3c686c05b4878c3773167ccaa877ce3997c"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:recall:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "9362eb437cf1c2c7b37f8870f3244ba4a5cc3b533018f371de5af1a3aab2d9ca"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:recall:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "f9e70d4f6b24e1adda6f235c4f347a162ad18f4dfc7a4033cea8f1df68d9cada"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_home:3",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "d3625ceaa223a83f146e76729445e956eea880c75fb45fa192ca83cbaad5c3e9"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_recall:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "ebc819a5e5b9b578740f2fe19b403e6cc86c64ab4db811dd678d327bb1730538"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_recall:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "f6f8ba7f9a6983f97c58b6d6f9bf30602fb5d855b545d83212c90bcef3cc6b20"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_recall:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "15b68ac3981aa79360f008efe268834e311f480fdbec41ce5625eb9c4b8e2507"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_recall:3",
+      "Input": "HOW ARE YOU THIS MORNING?",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "0e331c6640dc940fa7ca001b67a3e641f753346d4f4e05f287a548937289e9b7"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_correction:0",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "9cfbbaac6491ea031d3bcbe247914c28c31b6c6a119a9192cd0da884f11082b3"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_correction:1",
+      "Input": "HOW ARE YOU THIS MORNING?",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "2e912d32810c971e0e49382be8e6ee0d0699a575b58061eedde0b9d1c437c74f"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:npc_correction:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "58f0e2c19d5dbd4046678698c7afbd21e292376163a0886a305c5d8f9ebdaf10"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:compound:1",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "4f61a685966a484cdb8178f7bc9d28153b4e79fa3658250cf665565f65d26a9e"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:compound:2",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "a0909d68ee9f2b252fb9902c7d0c339ddc252d41bca9588f8285797b80ddadbe"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:compound:3",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "5cf348bd57a5849f1657cd1ba6db2eb82b071f244ac0463c042d0a3d634775ce"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:compound:5",
+      "Input": "HOW ARE YOU THIS MORNING",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_CURRENT_LOCATION",
+        "Arguments": {},
+        "IdempotencyKey": "147bd63c5d71e5d9d8d13aa0c07be95d151b9ab63c0f30ce659af2049ff0f10c"
+      },
+      "WorldChanged": false
+    }
+  ]
+}

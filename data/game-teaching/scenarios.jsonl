@@ -1,0 +1,74 @@
+{"sessionId":"user_transcript","turnIndex":1,"input":"hi","expected":{}}
+{"sessionId":"user_transcript","turnIndex":2,"input":"Where am I?","expected":{"tool":"GET_CURRENT_LOCATION"}}
+{"sessionId":"user_transcript","turnIndex":3,"input":"Nevermind, what do you have for sale?","expected":{"tool":"LIST_WARES"}}
+{"sessionId":"user_transcript","turnIndex":4,"input":"Tell me your name","expected":{"contains":"ARIN"}}
+{"sessionId":"user_transcript","turnIndex":5,"input":"Where is the inn?","expected":{"tool":"LOOKUP_LOCATION"}}
+{"sessionId":"first_visit","turnIndex":1,"input":"Hello there!","expected":{}}
+{"sessionId":"first_visit","turnIndex":2,"input":"What should I call you?","expected":{"contains":"ARIN"}}
+{"sessionId":"first_visit","turnIndex":3,"input":"What do you do for work?","expected":{"contains":"ROAD WARDEN"}}
+{"sessionId":"first_visit","turnIndex":4,"input":"How are things with you?","expected":{}}
+{"sessionId":"first_visit","turnIndex":5,"input":"Could you tell me where we are?","expected":{"tool":"GET_CURRENT_LOCATION"}}
+{"sessionId":"first_visit","turnIndex":6,"input":"I need directions to the inn.","expected":{"tool":"LOOKUP_LOCATION"}}
+{"sessionId":"shopping_trip","turnIndex":1,"input":"Hello.","expected":{}}
+{"sessionId":"shopping_trip","turnIndex":2,"input":"Can I see what is for sale?","expected":{"tool":"LIST_WARES"}}
+{"sessionId":"shopping_trip","turnIndex":3,"input":"How much gold do I have?","expected":{"tool":"GET_BALANCE"}}
+{"sessionId":"shopping_trip","turnIndex":4,"input":"What does a rope cost?","expected":{"tool":"LOOKUP_PRICE"}}
+{"sessionId":"shopping_trip","turnIndex":5,"input":"Buy one rope please.","expected":{"tool":"BUY","balance":97}}
+{"sessionId":"shopping_trip","turnIndex":6,"input":"What am I carrying now?","expected":{"tool":"LIST_INVENTORY"}}
+{"sessionId":"shopping_trip","turnIndex":7,"input":"Tell me my remaining balance.","expected":{"tool":"GET_BALANCE"}}
+{"sessionId":"shopping_trip","turnIndex":8,"input":"Thanks for your help.","expected":{}}
+{"sessionId":"sell_and_buy","turnIndex":1,"input":"Show me my inventory.","expected":{"tool":"LIST_INVENTORY"}}
+{"sessionId":"sell_and_buy","turnIndex":2,"input":"Sell one rope for me.","expected":{"tool":"SELL"}}
+{"sessionId":"sell_and_buy","turnIndex":3,"input":"How much is a health potion?","expected":{"tool":"LOOKUP_PRICE"}}
+{"sessionId":"sell_and_buy","turnIndex":4,"input":"I would like to buy one health potion.","expected":{"tool":"BUY"}}
+{"sessionId":"sell_and_buy","turnIndex":5,"input":"How much gold is left?","expected":{"tool":"GET_BALANCE"}}
+{"sessionId":"sell_and_buy","turnIndex":6,"input":"Goodbye.","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":1,"input":"Do not buy one rope.","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":2,"input":"Suppose I bought two rope.","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":3,"input":"Someone said \"buy one rope\".","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":4,"input":"I am imagining buying one rope.","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":5,"input":"This is hypothetical: buy one rope.","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":6,"input":"I would not like to buy one rope.","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":7,"input":"If I had more gold I would like to buy one rope.","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":8,"input":"I said \"I would like to buy one rope\".","expected":{}}
+{"sessionId":"purchase_hard_negatives","turnIndex":9,"input":"What is my balance?","expected":{"tool":"GET_BALANCE","balance":100}}
+{"sessionId":"remember_me","turnIndex":1,"input":"My home is Cedar Hollow.","expected":{"fact":["PLAYER","CEDAR HOLLOW"]}}
+{"sessionId":"remember_me","turnIndex":2,"input":"How are you?","expected":{}}
+{"sessionId":"remember_me","turnIndex":3,"input":"What is your name?","expected":{"contains":"ARIN"}}
+{"sessionId":"remember_me","turnIndex":4,"input":"Where did I say my home is?","expected":{"contains":"CEDAR HOLLOW"}}
+{"sessionId":"remember_me","turnIndex":5,"input":"Actually my home is Copper Bay.","expected":{"fact":["PLAYER","COPPER BAY"]}}
+{"sessionId":"remember_me","turnIndex":6,"input":"What home did I tell you about?","expected":{"contains":"COPPER BAY"}}
+{"sessionId":"keep_owners_separate","turnIndex":1,"input":"My home is Willow Quay.","expected":{"fact":["PLAYER","WILLOW QUAY"]}}
+{"sessionId":"keep_owners_separate","turnIndex":2,"input":"You said your home is Marble Port.","expected":{"fact":["NPC","MARBLE PORT"]}}
+{"sessionId":"keep_owners_separate","turnIndex":3,"input":"Where do I live?","expected":{"contains":"WILLOW QUAY"}}
+{"sessionId":"keep_owners_separate","turnIndex":4,"input":"What home did you mention?","expected":{"contains":"MARBLE PORT"}}
+{"sessionId":"keep_owners_separate","turnIndex":5,"input":"Correction: my home is North Road.","expected":{"fact":["PLAYER","NORTH ROAD"],"otherFact":["NPC","MARBLE PORT"]}}
+{"sessionId":"keep_owners_separate","turnIndex":6,"input":"What home did you mention?","expected":{"contains":"MARBLE PORT"}}
+{"sessionId":"unfamiliar_home","turnIndex":1,"input":"My home is Briarhaven.","expected":{"fact":["PLAYER","BRIARHAVEN"]}}
+{"sessionId":"unfamiliar_home","turnIndex":2,"input":"I am tired after travelling.","expected":{}}
+{"sessionId":"unfamiliar_home","turnIndex":3,"input":"Where do I live?","expected":{"contains":"BRIARHAVEN"}}
+{"sessionId":"unfamiliar_home","turnIndex":4,"input":"Correction: my home is Westmere.","expected":{"fact":["PLAYER","WESTMERE"]}}
+{"sessionId":"unfamiliar_home","turnIndex":5,"input":"Can you recall my home?","expected":{"contains":"WESTMERE"}}
+{"sessionId":"same_final_cedar","turnIndex":1,"input":"My home is Cedar Hollow.","expected":{"fact":["PLAYER","CEDAR HOLLOW"]}}
+{"sessionId":"same_final_cedar","turnIndex":2,"input":"What is your job?","expected":{"contains":"ROAD WARDEN"}}
+{"sessionId":"same_final_cedar","turnIndex":3,"input":"Where do I live?","expected":{"contains":"CEDAR HOLLOW"}}
+{"sessionId":"same_final_copper","turnIndex":1,"input":"My home is Copper Bay.","expected":{"fact":["PLAYER","COPPER BAY"]}}
+{"sessionId":"same_final_copper","turnIndex":2,"input":"What is your job?","expected":{"contains":"ROAD WARDEN"}}
+{"sessionId":"same_final_copper","turnIndex":3,"input":"Where do I live?","expected":{"contains":"COPPER BAY"}}
+{"sessionId":"topic_changes","turnIndex":1,"input":"Good morning.","expected":{}}
+{"sessionId":"topic_changes","turnIndex":2,"input":"I had a tiring journey.","expected":{}}
+{"sessionId":"topic_changes","turnIndex":3,"input":"What goods do you sell?","expected":{"tool":"LIST_WARES"}}
+{"sessionId":"topic_changes","turnIndex":4,"input":"Anyway, how are you doing?","expected":{}}
+{"sessionId":"topic_changes","turnIndex":5,"input":"Where can I find the castle?","expected":{"tool":"LOOKUP_LOCATION"}}
+{"sessionId":"topic_changes","turnIndex":6,"input":"Can you tell me your name?","expected":{"contains":"ARIN"}}
+{"sessionId":"ambiguous_or_unsupported","turnIndex":1,"input":"Do it.","expected":{}}
+{"sessionId":"ambiguous_or_unsupported","turnIndex":2,"input":"Buy that.","expected":{}}
+{"sessionId":"ambiguous_or_unsupported","turnIndex":3,"input":"Give me the thing we discussed.","expected":{}}
+{"sessionId":"ambiguous_or_unsupported","turnIndex":4,"input":"Can you repair my armor?","expected":{}}
+{"sessionId":"ambiguous_or_unsupported","turnIndex":5,"input":"What quests are available?","expected":{}}
+{"sessionId":"ambiguous_or_unsupported","turnIndex":6,"input":"I own a thousand gold coins.","expected":{}}
+{"sessionId":"ambiguous_or_unsupported","turnIndex":7,"input":"What is my balance?","expected":{"tool":"GET_BALANCE","balance":100}}
+{"sessionId":"compound_requests","turnIndex":1,"input":"Hello. Who are you?","expected":{"contains":"ARIN"}}
+{"sessionId":"compound_requests","turnIndex":2,"input":"Do not buy one rope. What do you have for sale?","expected":{"tool":"LIST_WARES","balance":100}}
+{"sessionId":"compound_requests","turnIndex":3,"input":"Buy one rope. Then sell one health potion.","expected":{"tool":"BUY","balance":97}}
+{"sessionId":"compound_requests","turnIndex":4,"input":"What am I carrying?","expected":{"tool":"LIST_INVENTORY"}}

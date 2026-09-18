@@ -1,0 +1,1177 @@
+{
+  "label": "baseline",
+  "assertionVersion": 2,
+  "metrics": {
+    "answer": {
+      "correct": 1,
+      "total": 17
+    },
+    "balance": {
+      "correct": 3,
+      "total": 5
+    },
+    "fact": {
+      "correct": 0,
+      "total": 9
+    },
+    "homeFactsPreserved": {
+      "correct": 65,
+      "total": 65
+    },
+    "noUnintendedMutation": {
+      "correct": 74,
+      "total": 74
+    },
+    "noUnrequestedTool": {
+      "correct": 51,
+      "total": 51
+    },
+    "otherFact": {
+      "correct": 0,
+      "total": 1
+    },
+    "requestedTool": {
+      "correct": 0,
+      "total": 23
+    }
+  },
+  "passedTurns": 26,
+  "turns": 74,
+  "cases": [
+    {
+      "session": "user_transcript",
+      "turn": 1,
+      "input": "hi",
+      "reply": "HI THERE.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "user_transcript",
+      "turn": 2,
+      "input": "Where am I?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "user_transcript",
+      "turn": 3,
+      "input": "Nevermind, what do you have for sale?",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "user_transcript",
+      "turn": 4,
+      "input": "Tell me your name",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "user_transcript",
+      "turn": 5,
+      "input": "Where is the inn?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "first_visit",
+      "turn": 1,
+      "input": "Hello there!",
+      "reply": "HELLO. A BIT OF COMPANY IS WELCOME.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "first_visit",
+      "turn": 2,
+      "input": "What should I call you?",
+      "reply": "I AM NOT SURE HOW TO RESPOND TO THAT.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "first_visit",
+      "turn": 3,
+      "input": "What do you do for work?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "first_visit",
+      "turn": 4,
+      "input": "How are things with you?",
+      "reply": "I AM NOT CERTAIN ABOUT THAT.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "first_visit",
+      "turn": 5,
+      "input": "Could you tell me where we are?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "first_visit",
+      "turn": 6,
+      "input": "I need directions to the inn.",
+      "reply": "I AM NOT CERTAIN ABOUT THAT.",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 1,
+      "input": "Hello.",
+      "reply": "HELLO. A BIT OF COMPANY IS WELCOME.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 2,
+      "input": "Can I see what is for sale?",
+      "reply": "I AM NOT SURE HOW TO RESPOND TO THAT.",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 3,
+      "input": "How much gold do I have?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 4,
+      "input": "What does a rope cost?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 5,
+      "input": "Buy one rope please.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "balance": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 6,
+      "input": "What am I carrying now?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 7,
+      "input": "Tell me my remaining balance.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "shopping_trip",
+      "turn": 8,
+      "input": "Thanks for your help.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "sell_and_buy",
+      "turn": 1,
+      "input": "Show me my inventory.",
+      "reply": "I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST.",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "sell_and_buy",
+      "turn": 2,
+      "input": "Sell one rope for me.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "sell_and_buy",
+      "turn": 3,
+      "input": "How much is a health potion?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "sell_and_buy",
+      "turn": 4,
+      "input": "I would like to buy one health potion.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "sell_and_buy",
+      "turn": 5,
+      "input": "How much gold is left?",
+      "reply": "I AM NOT CERTAIN ABOUT THAT.",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "sell_and_buy",
+      "turn": 6,
+      "input": "Goodbye.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 1,
+      "input": "Do not buy one rope.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 2,
+      "input": "Suppose I bought two rope.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 3,
+      "input": "Someone said \"buy one rope\".",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 4,
+      "input": "I am imagining buying one rope.",
+      "reply": "THAT IS A MORE LOT OF COUNTRIES.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 5,
+      "input": "This is hypothetical: buy one rope.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 6,
+      "input": "I would not like to buy one rope.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 7,
+      "input": "If I had more gold I would like to buy one rope.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 8,
+      "input": "I said \"I would like to buy one rope\".",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "purchase_hard_negatives",
+      "turn": 9,
+      "input": "What is my balance?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "balance": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "remember_me",
+      "turn": 1,
+      "input": "My home is Cedar Hollow.",
+      "reply": "SURE. THE MOST IS SURE SITUATION TOO EASIER.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "remember_me",
+      "turn": 2,
+      "input": "How are you?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "remember_me",
+      "turn": 3,
+      "input": "What is your name?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "remember_me",
+      "turn": 4,
+      "input": "Where did I say my home is?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "remember_me",
+      "turn": 5,
+      "input": "Actually my home is Copper Bay.",
+      "reply": "I AM NOT CERTAIN ABOUT THAT.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "remember_me",
+      "turn": 6,
+      "input": "What home did I tell you about?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "keep_owners_separate",
+      "turn": 1,
+      "input": "My home is Willow Quay.",
+      "reply": "WOULD YOU HAVE TO LONG PRETTY DID!",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "keep_owners_separate",
+      "turn": 2,
+      "input": "You said your home is Marble Port.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "keep_owners_separate",
+      "turn": 3,
+      "input": "Where do I live?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "keep_owners_separate",
+      "turn": 4,
+      "input": "What home did you mention?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "keep_owners_separate",
+      "turn": 5,
+      "input": "Correction: my home is North Road.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false,
+        "otherFact": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "keep_owners_separate",
+      "turn": 6,
+      "input": "What home did you mention?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "unfamiliar_home",
+      "turn": 1,
+      "input": "My home is Briarhaven.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "unfamiliar_home",
+      "turn": 2,
+      "input": "I am tired after travelling.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "unfamiliar_home",
+      "turn": 3,
+      "input": "Where do I live?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "unfamiliar_home",
+      "turn": 4,
+      "input": "Correction: my home is Westmere.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "unfamiliar_home",
+      "turn": 5,
+      "input": "Can you recall my home?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "same_final_cedar",
+      "turn": 1,
+      "input": "My home is Cedar Hollow.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "same_final_cedar",
+      "turn": 2,
+      "input": "What is your job?",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "same_final_cedar",
+      "turn": 3,
+      "input": "Where do I live?",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "same_final_copper",
+      "turn": 1,
+      "input": "My home is Copper Bay.",
+      "reply": "THAT SOUNDS PRETTY A COOL SOUNDS. COOL.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "fact": false
+      },
+      "passed": false,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "same_final_copper",
+      "turn": 2,
+      "input": "What is your job?",
+      "reply": "I AM NOT CERTAIN ABOUT THAT.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "same_final_copper",
+      "turn": 3,
+      "input": "Where do I live?",
+      "reply": "I AM NOT CERTAIN ABOUT THAT.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "topic_changes",
+      "turn": 1,
+      "input": "Good morning.",
+      "reply": "HELLO. A QUIET CONVERSATION SOUNDS WELCOME.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "topic_changes",
+      "turn": 2,
+      "input": "I had a tiring journey.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "topic_changes",
+      "turn": 3,
+      "input": "What goods do you sell?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "topic_changes",
+      "turn": 4,
+      "input": "Anyway, how are you doing?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "topic_changes",
+      "turn": 5,
+      "input": "Where can I find the castle?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "topic_changes",
+      "turn": 6,
+      "input": "Can you tell me your name?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "ambiguous_or_unsupported",
+      "turn": 1,
+      "input": "Do it.",
+      "reply": "SURE. WHAT FOOD IS GOOD.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CONVERSATIONAL_GENERATED",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "ambiguous_or_unsupported",
+      "turn": 2,
+      "input": "Buy that.",
+      "reply": "I UNDERSTAND.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "FALLBACK",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "ambiguous_or_unsupported",
+      "turn": 3,
+      "input": "Give me the thing we discussed.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "ambiguous_or_unsupported",
+      "turn": 4,
+      "input": "Can you repair my armor?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "ambiguous_or_unsupported",
+      "turn": 5,
+      "input": "What quests are available?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "ambiguous_or_unsupported",
+      "turn": 6,
+      "input": "I own a thousand gold coins.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": true,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "ambiguous_or_unsupported",
+      "turn": 7,
+      "input": "What is my balance?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "balance": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "compound_requests",
+      "turn": 1,
+      "input": "Hello. Who are you?",
+      "reply": "MY NAME IS ARIN.",
+      "checks": {
+        "noUnrequestedTool": true,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "answer": true
+      },
+      "passed": true,
+      "source": "PERSONA_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "compound_requests",
+      "turn": 2,
+      "input": "Do not buy one rope. What do you have for sale?",
+      "reply": "I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST.",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "balance": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "compound_requests",
+      "turn": 3,
+      "input": "Buy one rope. Then sell one health potion.",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true,
+        "balance": false
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    },
+    {
+      "session": "compound_requests",
+      "turn": 4,
+      "input": "What am I carrying?",
+      "reply": "COULD YOU EXPLAIN WHAT YOU MEAN?",
+      "checks": {
+        "requestedTool": false,
+        "noUnintendedMutation": true,
+        "homeFactsPreserved": true
+      },
+      "passed": false,
+      "source": "CLARIFICATION_TEMPLATE",
+      "tool": null,
+      "mutated": false
+    }
+  ],
+  "assertionChanges": "Version 2 also checks exact tool arguments and home-memory preservation on unrelated turns. Scenarios and training inputs are unchanged.",
+  "note": "Passing behavior assertions does not establish naturalness, open-domain understanding, or release readiness."
+}

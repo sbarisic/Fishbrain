@@ -1,0 +1,42 @@
+{
+  "schedule": {
+    "name": "STATEFUL_GAME_TEACHING_V1",
+    "seed": 42,
+    "batchSize": 32,
+    "joint": 5000,
+    "decoderOnly": 1000,
+    "endpoint": 6000,
+    "semanticCadence": 7,
+    "peakLearningRate": 0.0003,
+    "decoderLearningRate": 0.0001,
+    "warmup": 100,
+    "clipNorm": 1,
+    "weightDecay": 0.01,
+    "sampler": "BALANCED_EXPLICIT_SEMANTIC_LABEL_SIGNATURE"
+  },
+  "binding": "c399c4216ebeb0d2948ebab5172e775009e04c3567d6ec43890c43fc4233ca7e",
+  "implementationHash": "51e805255ab226b4650d4c345d7b667f4828add94e962d457ad7bdcaba142ebc",
+  "counts": {
+    "train": 20193,
+    "validation": 6157,
+    "test": 1217
+  },
+  "semanticGroups": 46,
+  "realizationGroups": 23,
+  "gpu": "AMD Radeon RX 9070 XT",
+  "config": {
+    "EncoderLayers": 4,
+    "DecoderLayers": 2,
+    "Width": 256,
+    "Heads": 8,
+    "FeedForwardWidth": 1024,
+    "ContextLength": 512,
+    "MaximumOutputTokens": 64,
+    "Seed": 42,
+    "CurrentUtteranceFirst": true,
+    "IndependentMemorySelection": true
+  },
+  "promoted": false,
+  "startingWeights": "FRESH_SEED_42",
+  "note": "Targeted synthetic curriculum. Validation for development and calibration only; no release-gate substitution."
+}

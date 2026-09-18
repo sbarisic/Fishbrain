@@ -12,7 +12,7 @@ internal sealed record PackedInput(int[] Tokens, int[] Segments, TokenSource[] S
 internal static class StructuredInput
 {
     public static PackedInput Pack(ReplyRequest request, DialogueTokenizer tokenizer, int budget,
-        IReadOnlyList<DialogueFact> memories, DialogueDomainDefinition domain)
+        IReadOnlyList<DialogueFact> memories, DialogueDomainDefinition domain, bool currentFirst = false)
     {
         var mandatory = new List<Part>();
         var p = request.Persona;
@@ -57,7 +57,10 @@ internal static class StructuredInput
             history.Insert(0, part);
         }
         retained.Add(current);
-        var parts = mandatory.Concat(memoryParts).Concat(history).Append(currentPart).ToArray();
+        var context = mandatory.Concat(memoryParts).Concat(history);
+        // Bidirectional attention retains all context, while the current words no longer
+        // move when unrelated summaries or variable-length persona values are inserted.
+        var parts = (currentFirst ? context.Prepend(currentPart) : context.Append(currentPart)).ToArray();
         var tokens = parts.SelectMany(x => x.Tokens).ToArray();
         var sources = parts.SelectMany(x => x.Sources).ToArray();
         return new(tokens, sources.Select(x => (int)x.Segment).ToArray(), sources, retained.ToArray(),

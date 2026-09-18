@@ -1,0 +1,26 @@
+[
+  {
+    "path": "data/training/game-teaching-run-v4/calibrated.fbm",
+    "sha256": "309fa19dd03373d972e6ae60b8d50ea8599a98e197e3246af3497af0fa4e019b"
+  },
+  {
+    "path": "data/training/game-teaching-tools/Fishbrain.dll",
+    "sha256": "148aac2ee1d36fc412d605570a04d73eec8db6715034c5142c4d2df99b04161d"
+  },
+  {
+    "path": "data/training/game-teaching-tools/Fishbrain.Runtime.dll",
+    "sha256": "b4ea45dee70e37d90c42f5a0a68de808b322ab0d0c617dcc03bfa3586bf4629f"
+  },
+  {
+    "path": "data/training/game-teaching-tools/Fishbrain.Training.dll",
+    "sha256": "a671b7402ce4fc0051e57fa4193e9dc5f181bb847ef1fd7bbe0deb8d9cf0a310"
+  },
+  {
+    "path": "data/conversation-v4/challenge.json",
+    "sha256": "87866b5a34d1126ca7ca30220cf8d691279d434251691fec062dbd21b445a3dd"
+  },
+  {
+    "path": "data/game-teaching/scenarios.jsonl",
+    "sha256": "89f3d2bf3de616c40c8ad8ced6fbc3630abadafbfa566e67a17d73d9051334f2"
+  }
+]

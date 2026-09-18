@@ -14,7 +14,7 @@ internal static class ConversationEvaluation
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper) }
     };
 
-    public static void Export(string checkpointPath, string scenarioPath, string outputPath)
+    public static void Export(string checkpointPath, string scenarioPath, string outputPath, string? diagnosticsPath = null)
     {
         var brain = Brain.Load(checkpointPath);
         var scenarios = File.ReadLines(scenarioPath, Encoding.UTF8)
@@ -26,6 +26,7 @@ internal static class ConversationEvaluation
             throw new InvalidDataException("Conversation scenario file is empty.");
 
         var output = new List<ConversationReview>();
+        var diagnostics = new List<object>();
         foreach (var session in scenarios.GroupBy(row => row.SessionId, StringComparer.Ordinal))
         {
             var orderedScenarios = session.OrderBy(row => row.TurnIndex).ToArray();
@@ -36,7 +37,8 @@ internal static class ConversationEvaluation
 
             var state = NpcDialogueState.Initial;
             var utterances = new List<DialogueUtterance>();
-            var tools = DemoGameTools.CreateMerchant();
+            var world = new DemoWorldState();
+            var tools = DemoGameTools.CreateMerchant(world);
             long sequence = 0;
             foreach (var scenario in orderedScenarios)
             {
@@ -45,13 +47,24 @@ internal static class ConversationEvaluation
                 var request = new ReplyRequest(
                     session.Key,
                     scenario.TurnIndex.ToString(),
-                    utterances,
+                    utterances.ToArray(),
                     state,
                     NpcPersona.Default,
                     PlayerConversationProfile.Empty,
                     sequence + 1,
                     StableSeed(session.Key, scenario.TurnIndex));
+                var balanceBefore = world.Balance;
+                var inventoryBefore = world.Inventory;
+                var replyTimer = System.Diagnostics.Stopwatch.StartNew();
                 var result = brain.Reply(request, tools);
+                replyTimer.Stop();
+                if (diagnosticsPath is not null) diagnostics.Add(new
+                {
+                    scenario.SessionId, scenario.TurnIndex, Request = request, Result = result,
+                    BalanceBefore = balanceBefore, BalanceAfter = world.Balance,
+                    InventoryBefore = inventoryBefore, InventoryAfter = world.Inventory,
+                    ReplyMilliseconds = replyTimer.Elapsed.TotalMilliseconds
+                });
                 state = result.State;
                 output.Add(new ConversationReview(
                     session.Key,
@@ -85,6 +98,11 @@ internal static class ConversationEvaluation
         var fullPath = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
         File.WriteAllLines(fullPath, output.Select(row => JsonSerializer.Serialize(row, Json)), new UTF8Encoding(false));
+        if (diagnosticsPath is not null)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(diagnosticsPath))!);
+            File.WriteAllLines(diagnosticsPath, diagnostics.Select(row => JsonSerializer.Serialize(row, Json)), new UTF8Encoding(false));
+        }
         Console.WriteLine($"CONVERSATION_REVIEW_EXPORTED {output.Count} {fullPath}");
         Console.WriteLine("DUPLICATE EACH ROW FOR TWO HUMAN REVIEWERS, SET REVIEWER ID AND EVERY RATING, THEN RUN CONVERSATION-GATE.");
     }

@@ -1,0 +1,31 @@
+{
+  "steps": {
+    "calibration": {
+      "exitCode": 0,
+      "seconds": 248.923314999789
+    },
+    "test": {
+      "exitCode": 1,
+      "seconds": 51.118519300594926
+    },
+    "acceptance": {
+      "exitCode": 1,
+      "seconds": 2.1000578003004193
+    },
+    "challenge": {
+      "exitCode": 1,
+      "seconds": 7.796500300057232
+    },
+    "simulation": {
+      "exitCode": 0,
+      "seconds": 4.969847899861634
+    },
+    "candidate-smoke": {
+      "exitCode": 0,
+      "seconds": 0.6133563006296754
+    }
+  },
+  "elapsedSeconds": 315.5237103998661,
+  "promoted": false,
+  "note": "Quality gate failures are retained. Read actual conversations before judging usefulness."
+}

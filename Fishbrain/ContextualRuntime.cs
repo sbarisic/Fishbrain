@@ -52,19 +52,23 @@ public sealed partial class Brain
         var model = _contextual!;
         var parameters = model.Parameters();
         var candidates = request.PlayerProfile.Facts.Concat(request.State.SessionFacts).Distinct().ToArray();
-        var initial = StructuredInput.Pack(request, _tokenizer, model.Config.ContextLength, [], model.Domain);
+        var initial = StructuredInput.Pack(request, _tokenizer, model.Config.ContextLength, [], model.Domain, model.Config.CurrentUtteranceFirst);
         var retrievalGraph = new TensorGraph(false);
         var initialEncoding = model.Encode(retrievalGraph, parameters, initial);
         var query = retrievalGraph.Mean(retrievalGraph.Gather(initialEncoding, initial.CurrentPositions));
-        var memoryScores = TensorGraph.Probabilities(model.MemoryScores(retrievalGraph, parameters, query, candidates));
+        var memoryLogits = model.MemoryScores(retrievalGraph, parameters, query, candidates);
+        var memoryScores = model.Config.IndependentMemorySelection
+            ? memoryLogits.Data.Select(value => 1f / (1f + MathF.Exp(-value))).ToArray()
+            : TensorGraph.Probabilities(memoryLogits);
         var memory = candidates.Select((fact, i) => new MemorySelection(fact, memoryScores[i + 1]))
-            .Where(x => x.Score > memoryScores[0]).OrderByDescending(x => x.Score).ThenByDescending(x => x.Fact.SourceUtterance).Take(8).ToArray();
+            .Where(x => x.Score > (model.Config.IndependentMemorySelection ? .5 : memoryScores[0]))
+            .OrderByDescending(x => x.Score).ThenByDescending(x => x.Fact.SourceUtterance).Take(8).ToArray();
         if (probeMemory is not null)
         {
             if (probeMemory.Count > 8 || probeMemory.Any(f => !candidates.Contains(f))) throw new ArgumentException("Invalid resource-probe memories.");
             memory = probeMemory.Select(f => new MemorySelection(f, memoryScores[Array.IndexOf(candidates, f) + 1])).ToArray();
         }
-        var packed = StructuredInput.Pack(request, _tokenizer, model.Config.ContextLength, memory.Select(x => x.Fact).ToArray(), model.Domain);
+        var packed = StructuredInput.Pack(request, _tokenizer, model.Config.ContextLength, memory.Select(x => x.Fact).ToArray(), model.Domain, model.Config.CurrentUtteranceFirst);
         memory = memory.Where(x => packed.Facts.Contains(x.Fact)).ToArray();
         var graph = new TensorGraph(false);
         var output = model.Understand(graph, parameters, packed, encodedInput: memory.Length == 0 ? initialEncoding : null);
@@ -126,8 +130,10 @@ public sealed partial class Brain
             // Include the whole surrounding sentence so a span prediction cannot omit a preceding negation.
             var clause = ActionLanguage.SurroundingSentence(current, frame.Start, frame.Length);
             var eligible = frame.Status == ActionStatus.Affirmative || !binding.Schema.MutatesWorldState && frame.Status == ActionStatus.Question;
-            if (!eligible || frame.Subject != DialogueParticipant.Player || ActionLanguage.ExecutionVeto(clause) is { })
+            if (!eligible || frame.Subject != DialogueParticipant.Player || ActionLanguage.ExecutionVeto(clause, binding.Schema.MutatesWorldState) is { })
             { vetoes.Add($"FRAME_{index}_NON_EXECUTABLE"); continue; }
+            if (ActionLanguage.ConflictingExplicitAction(current.Substring(frame.Start, frame.Length), binding, model.Domain))
+            { vetoes.Add($"FRAME_{index}_CONFLICTING_EXPLICIT_ACTION"); continue; }
             if (!acts.Any(x => x.Act == DialogueResponseAct.ExecuteTool && x.FrameIndex == index))
             { vetoes.Add($"FRAME_{index}_PLAN_DID_NOT_AUTHORIZE_TOOL"); continue; }
             if (!tools.TryGet(frame.ToolName, out var tool)) { vetoes.Add("CAPABILITY_UNAVAILABLE"); continue; }
@@ -188,7 +194,7 @@ public sealed partial class Brain
         var understandingMilliseconds = timer.Elapsed.TotalMilliseconds;
         if (invocation is null && text.Length == 0)
         {
-            if (vetoes.Count > 0)
+            if (vetoes.Count > 0 && acts.Any(a => a.Act == DialogueResponseAct.ExecuteTool))
             { text = "I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST."; source = ResponseSource.ClarificationTemplate; fallback = vetoes[0]; clarified = true; }
             else if (acts.Any(x => x.Act == DialogueResponseAct.Refuse) || perception.Policy == ResponsePolicy.Refuse)
             { text = "I WILL NOT DO THAT."; source = ResponseSource.Fallback; }
@@ -202,6 +208,13 @@ public sealed partial class Brain
             else if (TryRenderPersona(perception.KnowledgeTarget, request.Persona, tools, out text, out source)) { }
             else if (acts.Any(x => x.Act == DialogueResponseAct.Clarify))
             { text = "COULD YOU EXPLAIN WHAT YOU MEAN?"; source = ResponseSource.ClarificationTemplate; clarified = true; }
+            else if (acts.Any(x => x.Act == DialogueResponseAct.Answer && ActFact(x, discourse, frames).Act == DiscourseAct.ReferBack))
+            {
+                // Recalled values are copied from selected, attributed facts. Free generation
+                // cannot reliably reproduce OOV names or replace the learned recall plan.
+                text = ContextualFallback(request, acts, discourse, memory, frames);
+                source = ResponseSource.ConversationalRepair;
+            }
             else if (request.ResponseMode == ResponseMode.Production && perception.ContentFlags.Count == 0 && _step > 0)
             {
                 text = GenerateContextual(model, parameters, output.PlanMemory, request.Seed);
@@ -321,7 +334,7 @@ public sealed partial class Brain
                 DialogueResponseAct.Clarify => "COULD YOU CLARIFY WHAT YOU MEAN?",
                 DialogueResponseAct.AskFollowUp when HasGroundedQuestion(request, [act], discourse, frames) =>
                     $"WHAT ELSE WOULD YOU LIKE TO DISCUSS ABOUT {clauseFact.FactValueSpan?.NormalizedValue ?? act.Subject}?",
-                DialogueResponseAct.Answer when clauseFact.Act == DiscourseAct.ReferBack => Recall(clauseFact),
+                DialogueResponseAct.Answer when clauseFact.Act == DiscourseAct.ReferBack => RecallMemory(clauseFact, memory),
                 DialogueResponseAct.Answer => "I AM NOT CERTAIN ABOUT THAT.",
                 _ => null
             };
@@ -329,15 +342,18 @@ public sealed partial class Brain
         }
         return clauses.Count == 0 ? "I AM NOT SURE HOW TO RESPOND TO THAT." : string.Join(' ', clauses);
 
-        string Recall(DiscourseFrame remembered)
-        {
-            var owner = remembered.Target == DialogueParticipant.None ? remembered.Subject : remembered.Target;
-            var selected = memory.Where(m => m.Fact.Subject == owner && m.Fact.Kind == remembered.FactKind).Select(m => m.Fact).Distinct().ToArray();
-            if (selected.Length != 1) return "I CANNOT IDENTIFY ONE CLEAR MEMORY ABOUT THAT.";
-            var fact = selected[0];
-            var subject = fact.Subject == DialogueParticipant.Player ? "YOU" : "ME";
-            return $"{(fact.Provenance == DialogueFactProvenance.CallerApproved ? "YOUR PROFILE" : "OUR CONVERSATION")} RECORDS THIS ABOUT {subject}: {fact.Kind.ToString().ToUpperInvariant()} {(fact.Negated ? "NOT " : "")}{fact.Value}.";
-        }
+    }
+
+    internal static string RecallMemory(DiscourseFrame remembered, IReadOnlyList<MemorySelection> memory)
+    {
+        var owner = remembered.Target == DialogueParticipant.None ? remembered.Subject : remembered.Target;
+        var selected = memory.Where(m => m.Fact.Subject == owner && m.Fact.Kind == remembered.FactKind).Select(m => m.Fact).Distinct().ToArray();
+        if (selected.Length != 1) return "I CANNOT IDENTIFY ONE CLEAR MEMORY ABOUT THAT.";
+        var fact = selected[0];
+        if (fact.Kind == DialogueFactKind.Home && fact.Provenance == DialogueFactProvenance.SessionReported)
+            return $"YOU SAID {(fact.Subject == DialogueParticipant.Player ? "YOUR" : "MY")} HOME IS {(fact.Negated ? "NOT " : "")}{fact.Value}.";
+        var subject = fact.Subject == DialogueParticipant.Player ? "YOU" : "ME";
+        return $"{(fact.Provenance == DialogueFactProvenance.CallerApproved ? "YOUR PROFILE" : "OUR CONVERSATION")} RECORDS THIS ABOUT {subject}: {fact.Kind.ToString().ToUpperInvariant()} {(fact.Negated ? "NOT " : "")}{fact.Value}.";
     }
 
     internal static DialogueSlot[] DecodeSlots(Tensor logits, PackedInput input, string text)

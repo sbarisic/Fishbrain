@@ -218,11 +218,12 @@ def collate(rows, manifest, device, phase, rng):
         result["claim_" + suffix + "_valid"] = tensor(mask.any(1), torch.float32)
 
     # A one-class NONE memory loss is exactly zero and needs no second encoder pass.
-    memory = [(i, r) for i, r in enumerate(rows) if r["memoryTargets"] is not None and len(r["facts"]) > 0]
+    independent = manifest['config'].get('independentMemorySelection', False)
+    memory = [(i, r) for i, r in enumerate(rows) if r["memoryTargets"] is not None and (independent or len(r["facts"]) > 0)]
     if memory:
         result["retrieval"] = packed("retrieval")
         fact_count = max(len(r["facts"]) for r in rows)
-        fact_length = max(len(f) for r in rows for f in r["facts"])
+        fact_length = max((len(f) for r in rows for f in r["facts"]), default=1)
         facts = np.zeros((b, fact_count, fact_length), dtype=np.int64)
         fact_tokens = np.zeros_like(facts, dtype=np.bool_)
         fact_mask = np.zeros((b, fact_count + 1), dtype=np.bool_)
@@ -239,4 +240,11 @@ def collate(rows, manifest, device, phase, rng):
         result.update(facts=tensor(facts), fact_token_mask=tensor(fact_tokens), fact_mask=tensor(fact_mask),
                       memory_indices=tensor([[i, label] for i, label, _ in memory_targets]),
                       memory_weights=tensor([w for _, _, w in memory_targets], torch.float32))
+        if independent:
+            labels = np.zeros((b, fact_count + 1), dtype=np.float32)
+            supervised = np.zeros(b, dtype=np.float32)
+            for i, row in memory:
+                labels[i, row['memoryTargets']] = 1
+                supervised[i] = 1
+            result.update(memory_set_labels=tensor(labels), memory_set_valid=tensor(supervised))
     return result

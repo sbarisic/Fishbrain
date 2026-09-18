@@ -1,0 +1,27 @@
+{
+  "seed": 42,
+  "sourceHash": "2af7a5540169d988372545a7594f0104b8d6e8f297cc62bfa2f3e0edfef6435a",
+  "splits": {
+    "train": {
+      "rows": 20650,
+      "episodes": 5080,
+      "families": 222,
+      "authoredPhrases": 214
+    },
+    "validation": {
+      "rows": 6157,
+      "episodes": 1488,
+      "families": 116,
+      "authoredPhrases": 108
+    },
+    "test": {
+      "rows": 1217,
+      "episodes": 388,
+      "families": 116,
+      "authoredPhrases": 108
+    }
+  },
+  "description": "Synthetic state/context/entity augmentation of split-authored phrase families. Not thousands of independently authored episodes.",
+  "responseSource": "Project-owned authored text only; no public conversations in this targeted experiment.",
+  "testRole": "Held-out development wording; original frozen v4 release challenge remains unchanged."
+}

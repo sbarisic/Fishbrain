@@ -1,0 +1,8 @@
+{
+  "status": "ENDPOINT_REACHED",
+  "completedSteps": 6000,
+  "endpoint": 6000,
+  "elapsedSeconds": 1259.6461877999827,
+  "promoted": false,
+  "decoderFreezeVerified": true
+}

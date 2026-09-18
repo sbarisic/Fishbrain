@@ -51,7 +51,7 @@ internal static class ContextualTraining
         // Validate packability up front; never silently discard difficult training examples.
         foreach (var example in data.Concat(validation))
             _ = StructuredInput.Pack(example.Request!, trainer.Architecture.Tokenizer, trainer.Architecture.Config.ContextLength,
-                example.Contextual?.RelevantFacts ?? [], trainer.Architecture.Domain);
+                example.Contextual?.RelevantFacts ?? [], trainer.Architecture.Domain, trainer.Architecture.Config.CurrentUtteranceFirst);
         var language = data.Where(ContextualTrainer.ProjectResponse).ToArray();
         foreach (var example in language)
             if (trainer.Architecture.Tokenizer.Encode(example.Response!).Length + 1 > trainer.Architecture.Config.MaximumOutputTokens)

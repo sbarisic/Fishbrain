@@ -1,0 +1,30 @@
+{
+  "metrics": {
+    "allCategorical": {
+      "correct": 27,
+      "total": 96,
+      "accuracy": 0.28125
+    },
+    "frameCategorical": {
+      "correct": 28,
+      "total": 96,
+      "accuracy": 0.2916666666666667
+    },
+    "planCategorical": {
+      "correct": 70,
+      "total": 96,
+      "accuracy": 0.7291666666666666
+    },
+    "knowledge": {
+      "correct": 79,
+      "total": 96,
+      "accuracy": 0.8229166666666666
+    },
+    "decoderTeacherToken": {
+      "correct": 198,
+      "total": 218,
+      "accuracy": 0.908256880733945
+    }
+  },
+  "developmentOnly": true
+}

@@ -9,6 +9,7 @@ internal static class ContextualArchitectureTests
     {
         QuotedActionBoundaries();
         ConversationMetadata();
+        TeachingInputAndMemory();
         foreach (var input in new[] { "DO NOT BUY 2 ROPE", "IF I BUY 2 ROPE", "I DO NOT WANT TO BUY 2 ROPE", "CANCEL BUY 2 ROPE", "HE SAID BUY 2 ROPE" })
         {
             var world = new DemoWorldState();
@@ -35,6 +36,62 @@ internal static class ContextualArchitectureTests
         StructuredBoundaries();
         ContextualLearningAndResume();
         DomainPlanning();
+    }
+
+    private static void TeachingInputAndMemory()
+    {
+        var model = new ContextualNetwork(new() { CurrentUtteranceFirst = true, IndependentMemorySelection = true },
+            WordVocabulary.Testing(), DemoDialogueDomains.Merchant);
+        var request = Request("WHERE AM I?");
+        var baseline = StructuredInput.Pack(request, model.Tokenizer, 512, [], model.Domain, true);
+        var changed = StructuredInput.Pack(request with
+        {
+            State = request.State with { TopicSummaries = [new(0, "SOCIAL")], ActiveGoals = [DialogueGoal.Rapport] },
+            Persona = request.Persona with { Name = "A MUCH LONGER NAME" }
+        }, model.Tokenizer, 512, [], model.Domain, true);
+        Assert(baseline.CurrentPositions.SequenceEqual(changed.CurrentPositions), "Optional context displaced current input positions.");
+        Assert(baseline.CurrentPositions.Select(i => baseline.Tokens[i]).SequenceEqual(changed.CurrentPositions.Select(i => changed.Tokens[i])),
+            "Current utterance token identity changed with persona/state.");
+        Assert(changed.Tokens.Length > baseline.Tokens.Length, "Stable current positions discarded context.");
+        var original = new ContextualNetwork(new(), model.Vocabulary, model.Domain);
+        Assert(ContextualCheckpoint.SchemaFingerprint(model) != ContextualCheckpoint.SchemaFingerprint(original), "New input/memory contract is not fingerprinted.");
+        // Independent BCE must support simultaneous positives and a negative distractor.
+        var logits = new Tensor(1, 4, [-1, 1, -2, 2], true);
+        var graph = new TensorGraph(true);
+        graph.BinaryCrossEntropy(logits, 0, new HashSet<int> { 1, 3 });
+        for (var i = 0; i < logits.Data.Length; i++)
+        {
+            var value = logits.Data[i];
+            logits.Data[i] = value + .001f;
+            var plus = new TensorGraph(false).BinaryCrossEntropy(logits, 0, new HashSet<int> { 1, 3 });
+            logits.Data[i] = value - .001f;
+            var minus = new TensorGraph(false).BinaryCrossEntropy(logits, 0, new HashSet<int> { 1, 3 });
+            logits.Data[i] = value;
+            Assert(Math.Abs((plus - minus) / .002f - logits.Gradient![i]) < .0002f, "Set-selection BCE gradient mismatch.");
+        }
+        foreach (var negative in new[] { "IF I WOULD LIKE TO BUY ONE ROPE", "I WOULD NOT LIKE TO BUY ONE ROPE",
+            "I SAID I WOULD LIKE TO BUY ONE ROPE", "BUY ONE ROPE IS HYPOTHETICAL", "I AM IMAGINING BUYING ONE ROPE",
+            "I WON'T BUY ONE ROPE", "I CAN'T BUY ONE ROPE", "I WOULDN'T BUY ONE ROPE", "I CANNOT BUY ONE ROPE" })
+            Assert(ActionLanguage.ExecutionVeto(negative) is not null, "Polite-form handling erased a real veto: " + negative);
+        Assert(ActionLanguage.ExecutionVeto("I WOULD LIKE TO BUY ONE ROPE") is null, "Polite request mistaken for hypothetical.");
+        Assert(ActionLanguage.ExecutionVeto("I WOULD BUY ONE ROPE") is not null, "Conditional WOULD was accepted.");
+        Assert(ActionLanguage.ExecutionVeto("WHAT WOULD A ROPE COST", false) is null, "Read-only price question mistaken for action.");
+        var buy = DemoDialogueDomains.Merchant.Tools.Single(t => t.Schema.Name == "BUY");
+        var sell = DemoDialogueDomains.Merchant.Tools.Single(t => t.Schema.Name == "SELL");
+        Assert(ActionLanguage.ConflictingExplicitAction("I WOULD LIKE YOU TO SELL 2 ROPE.", buy, DemoDialogueDomains.Merchant),
+            "A sell request could be executed as a purchase.");
+        Assert(!ActionLanguage.ConflictingExplicitAction("I WOULD LIKE YOU TO SELL 2 ROPE.", sell, DemoDialogueDomains.Merchant), "Matching action was vetoed.");
+        Assert(!ActionLanguage.ConflictingExplicitAction("PURCHASE 2 ROPE.", buy, DemoDialogueDomains.Merchant), "Uninterpreted synonym was treated as contradiction.");
+        var storage = new DialogueDomainDefinition("STORAGE_CHECK", [buy with { Capability = "STORE GOODS" }, sell with { Capability = "RELEASE GOODS" }]);
+        Assert(ActionLanguage.ConflictingExplicitAction("RELEASE TWO BOXES.", storage.Tools.Single(t => t.Capability == "STORE GOODS"), storage),
+            "Action contradiction checking depends on merchant names.");
+        var fact = new DialogueFact(DialogueParticipant.Player, DialogueFactKind.Home, "BRIARHAVEN", false, 0, 1, DialogueFactProvenance.SessionReported);
+        var recall = DiscourseFrame.Empty with { Act = DiscourseAct.ReferBack, Target = DialogueParticipant.Player, FactKind = DialogueFactKind.Home };
+        Assert(Brain.RecallMemory(recall, [new(fact, 1)]) == "YOU SAID YOUR HOME IS BRIARHAVEN.", "Memory value was not copied with attribution.");
+        Assert(Brain.RecallMemory(recall, [new(fact with { Negated = true }, 1)]) == "YOU SAID YOUR HOME IS NOT BRIARHAVEN.", "Recall lost polarity.");
+        Assert(!Brain.RecallMemory(recall, [new(fact with { Subject = DialogueParticipant.Npc }, 1)]).Contains("BRIARHAVEN"), "Recall crossed speaker ownership.");
+        Assert(!Brain.RecallMemory(recall, [new(fact, 1), new(fact with { Value = "WESTMERE" }, 1)]).Contains("BRIARHAVEN"), "Ambiguous memory was answered as certain.");
+        Assert(Brain.RecallMemory(recall, [new(fact with { Provenance = DialogueFactProvenance.CallerApproved }, 1)]).StartsWith("YOUR PROFILE"), "Recall lost approved provenance.");
     }
 
     private static void ConversationMetadata()
@@ -111,6 +168,14 @@ internal static class ContextualArchitectureTests
             var rejected = false;
             try { TorchTrainingBridge.ValidateConversationBinding(directory); } catch (InvalidDataException) { rejected = true; }
             Assert(rejected, "Changed conversation split was accepted for GPU packing.");
+            File.WriteAllText(Path.Combine(directory, "train.jsonl"), "{}");
+            File.WriteAllText(Path.Combine(directory, "audit.json"), System.Text.Json.JsonSerializer.Serialize(new
+            { schema = "STATEFUL_GAME_TEACHING_V1", familyOverlap = 0, exactCrossSplitContexts = 0, splitHashes = hashes }));
+            TorchTrainingBridge.ValidateGameTeachingBinding(directory);
+            File.AppendAllText(Path.Combine(directory, "train.jsonl"), " ");
+            rejected = false;
+            try { TorchTrainingBridge.ValidateGameTeachingBinding(directory); } catch (InvalidDataException) { rejected = true; }
+            Assert(rejected, "Changed teaching split was accepted after audit.");
         }
         finally { Directory.Delete(directory, true); }
     }

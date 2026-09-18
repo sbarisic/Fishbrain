@@ -31,7 +31,9 @@ internal static class ContextualCheckpoint
     internal static string SchemaFingerprint(ContextualNetwork model) => Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new
     {
         model.Shapes,
-        InputContract = "TYPED_ROLES_OWNED_FACTS_AGENDA_SOURCE_TOPICS",
+        InputContract = model.Config.CurrentUtteranceFirst || model.Config.IndependentMemorySelection
+            ? $"TYPED_ROLES_OWNED_FACTS_AGENDA_SOURCE_TOPICS_CURRENT_FIRST_{model.Config.CurrentUtteranceFirst}_MEMORY_SET_{model.Config.IndependentMemorySelection}"
+            : "TYPED_ROLES_OWNED_FACTS_AGENDA_SOURCE_TOPICS",
         Segments = Enum.GetNames<InputSegment>(),
         Acts = Enum.GetNames<DialogueResponseAct>(),
         Status = Enum.GetNames<ActionStatus>(),

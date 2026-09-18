@@ -76,6 +76,14 @@ internal static class Program
                     Count(args, 3, 3);
                     TorchTrainingBridge.Prepare(args[1], args[2]);
                     break;
+                case "prepare-game-teaching":
+                    Count(args, 3, 3);
+                    TorchTrainingBridge.Prepare(args[1], args[2], gameTeaching: true);
+                    break;
+                case "replay-teaching":
+                    Count(args, 3, 3);
+                    TeachingEpisodes.Prepare(args[1], args[2]);
+                    break;
                 case "normalize-conversation":
                     Count(args, 1, 1);
                     TorchTrainingBridge.NormalizeConversation();
@@ -90,6 +98,14 @@ internal static class Program
                 case "calibrate-pilot":
                     Count(args, 4, 4);
                     TorchTrainingBridge.CalibratePilot(args[1], args[2], args[3]);
+                    break;
+                case "calibrate-game-teaching":
+                    Count(args, 4, 4);
+                    TorchTrainingBridge.CalibratePilot(args[1], args[2], args[3], entireValidation: true);
+                    break;
+                case "simulate-game":
+                    Count(args, 5, 5);
+                    ConversationEvaluation.Export(args[1], args[2], args[3], args[4]);
                     break;
                 case "torch-reference":
                     Count(args, 4, 4);
@@ -115,7 +131,7 @@ internal static class Program
                     if (shipped.ContextualConfig is null) throw new InvalidDataException("The shipped artifact must use the contextual architecture.");
                     _ = shipped.Reply(new ReplyRequest("ARTIFACT_SMOKE", "1", [new(0, DialogueRole.Player, "HELLO")],
                         NpcDialogueState.Initial, NpcPersona.Default, PlayerConversationProfile.Empty, 1, 42), DemoGameTools.CreateMerchant());
-                    Console.WriteLine("PASS SHIPPED CONTEXTUAL ARTIFACT");
+                    Console.WriteLine(args.Length == 2 ? "PASS SELECTED CONTEXTUAL ARTIFACT" : "PASS SHIPPED CONTEXTUAL ARTIFACT");
                     break;
                 case "conversation-sample":
                     Count(args, 4, 4);
@@ -231,6 +247,10 @@ internal static class Program
         Console.WriteLine("  selftest");
         Console.WriteLine("  benchmark-training CORPUS_DIRECTORY CHECKPOINT REPORT.json [UPDATES_PER_PHASE]");
         Console.WriteLine("  prepare-torch CORPUS_DIRECTORY EMPTY_OUTPUT_DIRECTORY");
+        Console.WriteLine("  prepare-game-teaching CORPUS_DIRECTORY EMPTY_OUTPUT_DIRECTORY");
+        Console.WriteLine("  replay-teaching AUTHORED_DIRECTORY EMPTY_OUTPUT_DIRECTORY");
+        Console.WriteLine("  calibrate-game-teaching CORPUS MODEL.fbm OUTPUT.fbm");
+        Console.WriteLine("  simulate-game MODEL.fbm SCENARIOS.jsonl REVIEW.jsonl DIAGNOSTICS.jsonl");
         Console.WriteLine("  torch-reference CORPUS_DIRECTORY MODEL.fbm OUTPUT.jsonl");
         Console.WriteLine("  validate-generated MODEL.fbm  (JSON lines on stdin)");
         Console.WriteLine("  assess-torch CORPUS_DIRECTORY GPU_RUN_DIRECTORY");

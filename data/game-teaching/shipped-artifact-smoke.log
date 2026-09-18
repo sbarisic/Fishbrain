@@ -1,0 +1,4 @@
+ERROR System.IO.InvalidDataException: Contextual checkpoint integrity failure.
+   at Fishbrain.Neural.ContextualCheckpoint.Load(String path, DialogueDomainDefinition domain, Boolean training) in E:\Projects\Fishbrain\Fishbrain\Neural\ContextualCheckpoint.cs:line 104
+   at Fishbrain.Brain.Load(String path) in E:\Projects\Fishbrain\Fishbrain.Runtime\Brain.cs:line 11
+   at Fishbrain.Program.Main(String[] args) in E:\Projects\Fishbrain\Fishbrain\Program.cs:line 130

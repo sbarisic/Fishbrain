@@ -14,6 +14,9 @@ The 50,000-update pilot also failed its gates; see the
 The subsequent [simulated-conversation teaching diagnostic](TEACHING_DIAGNOSTIC.md)
 shows that the same architecture can fit small lessons, but remains sensitive to
 new wording and runtime dialogue state. It is not a replacement model.
+The [stateful in-game teaching follow-up](GAME_TEACHING.md) adds varied histories,
+character-based fact copying, memory-selection changes and actual game simulations.
+See its [measured results and limitations](GAME_TEACHING_RESULTS.md) before testing.
 Native acceptance and two-human review remain required before release.
 Long-context inference currently exceeds the 100 ms engineering target.
 

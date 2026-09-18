@@ -1,0 +1,198 @@
+{
+  "passed": true,
+  "torch": "2.13.0+rocm10.0.0",
+  "gpu": "AMD Radeon RX 9070 XT",
+  "export": "data\\training\\game-teaching-parity-v5.fbm",
+  "cases": [
+    {
+      "family": "GAME:validation:clarify:0",
+      "maximumLogitError": 4.57763671875e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 5.807431697845459,
+          "referenceLoss": 5.807431,
+          "maximumGradientError": 2.821160182950311e-06
+        },
+        "JointUnderstanding": {
+          "loss": 157.7648468017578,
+          "referenceLoss": 157.76488,
+          "maximumGradientError": 1.9230895995647757e-05
+        },
+        "JointRealization": {
+          "loss": 5.1933088302612305,
+          "referenceLoss": 5.193309,
+          "maximumGradientError": 3.0006515502889464e-07
+        },
+        "DecoderPolish": {
+          "loss": 5.1933088302612305,
+          "referenceLoss": 5.193309,
+          "maximumGradientError": 6.380554196105948e-08
+        }
+      }
+    },
+    {
+      "family": "GAME:validation:clarify:0",
+      "maximumLogitError": 4.57763671875e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 6.084552764892578,
+          "referenceLoss": 6.084553,
+          "maximumGradientError": 1.2993458557153392e-06
+        },
+        "JointUnderstanding": {
+          "loss": 162.7214813232422,
+          "referenceLoss": 162.72142,
+          "maximumGradientError": 1.6735717773386227e-05
+        },
+        "JointRealization": {
+          "loss": 5.870006561279297,
+          "referenceLoss": 5.8700075,
+          "maximumGradientError": 1.8099704743312905e-07
+        },
+        "DecoderPolish": {
+          "loss": 5.870006561279297,
+          "referenceLoss": 5.8700075,
+          "maximumGradientError": 1.30576477047617e-07
+        }
+      }
+    },
+    {
+      "family": "GAME:validation:home:0",
+      "maximumLogitError": 4.57763671875e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 5.711097717285156,
+          "referenceLoss": 5.7110987,
+          "maximumGradientError": 4.000423431391176e-06
+        },
+        "JointUnderstanding": {
+          "loss": 74.21697998046875,
+          "referenceLoss": 74.21698,
+          "maximumGradientError": 6.725415039099403e-06
+        }
+      }
+    },
+    {
+      "family": "GAME:validation:home:0",
+      "maximumLogitError": 6.103515625e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 6.050970077514648,
+          "referenceLoss": 6.05097,
+          "maximumGradientError": 1.3008373546605223e-06
+        },
+        "JointUnderstanding": {
+          "loss": 73.59542846679688,
+          "referenceLoss": 73.59547,
+          "maximumGradientError": 1.0893762206976021e-05
+        },
+        "JointRealization": {
+          "loss": 5.498451232910156,
+          "referenceLoss": 5.498452,
+          "maximumGradientError": 2.2252147674484135e-07
+        },
+        "DecoderPolish": {
+          "loss": 5.498451232910156,
+          "referenceLoss": 5.498452,
+          "maximumGradientError": 1.5231414796090803e-07
+        }
+      }
+    },
+    {
+      "family": "GAME:validation:compound:0",
+      "maximumLogitError": 3.0517578125e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 5.794165134429932,
+          "referenceLoss": 5.794165,
+          "maximumGradientError": 3.8772201538250783e-07
+        },
+        "JointUnderstanding": {
+          "loss": 165.42938232421875,
+          "referenceLoss": 165.4294,
+          "maximumGradientError": 1.2681274414561017e-05
+        },
+        "JointRealization": {
+          "loss": 5.86345911026001,
+          "referenceLoss": 5.8634586,
+          "maximumGradientError": 1.8224822995183132e-07
+        },
+        "DecoderPolish": {
+          "loss": 5.86345911026001,
+          "referenceLoss": 5.8634586,
+          "maximumGradientError": 1.8224822995183132e-07
+        }
+      }
+    },
+    {
+      "family": "GAME:validation:compound:0",
+      "maximumLogitError": 3.0517578125e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 5.768524169921875,
+          "referenceLoss": 5.768524,
+          "maximumGradientError": 1.186521911833438e-07
+        },
+        "JointUnderstanding": {
+          "loss": 177.8478546142578,
+          "referenceLoss": 177.84785,
+          "maximumGradientError": 0.00036464855956985787
+        },
+        "JointRealization": {
+          "loss": 5.148114204406738,
+          "referenceLoss": 5.148114,
+          "maximumGradientError": 6.857675247218253e-06
+        },
+        "DecoderPolish": {
+          "loss": 5.148114204406738,
+          "referenceLoss": 5.148114,
+          "maximumGradientError": 8.329162592968231e-08
+        }
+      }
+    },
+    {
+      "family": "GAME:validation:clarify:0",
+      "maximumLogitError": 4.57763671875e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 5.928215980529785,
+          "referenceLoss": 5.928217,
+          "maximumGradientError": 2.1199871063221076e-06
+        },
+        "JointUnderstanding": {
+          "loss": 173.46282958984375,
+          "referenceLoss": 173.46284,
+          "maximumGradientError": 1.2861389160789827e-05
+        },
+        "JointRealization": {
+          "loss": 6.1021318435668945,
+          "referenceLoss": 6.102132,
+          "maximumGradientError": 1.8176498417510345e-07
+        },
+        "DecoderPolish": {
+          "loss": 6.1021318435668945,
+          "referenceLoss": 6.102132,
+          "maximumGradientError": 1.8176498417510345e-07
+        }
+      }
+    },
+    {
+      "family": "GAME:validation:clarify:0",
+      "maximumLogitError": 6.103515625e-05,
+      "phases": {
+        "MaskedLanguage": {
+          "loss": 6.1616034507751465,
+          "referenceLoss": 6.161604,
+          "maximumGradientError": 2.1443481434957334e-07
+        },
+        "JointUnderstanding": {
+          "loss": 171.11512756347656,
+          "referenceLoss": 171.1151,
+          "maximumGradientError": 1.4321289063090603e-05
+        }
+      }
+    }
+  ],
+  "batchedParity": true,
+  "frozenPolish": true
+}

@@ -1,0 +1,1469 @@
+{
+  "Rows": 1217,
+  "FrameExact": 0.18734593262119967,
+  "PlanExact": 0.4774034511092851,
+  "MemoryExact": 0.9219391947411668,
+  "CorrectionExact": 0.05555555555555555,
+  "AgendaExact": 1,
+  "UnintendedMutations": 9,
+  "AuthoritativeAlterations": 0,
+  "InvalidResponses": 0,
+  "UnderstandingP95": 103.2073,
+  "ReplyP95": 109.1626,
+  "AutomatedPass": false,
+  "ToolDecisions": [
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5875065326690674,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9993958473205566,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5044926404953003,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7243089079856873,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5371679067611694,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.7480082511901855,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.5108413696289062,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9556355476379395,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5007967948913574,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.6081591844558716,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9846343398094177,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7019031643867493,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.6011094450950623,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9082100987434387,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7415681481361389,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8833234906196594,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9390982985496521,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5204601287841797,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.95891934633255,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9249165058135986,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9354541301727295,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5007967948913574,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5640747547149658,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.7872821092605591,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9206618666648865,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9994825124740601,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.96825110912323,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6433008909225464,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9206618666648865,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9171591401100159,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9708451628684998,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.8873661160469055,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5494214296340942,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9206618666648865,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.727427065372467,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9355431795120239,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8462347388267517,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.928642749786377,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5494214296340942,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9942747950553894,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9939529299736023,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5494214296340942,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9665572047233582,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4996672570705414,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.8506702184677124,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9236214756965637,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.5695868730545044,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.538605809211731,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6490871906280518,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6015808582305908,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5102443099021912,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9354541301727295,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8742267489433289,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4996672570705414,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.7183518409729004,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.5148453116416931,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7019031643867493,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9708451628684998,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.5733188986778259,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6490871906280518,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9722920060157776,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9438354969024658,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5673525333404541,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9206618666648865,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5309716463088989,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9114668965339661,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5007967948913574,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7250369787216187,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7401235699653625,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9355431795120239,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7546008825302124,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5494214296340942,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7873325347900391,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9843144416809082,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.6042290329933167,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8742267489433289,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9177319407463074,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.963161051273346,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9413954019546509,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6338282823562622,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8971380591392517,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4996672570705414,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.970725953578949,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9082100987434387,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9982315897941589,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5494214296340942,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9814324975013733,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.5695868730545044,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.7876615524291992,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.8510186076164246,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9022247791290283,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9171591401100159,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8104175925254822,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8760207891464233,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9182305335998535,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.7590136528015137,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9401105046272278,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9977008700370789,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9995734095573425,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8205434083938599,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9990614056587219,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9991644620895386,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9989467263221741,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.6011094450950623,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9978579878807068,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9980436563491821,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9992222785949707,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9923277497291565,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9967077970504761,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9989683628082275,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.998257577419281,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7335290908813477,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9993925094604492,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.994719386100769,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.994439959526062,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9950557947158813,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9846994280815125,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.8836883902549744,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.8899019360542297,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9715502858161926,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.6953970789909363,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.9087135195732117,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8257816433906555,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.9942235350608826,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.991551399230957,
+      "Correct": false
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9885790348052979,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4999178647994995,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9897541403770447,
+      "Correct": false
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.689035177230835,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9206618666648865,
+      "Correct": false
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.7292918562889099,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.958227813243866,
+      "Correct": false
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9839515686035156,
+      "Correct": false
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.998772919178009,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.9963786005973816,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.7849088311195374,
+      "Correct": true
+    },
+    {
+      "Tool": "SELL",
+      "Confidence": 0.998023509979248,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5007967948913574,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9545040130615234,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5377791523933411,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5042645335197449,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9956707954406738,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5771920680999756,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.36862537264823914,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9823035597801208,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.7692041397094727,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.920592188835144,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9640986919403076,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5494214296340942,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9263619780540466,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.999497652053833,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.7298259735107422,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4996672570705414,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9992374181747437,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9916456341743469,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9442786574363708,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9967893362045288,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9670059084892273,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9763814806938171,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9082100987434387,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9983142614364624,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9981458187103271,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.988361656665802,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9488425850868225,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9921242594718933,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9171591401100159,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.750341534614563,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9206618666648865,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5648694038391113,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.7275662422180176,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7335290908813477,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8971380591392517,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6490871906280518,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.7457879781723022,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.565515398979187,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9174081087112427,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.99496990442276,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9834169149398804,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.44638851284980774,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9476932287216187,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6790086627006531,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.995598316192627,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4996672570705414,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9660584330558777,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9593848586082458,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8803964853286743,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9018741846084595,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5082976222038269,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9869982004165649,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.8709281086921692,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.6365745663642883,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.7876615524291992,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8742267489433289,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9166143536567688,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5651213526725769,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9355431795120239,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9282533526420593,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6667847037315369,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5494214296340942,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.896158754825592,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9964209794998169,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8999148011207581,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9603671431541443,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6103909611701965,
+      "Correct": false
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.989840567111969,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7899600863456726,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.6540235280990601,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9906125068664551,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9944494962692261,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9852504134178162,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6131711602210999,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.97786545753479,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9996531009674072,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8573679327964783,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9961715340614319,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9294043779373169,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8742267489433289,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9709832668304443,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6490871906280518,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9176478385925293,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4996672570705414,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5007967948913574,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9035691618919373,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9915285110473633,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.822766125202179,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9992177486419678,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8456488847732544,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.779198944568634,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.6597316861152649,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6240659952163696,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8628959655761719,
+      "Correct": false
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.997160792350769,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9979914426803589,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9985479712486267,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9982200264930725,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9434210062026978,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9957921504974365,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9447492361068726,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6485612392425537,
+      "Correct": true
+    },
+    {
+      "Tool": "BUY",
+      "Confidence": 0.9986566305160522,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.685909628868103,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.8177170157432556,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.4996672570705414,
+      "Correct": false
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.6962398290634155,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9694564938545227,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9144667387008667,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9843048453330994,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9747138023376465,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.7567889094352722,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.990260660648346,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.6490871906280518,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9314723610877991,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5406619310379028,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_BALANCE",
+      "Confidence": 0.729486346244812,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5615727305412292,
+      "Correct": false
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5202053785324097,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9665554165840149,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9941039681434631,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9965410828590393,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.504952073097229,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.5007967948913574,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9635331034660339,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_PRICE",
+      "Confidence": 0.9855204224586487,
+      "Correct": true
+    }
+  ],
+  "Operational": {
+    "speechActs": 0.3378215969669976,
+    "domains": 0.36732952054748674,
+    "goals": 0.582957067175172,
+    "content": 0,
+    "affect": 0.9506984387838948,
+    "policy": 0.6540673788003287,
+    "slots": 0.8211508553654744,
+    "tool": 0.7017255546425637,
+    "mutatingToolPrecision": 0.36363636363636365,
+    "knowledgeTarget": 0.7304847986852917,
+    "discourseAct": 0.6721446179129006,
+    "speakerAttribution": 0.5227272727272727,
+    "factSpan": 0.209366391184573,
+    "antecedent": 0.2222222222222222,
+    "correctionState": 0.05555555555555555
+  },
+  "RetiredMetrics": [
+    "CATALOG_RESPONSE_TOP1",
+    "CATALOG_RESPONSE_TOP3",
+    "VARIATION_RECALL_AT10",
+    "VARIATION_MRR"
+  ],
+  "UnintendedWorldMutations": 4,
+  "UnintendedToolInvocations": 9,
+  "ExecutionViolations": [
+    {
+      "Family": "GAME:test:wellbeing:3",
+      "Input": "HAVING A GOOD DAY",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_BALANCE",
+        "Arguments": {},
+        "IdempotencyKey": "b72c44978668b72df979d6194773913bdb03a77cd194eeacb229e9f6ba270910"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:location:1",
+      "Input": "I AM LOST, WHERE AM I?",
+      "ExpectedTool": "GET_CURRENT_LOCATION",
+      "Invocation": {
+        "ToolName": "GET_BALANCE",
+        "Arguments": {},
+        "IdempotencyKey": "e721dc0720682053c895ebe2e297fc18c017dd5dced53a05ee4e5a1a909c6123"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:sell:1",
+      "Input": "GO AHEAD WITH SELLING 2 ROPE",
+      "ExpectedTool": "SELL",
+      "Invocation": {
+        "ToolName": "BUY",
+        "Arguments": {
+          "ITEM": "ROPE",
+          "QUANTITY": "2"
+        },
+        "IdempotencyKey": "d0200228c59076be0a30148a8724ed4e248f424754ab09486484f579edc4b63e"
+      },
+      "WorldChanged": true
+    },
+    {
+      "Family": "GAME:test:sell:1",
+      "Input": "GO AHEAD WITH SELLING 2 HEALTH POTION.",
+      "ExpectedTool": "SELL",
+      "Invocation": {
+        "ToolName": "BUY",
+        "Arguments": {
+          "ITEM": "HEALTH POTION",
+          "QUANTITY": "2"
+        },
+        "IdempotencyKey": "2c4eb9e847e1635713bbbda4808060e16123747f9844c00144442270ef5ba418"
+      },
+      "WorldChanged": true
+    },
+    {
+      "Family": "GAME:test:sell:1",
+      "Input": "GO AHEAD WITH SELLING ONE HEALTH POTION",
+      "ExpectedTool": "SELL",
+      "Invocation": {
+        "ToolName": "BUY",
+        "Arguments": {
+          "ITEM": "HEALTH POTION",
+          "QUANTITY": "1"
+        },
+        "IdempotencyKey": "f5b07b7452465e1f13d909cd60fd3c0ea1f0fff730a6a97eb20961b3a5a26ffd"
+      },
+      "WorldChanged": true
+    },
+    {
+      "Family": "GAME:test:sell:2",
+      "Input": "MAKE THE SALE OF 1 ROPE",
+      "ExpectedTool": "SELL",
+      "Invocation": {
+        "ToolName": "BUY",
+        "Arguments": {
+          "ITEM": "ROPE",
+          "QUANTITY": "1"
+        },
+        "IdempotencyKey": "266a2ded244d3a277a58ac760815337b1aad269d5a128748d71bb5228b09c981"
+      },
+      "WorldChanged": true
+    },
+    {
+      "Family": "GAME:test:npc_home:1",
+      "Input": "HAVING A GOOD DAY",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_BALANCE",
+        "Arguments": {},
+        "IdempotencyKey": "c9abb86e438e2ecd6d2740235382df1aae141ac036c2048b3cbf7bacd2a73a5d"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:compound:5",
+      "Input": "HAVING A GOOD DAY",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_BALANCE",
+        "Arguments": {},
+        "IdempotencyKey": "147bd63c5d71e5d9d8d13aa0c07be95d151b9ab63c0f30ce659af2049ff0f10c"
+      },
+      "WorldChanged": false
+    },
+    {
+      "Family": "GAME:test:compound:6",
+      "Input": "HAVING A GOOD DAY",
+      "ExpectedTool": null,
+      "Invocation": {
+        "ToolName": "GET_BALANCE",
+        "Arguments": {},
+        "IdempotencyKey": "7c053715d62e576e166869be85b26811056e46a497d9112f8961d68673352c57"
+      },
+      "WorldChanged": false
+    }
+  ]
+}

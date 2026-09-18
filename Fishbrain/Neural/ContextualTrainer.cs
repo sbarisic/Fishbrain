@@ -83,7 +83,7 @@ internal sealed class ContextualTrainer : IContextualTrainingState
                     if (phase != ContextualPhase.MaskedLanguage) continue;
                     var example = examples[start + i];
                     var input = StructuredInput.Pack(example.Request!, Architecture.Tokenizer, Architecture.Config.ContextLength,
-                        example.Contextual?.RelevantFacts ?? [], Architecture.Domain);
+                        example.Contextual?.RelevantFacts ?? [], Architecture.Domain, Architecture.Config.CurrentUtteranceFirst);
                     _ = MaskPositions(input, Random);
                 }
                 var losses = new float[count];
@@ -127,7 +127,7 @@ internal sealed class ContextualTrainer : IContextualTrainingState
         var request = example.Request ?? throw new InvalidDataException("Contextual training requires complete structured requests.");
         var facts = request.PlayerProfile.Facts.Concat(request.State.SessionFacts).Distinct().ToArray();
         var selected = example.Contextual?.RelevantFacts ?? Array.Empty<DialogueFact>();
-        var input = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, selected, model.Domain);
+        var input = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, selected, model.Domain, model.Config.CurrentUtteranceFirst);
         var graph = new TensorGraph(backward);
         var p = parameters ?? Parameters;
         var loss = 0f;
@@ -184,12 +184,13 @@ internal sealed class ContextualTrainer : IContextualTrainingState
                 if (example.Contextual?.RelevantFacts is { } relevant)
                 {
                     // Retrieval sees the same pre-selection context at training and inference.
-                    var retrievalInput = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, [], model.Domain);
+                    var retrievalInput = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, [], model.Domain, model.Config.CurrentUtteranceFirst);
                     var retrievalEncoding = model.Encode(graph, p, retrievalInput);
                     var scores = model.MemoryScores(graph, p, graph.Mean(graph.Gather(retrievalEncoding, retrievalInput.CurrentPositions)), facts);
                     var positives = relevant.Select(f => Array.IndexOf(facts, f) + 1).ToHashSet();
                     if (positives.Count == 0) positives.Add(0);
-                    foreach (var target in positives) loss += graph.CrossEntropy(scores, 0, target, 1f / positives.Count);
+                    if (model.Config.IndependentMemorySelection) loss += graph.BinaryCrossEntropy(scores, 0, positives);
+                    else foreach (var target in positives) loss += graph.CrossEntropy(scores, 0, target, 1f / positives.Count);
                 }
                 if (example.Contextual?.Frames is { } frames)
                     for (var i = 0; i < 3; i++)

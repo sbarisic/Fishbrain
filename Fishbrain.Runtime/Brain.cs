@@ -69,7 +69,7 @@ public sealed partial class Brain
     }
 
 
-    private static bool TryRenderPersona(
+    internal static bool TryRenderPersona(
         KnowledgeTarget target, NpcPersona persona, GameToolRegistry tools,
         out string text, out ResponseSource source)
     {

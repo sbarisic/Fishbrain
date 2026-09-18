@@ -55,8 +55,15 @@ def loss_for(model, batch, phase, mine_claims=None):
         loss = loss + F.binary_cross_entropy_with_logits(logits.float(), labels, reduction="none").mean(-1).sum() / size
     if "retrieval" in batch:
         scores = model.retrieve(batch)[:, 0]
-        indices = batch["memory_indices"]
-        loss = loss + (categorical(scores[indices[:, 0]], indices[:, 1]) * batch["memory_weights"]).sum()
+        if model.config.get('IndependentMemorySelection', False):
+            valid = batch['fact_mask']
+            # Mask padding before BCE: masked pointer logits may be -inf.
+            raw = F.binary_cross_entropy_with_logits(scores.float().masked_fill(~valid, 0), batch['memory_set_labels'], reduction='none')
+            per_row = (raw * valid).sum(-1) / valid.sum(-1).clamp_min(1)
+            loss = loss + (per_row * batch['memory_set_valid']).sum() / size
+        else:
+            indices = batch["memory_indices"]
+            loss = loss + (categorical(scores[indices[:, 0]], indices[:, 1]) * batch["memory_weights"]).sum()
     for suffix, label in (("positive", 0), ("negative", 1)):
         logits = model.claim(batch["claim_" + suffix], batch["claim_" + suffix + "_mask"], memory, memory_mask)[:, 0]
         labels = torch.full((size,), label, dtype=torch.long, device=logits.device)

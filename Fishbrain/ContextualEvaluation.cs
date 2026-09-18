@@ -4,10 +4,19 @@ using Fishbrain.Neural;
 namespace Fishbrain;
 
 internal sealed record ToolCalibrationDecision(string Tool, double Confidence, bool Correct);
+internal sealed record ContextualExecutionViolation(string Family, string Input, string? ExpectedTool,
+    GameToolInvocation Invocation, bool WorldChanged);
 internal sealed record ContextualMetrics(int Rows, double FrameExact, double PlanExact, double MemoryExact,
     double CorrectionExact, double AgendaExact, int UnintendedMutations, int AuthoritativeAlterations, int InvalidResponses, double UnderstandingP95,
     double ReplyP95, bool AutomatedPass, IReadOnlyList<ToolCalibrationDecision> ToolDecisions,
-    IReadOnlyDictionary<string, double> Operational, string[] RetiredMetrics);
+    IReadOnlyDictionary<string, double> Operational, string[] RetiredMetrics)
+{
+    // Retain the historical strict gate/counter above; it counts incorrect read-only
+    // invocations too. This additional counter reports actual world-state violations.
+    public int UnintendedWorldMutations { get; init; }
+    public int UnintendedToolInvocations => UnintendedMutations;
+    public IReadOnlyList<ContextualExecutionViolation> ExecutionViolations { get; init; } = [];
+}
 
 internal static class ContextualEvaluation
 {
@@ -16,14 +25,17 @@ internal static class ContextualEvaluation
     {
         var brain = Brain.CreateContextualForEvaluation(model, completedSteps, thresholds);
         int frameRows = 0, frameCorrect = 0, planRows = 0, planCorrect = 0, memoryRows = 0, memoryCorrect = 0, correctionRows = 0, correctionCorrect = 0, agendaRows = 0, agendaCorrect = 0;
-        var unintended = 0; var invalid = 0; var alterations = 0;
+        var unintended = 0; var worldMutations = 0; var invalid = 0; var alterations = 0;
+        var violations = new List<ContextualExecutionViolation>();
         var times = new List<double>(); var understanding = new List<double>(); var decisions = new List<ToolCalibrationDecision>();
         var pairs = new List<(TrainingExample Expected, StructuredPerception Actual)>();
         foreach (var example in examples)
         {
             var timer = System.Diagnostics.Stopwatch.StartNew();
             // Each independent row receives a fresh world; expected history is in its explicit state.
-            var result = brain.Reply(example.Request!, DemoGameTools.CreateMerchant());
+            var world = new DemoWorldState();
+            var inventoryBefore = world.Inventory.OrderBy(x => x.Key).ToArray();
+            var result = brain.Reply(example.Request!, DemoGameTools.CreateMerchant(world));
             times.Add(timer.Elapsed.TotalMilliseconds);
             var contextual = result.Contextual!;
             understanding.Add(contextual.UnderstandingMilliseconds);
@@ -40,7 +52,13 @@ internal static class ContextualEvaluation
                         ArgumentsEqual(expectedFirst, candidate.ToolName, candidate.Arguments, example.Request!)));
                 if (result.Diagnostics.ToolInvocation is { } invocation)
                 {
-                    if (expectedFirst is null || !ArgumentsEqual(expectedFirst, invocation.ToolName, invocation.Arguments, example.Request!)) unintended++;
+                    if (expectedFirst is null || !ArgumentsEqual(expectedFirst, invocation.ToolName, invocation.Arguments, example.Request!))
+                    {
+                        unintended++;
+                        var changed = world.Balance != 100 || !inventoryBefore.SequenceEqual(world.Inventory.OrderBy(x => x.Key));
+                        if (changed) worldMutations++;
+                        violations.Add(new(example.SemanticFamilyId, example.Request!.Utterances[^1].Text, expectedFirst?.ToolName, invocation, changed));
+                    }
                     // Replay against an isolated identical world to verify exact typed authority rendering.
                     var oracle = DemoGameTools.CreateMerchant();
                     if (oracle.TryGet(invocation.ToolName, out var oracleTool))
@@ -74,7 +92,8 @@ internal static class ContextualEvaluation
             Percentile(understanding) <= 100 && Percentile(times) <= 1000;
         // Full authority, artifact, memory-budget and human gates remain separate mandatory release checks.
         return new(examples.Count, f, p, m, c, a, unintended, alterations, invalid, Percentile(understanding), Percentile(times), pass,
-            decisions, operational, ["CATALOG_RESPONSE_TOP1", "CATALOG_RESPONSE_TOP3", "VARIATION_RECALL_AT10", "VARIATION_MRR"]);
+            decisions, operational, ["CATALOG_RESPONSE_TOP1", "CATALOG_RESPONSE_TOP3", "VARIATION_RECALL_AT10", "VARIATION_MRR"])
+        { UnintendedWorldMutations = worldMutations, ExecutionViolations = violations.AsReadOnly() };
 
         bool Executable(SemanticFrame frame) => frame.ToolName is not null && (frame.Status == ActionStatus.Affirmative ||
             frame.Status == ActionStatus.Question && !model.Domain.Tools.Single(t => t.Schema.Name == frame.ToolName).Schema.MutatesWorldState);

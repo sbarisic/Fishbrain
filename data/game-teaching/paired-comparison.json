@@ -1,0 +1,18 @@
+{
+  "baseline": "baseline",
+  "candidate": "candidate",
+  "sessions": 13,
+  "turns": 74,
+  "baselinePassed": 26,
+  "candidatePassed": 55,
+  "pairedDifference": 0.3918918918918919,
+  "sessionBootstrap95Interval": [
+    0.21333333333333335,
+    0.5921052631578947
+  ],
+  "seed": 42,
+  "replicates": 10000,
+  "improved": 32,
+  "regressed": 3,
+  "note": "Exploratory interval over this deliberately selected development scenario mix. It does not establish population accuracy, naturalness, or release readiness."
+}

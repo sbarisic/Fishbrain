@@ -116,6 +116,8 @@ public sealed record ContextualModelConfig
     public int ContextLength { get; init; } = 512;
     public int MaximumOutputTokens { get; init; } = 64;
     public int Seed { get; init; } = 42;
+    public bool CurrentUtteranceFirst { get; init; }
+    public bool IndependentMemorySelection { get; init; }
     internal void Validate()
     {
         if (EncoderLayers is < 1 or > 12 || DecoderLayers is < 1 or > 12 || Width is < 4 or > 1024 ||

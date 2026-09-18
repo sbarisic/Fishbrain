@@ -36,7 +36,7 @@ internal static class TorchTrainingBridge
                 if (row.Training is null) throw new InvalidDataException("Conversation v4 requires explicit eligibility metadata.");
                 try
                 {
-                    var packed = StructuredInput.Pack(row.Request!, model.Tokenizer, 512, row.Contextual?.RelevantFacts ?? [], model.Domain);
+                    var packed = StructuredInput.Pack(row.Request!, model.Tokenizer, 512, row.Contextual?.RelevantFacts ?? [], model.Domain, model.Config.CurrentUtteranceFirst);
                     if (row.Training.ResponseEligible) histories[row.Training.ExampleId] = new { Turns = packed.Utterances.Length, Tokens = packed.Tokens.Length };
                     if (row.Training.ResponseEligible && model.Tokenizer.Encode(row.Response!).Length + 1 > 64)
                         throw new ArgumentException("RESPONSE_TOKEN_BUDGET");
@@ -47,19 +47,20 @@ internal static class TorchTrainingBridge
         File.WriteAllText(report, JsonSerializer.Serialize(new { Counts = counts, Rejected = rejected, Histories = histories }));
     }
 
-    internal static void CalibratePilot(string corpus, string input, string output)
+    internal static void CalibratePilot(string corpus, string input, string output, bool entireValidation = false)
     {
         var loaded = ContextualCheckpoint.Load(input);
         if (loaded.Header.CorpusHash != ContextualTraining.CorpusHash(corpus))
             throw new InvalidDataException("Pilot calibration corpus mismatch.");
         var rows = TrainingData.Load(Path.Combine(corpus, "validation.jsonl"), loaded.Model.Tokenizer).StructuredSamples
-            .Where(x => x.Contextual?.Frames is not null && ContextualTraining.CalibrationFamily(x.SemanticFamilyId)).ToArray();
+            .Where(x => x.Contextual?.Frames is not null && (entireValidation || ContextualTraining.CalibrationFamily(x.SemanticFamilyId))).ToArray();
         var metrics = ContextualEvaluation.Measure(loaded.Model, rows, loaded.Header.CompletedSteps, loaded.Header.ExecutionThresholds);
         var thresholds = ContextualEvaluation.Calibrate(metrics.ToolDecisions, loaded.Model.Domain);
         ContextualCheckpoint.Save(output, loaded.Model, loaded.Header.CorpusHash, loaded.Header.CompletedSteps, thresholds);
         File.WriteAllText(output + ".calibration.json", JsonSerializer.Serialize(new { Rows = rows.Length, Thresholds = thresholds,
             Coverage = metrics.ToolDecisions.GroupBy(x => x.Tool).ToDictionary(g => g.Key, g => new { Candidates = g.Count(), Correct = g.Count(x => x.Correct) }),
-            Method = "VALIDATION_FAMILIES_ONLY; existing minimum 30 decisions and 99% mutating / 95% read-only precision", Promoted = false }, Json));
+            Method = (entireValidation ? "EXPLICIT_CALIBRATION_SPLIT" : "VALIDATION_FAMILIES_ONLY") +
+                "; existing minimum 30 decisions and 99% mutating / 95% read-only precision", Promoted = false }, Json));
         Console.WriteLine($"PILOT CALIBRATED {rows.Length} HELD-OUT ROWS; NO MODEL PROMOTED");
     }
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -88,8 +89,9 @@ internal static class TorchTrainingBridge
         }
     }
 
-    internal static void Prepare(string corpus, string directory)
+    internal static void Prepare(string corpus, string directory, bool gameTeaching = false)
     {
+        if (gameTeaching) ValidateGameTeachingBinding(corpus);
         var conversation = File.Exists(Path.Combine(corpus, "conversation-v4.json"));
         if (conversation) ValidateConversationBinding(corpus);
         directory = Path.GetFullPath(directory);
@@ -97,7 +99,21 @@ internal static class TorchTrainingBridge
             throw new ArgumentException("Use an empty output directory for a fresh GPU training dataset.");
         Directory.CreateDirectory(directory);
         var corpusHash = ContextualTraining.CorpusHash(corpus);
-        var model = new ContextualNetwork(new(), ContextualTraining.BuildVocabulary(Path.Combine(corpus, "train.jsonl")), DemoDialogueDomains.Merchant);
+        var vocabulary = ContextualTraining.BuildVocabulary(Path.Combine(corpus, "train.jsonl"));
+        if (gameTeaching)
+        {
+            // Teach the existing character fallback using authored fact values. A new
+            // player's name/place cannot be assumed to have a whole-word embedding.
+            var samples = TrainingData.Load(Path.Combine(corpus, "train.jsonl"), new DialogueTokenizer(vocabulary)).StructuredSamples;
+            var copiedWords = samples.SelectMany(x => x.Contextual?.Frames ?? [])
+                .Where(f => f.Fact?.FactValueSpan is not null)
+                .SelectMany(f => Tokenizer.Lex(f.Fact!.FactValueSpan!.NormalizedValue))
+                .Where(t => t.Kind == LexicalTokenKind.Word).Select(t => t.Text).ToHashSet(StringComparer.Ordinal);
+            copiedWords.ExceptWith(vocabulary.OutputWords);
+            vocabulary = new(vocabulary.Words.Where(w => !copiedWords.Contains(w)), vocabulary.OutputWords);
+        }
+        var model = new ContextualNetwork(new() { CurrentUtteranceFirst = gameTeaching, IndependentMemorySelection = gameTeaching },
+            vocabulary, DemoDialogueDomains.Merchant);
         ContextualCheckpoint.Save(Path.Combine(directory, "initial.fbm"), model, corpusHash, 0, new Dictionary<string, double>());
         var counts = new Dictionary<string, int>();
         var hashes = new Dictionary<string, string>();
@@ -137,6 +153,22 @@ internal static class TorchTrainingBridge
         }, Json));
     }
 
+    internal static void ValidateGameTeachingBinding(string corpus)
+    {
+        using var audit = JsonDocument.Parse(File.ReadAllText(Path.Combine(corpus, "audit.json")));
+        var root = audit.RootElement;
+        if (root.GetProperty("schema").GetString() != "STATEFUL_GAME_TEACHING_V1" ||
+            root.GetProperty("familyOverlap").GetInt32() != 0 || root.GetProperty("exactCrossSplitContexts").GetInt32() != 0)
+            throw new InvalidDataException("Game teaching requires an isolated, audited corpus.");
+        foreach (var split in new[] { "train", "validation", "test" })
+        {
+            using var stream = File.OpenRead(Path.Combine(corpus, split + ".jsonl"));
+            var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+            if (hash != root.GetProperty("splitHashes").GetProperty(split).GetString())
+                throw new InvalidDataException("Game teaching split changed after audit: " + split);
+        }
+    }
+
     internal static void ValidateConversationBinding(string corpus)
     {
         using var metadata = JsonDocument.Parse(File.ReadAllText(Path.Combine(corpus, "conversation-v4.json")));
@@ -160,7 +192,7 @@ internal static class TorchTrainingBridge
         var request = example.Request ?? throw new InvalidDataException("GPU training requires structured requests.");
         var facts = request.PlayerProfile.Facts.Concat(request.State.SessionFacts).Distinct().ToArray();
         var selected = example.Contextual?.RelevantFacts ?? [];
-        var input = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, selected, model.Domain);
+        var input = StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, selected, model.Domain, model.Config.CurrentUtteranceFirst);
         var targets = new List<Target>();
         var multi = new List<MultiTarget>();
         var supervised = example.SupervisedHeads;
@@ -236,7 +268,7 @@ internal static class TorchTrainingBridge
             example.Source,
             Calibration = ContextualTraining.CalibrationFamily(example.SemanticFamilyId),
             InputData = Packed(input),
-            Retrieval = Packed(StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, [], model.Domain)),
+            Retrieval = Packed(StructuredInput.Pack(request, model.Tokenizer, model.Config.ContextLength, [], model.Domain, model.Config.CurrentUtteranceFirst)),
             Facts = facts.Select(f => model.Tokenizer.Encode(StructuredInput.FactText(f))).ToArray(),
             MemoryTargets = memoryTargets,
             Targets = targets,
@@ -275,7 +307,7 @@ internal static class TorchTrainingBridge
         foreach (var example in selected)
         {
             var trainer = new ContextualTrainer(model, 100001);
-            var input = StructuredInput.Pack(example.Request!, model.Tokenizer, model.Config.ContextLength, example.Contextual?.RelevantFacts ?? [], model.Domain);
+            var input = StructuredInput.Pack(example.Request!, model.Tokenizer, model.Config.ContextLength, example.Contextual?.RelevantFacts ?? [], model.Domain, model.Config.CurrentUtteranceFirst);
             var prediction = model.Understand(new TensorGraph(false), trainer.Parameters, input, example.Contextual?.Frames, example.Contextual?.Plan);
             var logits = new Dictionary<string, Tensor>(prediction.Heads.ToDictionary(x => "head." + x.Key, x => x.Value))
             { ["encoded"] = prediction.Encoded, ["slots"] = prediction.Slots, ["factSpans"] = prediction.FactSpans, ["antecedents"] = prediction.Antecedents };

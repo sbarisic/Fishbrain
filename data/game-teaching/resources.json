@@ -1,0 +1,49 @@
+{
+  "Iterations": 16,
+  "Config": {
+    "EncoderLayers": 4,
+    "DecoderLayers": 2,
+    "Width": 256,
+    "Heads": 8,
+    "FeedForwardWidth": 1024,
+    "ContextLength": 512,
+    "MaximumOutputTokens": 64,
+    "Seed": 42,
+    "CurrentUtteranceFirst": true,
+    "IndependentMemorySelection": true
+  },
+  "ParameterCount": 5974784,
+  "ColdLoadMilliseconds": 391.5124,
+  "UnderstandingP95Milliseconds": 27.8677,
+  "Full64TokenReplyP95Milliseconds": 161.7373,
+  "IncrementalManagedBytes": 157768760,
+  "IncrementalResidentBytes": 181178368,
+  "AverageAllocatedBytes": 4616284.5,
+  "SteadyResidentBytesBeforeCompaction": 84623360,
+  "ActiveResidentPeakBytes": 199532544,
+  "LongContext": {
+    "InputTokens": 476,
+    "CandidateFacts": 16,
+    "SelectedFacts": 7,
+    "UnderstandingP95Milliseconds": 98.3287
+  },
+  "MaximumMemoryStress": {
+    "InputTokens": 512,
+    "SelectedFacts": 8,
+    "UnderstandingP95Milliseconds": 112.733,
+    "Full64TokenReplyP95Milliseconds": 306.1616,
+    "Selection": "Forced bounded selection for resource coverage; retrieval scoring still runs. This is not a quality result."
+  },
+  "Concurrent": {
+    "Workers": 4,
+    "Replies": 16,
+    "UnderstandingP95Milliseconds": 47.9112,
+    "ElapsedMilliseconds": 187.3355
+  },
+  "MeasurementNotes": "Batch-one resource gate includes short, long and eight-memory context. Four-worker timings are separate. Allocation count includes all worker threads and an extra plan preparation for the forced 64-token decode. Compacted resident memory is diagnostic, not the release gate.",
+  "OptimizerAllocated": false,
+  "ResourceGate": "FAIL",
+  "Machine": "CARPPC",
+  "LogicalProcessors": 12,
+  "Framework": ".NET 10.0.12"
+}

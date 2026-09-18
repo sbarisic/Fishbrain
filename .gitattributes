@@ -7,3 +7,6 @@ data/teaching-diagnostic/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,spac
 data/teaching-diagnostic/generator-snapshot.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 data/teaching-diagnostic/results/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 data/teaching-diagnostic/results/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/game-teaching/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/game-teaching/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+scripts/conversation_data/game_lessons.py text eol=lf
