@@ -1,0 +1,65 @@
+{
+  "rollouts": {
+    "baseline": {
+      "turns": 48,
+      "sources": {
+        "CONVERSATIONAL_GENERATED": 10,
+        "CLARIFICATION_TEMPLATE": 29,
+        "FALLBACK": 9
+      },
+      "responses": {
+        "HI THERE.": 3,
+        "COULD YOU EXPLAIN WHAT YOU MEAN?": 27,
+        "NOT QUITE AN FUN.": 1,
+        "I AM NOT CERTAIN ABOUT THAT.": 4,
+        "A BIT OF SPACE FOR YOUR THOUGHTS CAN BE VALUABLE.": 1,
+        "I UNDERSTAND.": 4,
+        "A WELL-TOLD STORY IS HARD TO RESIST.": 1,
+        "HELLO. A LITTLE WITH COMPANY IS WELCOME.": 1,
+        "I AM NOT SURE HOW TO RESPOND TO THAT.": 1,
+        "A LITTLE. COME HELP A LONG DAY A DAY.": 1,
+        "I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST.": 2,
+        "SURE. DID IT ON PAGE WHERE IS FEEL NEW.": 1,
+        "WELL MET, FRIEND.": 1
+      }
+    },
+    "diagnostic": {
+      "turns": 48,
+      "sources": {
+        "CONVERSATIONAL_GENERATED": 22,
+        "PERSONA_TEMPLATE": 5,
+        "CLARIFICATION_TEMPLATE": 12,
+        "FALLBACK": 9
+      },
+      "responses": {
+        "HI THERE.": 1,
+        "MY NAME IS ARIN.": 5,
+        "GLAD TO HAVE A MOMENT TO TALK.": 6,
+        "YOU'RE WELCOME.": 10,
+        "HELLO.": 2,
+        "THAT SOUNDS TIRING. TAKE YOUR TIME.": 1,
+        "GOOD MORNING.": 1,
+        "I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST.": 12,
+        "I AM NOT CERTAIN ABOUT THAT.": 3,
+        "THANKS FOR TELLING ME.": 1,
+        "OUR CONVERSATION RECORDS THIS ABOUT YOU: HOME CEDAR HOLLOW.": 1,
+        "THANK YOU FOR THE CORRECTION.": 1,
+        "I AM NOT SURE HOW TO RESPOND TO THAT.": 2,
+        "I UNDERSTAND.": 2
+      }
+    }
+  },
+  "artifacts": {
+    "diagnostic.fbm": {
+      "sha256": "e05d8c54f5e25e60c0ef3455078713d7cb91518bffae1bc91c4d16abc17e9991",
+      "bytes": 23595843
+    },
+    "training.pt": {
+      "sha256": "2c56e0187ad229583f3008df89580b1edfb78e0128934fd9996eb4235ff4c9af",
+      "bytes": 70884683
+    }
+  },
+  "promoted": false,
+  "independentHumanReview": false,
+  "interpretation": "Counts describe these development sessions only; response matching is not a naturalness score."
+}

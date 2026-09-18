@@ -1,0 +1,84 @@
+{
+  "Rows": 32,
+  "FrameExact": 0.96875,
+  "PlanExact": 1,
+  "MemoryExact": 1,
+  "CorrectionExact": 1,
+  "AgendaExact": 1,
+  "UnintendedMutations": 0,
+  "AuthoritativeAlterations": 0,
+  "InvalidResponses": 0,
+  "UnderstandingP95": 100.933,
+  "ReplyP95": 128.3966,
+  "AutomatedPass": false,
+  "ToolDecisions": [
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9993569254875183,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9995123147964478,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.999833345413208,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9996639490127563,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9997219443321228,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9996978044509888,
+      "Correct": true
+    },
+    {
+      "Tool": "LIST_WARES",
+      "Confidence": 0.9990311861038208,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.999528169631958,
+      "Correct": true
+    },
+    {
+      "Tool": "LOOKUP_LOCATION",
+      "Confidence": 0.9996887445449829,
+      "Correct": true
+    }
+  ],
+  "Operational": {
+    "speechActs": 1,
+    "domains": 1,
+    "goals": 1,
+    "content": 0,
+    "affect": 1,
+    "policy": 1,
+    "slots": 0.9523809523809523,
+    "tool": 0.875,
+    "mutatingToolPrecision": 1,
+    "knowledgeTarget": 1,
+    "discourseAct": 1,
+    "speakerAttribution": 1,
+    "factSpan": 1,
+    "antecedent": 1,
+    "correctionState": 1
+  },
+  "RetiredMetrics": [
+    "CATALOG_RESPONSE_TOP1",
+    "CATALOG_RESPONSE_TOP3",
+    "VARIATION_RECALL_AT10",
+    "VARIATION_MRR"
+  ]
+}

@@ -1,0 +1,413 @@
+# Teaching diagnostic: actual conversations
+
+Development lessons and related paraphrase probes. These are not independent release evaluations.
+All tools are disabled in the diagnostic model because these few examples cannot calibrate execution.
+Desired authority replies illustrate the demo values; exact tool-template wording can differ.
+
+## arrival (trained lesson)
+
+**Player:** HI
+
+**Desired:** HI THERE.
+
+**Previous pilot:** HI THERE.
+
+**Diagnostic:** HI THERE. (CONVERSATIONAL_GENERATED)
+
+**Player:** WHERE AM I?
+
+**Desired:** YOU ARE AT VILLAGE MARKET.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** MY NAME IS ARIN. (PERSONA_TEMPLATE)
+
+**Player:** TELL ME YOUR NAME
+
+**Desired:** MY NAME IS ARIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** GLAD TO HAVE A MOMENT TO TALK. (CONVERSATIONAL_GENERATED)
+
+**Player:** WHERE IS THE INN?
+
+**Desired:** INN IS NORTH BY THE FOUNTAIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+## shopping (trained lesson)
+
+**Player:** HELLO
+
+**Desired:** HELLO.
+
+**Previous pilot:** HI THERE.
+
+**Diagnostic:** HELLO. (CONVERSATIONAL_GENERATED)
+
+**Player:** WHAT DO YOU HAVE FOR SALE?
+
+**Desired:** I HAVE HEALTH POTION, IRON SWORD AND ROPE.
+
+**Previous pilot:** NOT QUITE AN FUN.
+
+**Diagnostic:** GLAD TO HAVE A MOMENT TO TALK. (CONVERSATIONAL_GENERATED)
+
+**Player:** DO NOT BUY ONE ROPE.
+
+**Desired:** ALL RIGHT.
+
+**Previous pilot:** I AM NOT CERTAIN ABOUT THAT.
+
+**Diagnostic:** THAT SOUNDS TIRING. TAKE YOUR TIME. (CONVERSATIONAL_GENERATED)
+
+**Player:** THANKS
+
+**Desired:** YOU'RE WELCOME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+## company (trained lesson)
+
+**Player:** GOOD MORNING
+
+**Desired:** GOOD MORNING.
+
+**Previous pilot:** A BIT OF SPACE FOR YOUR THOUGHTS CAN BE VALUABLE.
+
+**Diagnostic:** GOOD MORNING. (CONVERSATIONAL_GENERATED)
+
+**Player:** HOW ARE YOU?
+
+**Desired:** GLAD TO HAVE A MOMENT TO TALK.
+
+**Previous pilot:** I UNDERSTAND.
+
+**Diagnostic:** GLAD TO HAVE A MOMENT TO TALK. (CONVERSATIONAL_GENERATED)
+
+**Player:** I HAD A TIRING JOURNEY.
+
+**Desired:** THAT SOUNDS TIRING. TAKE YOUR TIME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** GLAD TO HAVE A MOMENT TO TALK. (CONVERSATIONAL_GENERATED)
+
+**Player:** WHAT IS YOUR NAME?
+
+**Desired:** MY NAME IS ARIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** MY NAME IS ARIN. (PERSONA_TEMPLATE)
+
+## directions (trained lesson)
+
+**Player:** WHERE AM I RIGHT NOW?
+
+**Desired:** YOU ARE AT VILLAGE MARKET.
+
+**Previous pilot:** A WELL-TOLD STORY IS HARD TO RESIST.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** CAN YOU TELL ME WHERE THE INN IS?
+
+**Desired:** INN IS NORTH BY THE FOUNTAIN.
+
+**Previous pilot:** I AM NOT CERTAIN ABOUT THAT.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** WHAT GOODS ARE FOR SALE?
+
+**Desired:** I HAVE HEALTH POTION, IRON SWORD AND ROPE.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** THANK YOU.
+
+**Desired:** YOU'RE WELCOME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+## quiet (trained lesson)
+
+**Player:** HELLO THERE.
+
+**Desired:** HELLO.
+
+**Previous pilot:** HELLO. A LITTLE WITH COMPANY IS WELCOME.
+
+**Diagnostic:** HELLO. (CONVERSATIONAL_GENERATED)
+
+**Player:** HOW IS YOUR DAY GOING?
+
+**Desired:** GLAD TO HAVE A MOMENT TO TALK.
+
+**Previous pilot:** I AM NOT SURE HOW TO RESPOND TO THAT.
+
+**Diagnostic:** GLAD TO HAVE A MOMENT TO TALK. (CONVERSATIONAL_GENERATED)
+
+**Player:** I AM TIRED.
+
+**Desired:** THAT SOUNDS TIRING. TAKE YOUR TIME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I AM NOT CERTAIN ABOUT THAT. (FALLBACK)
+
+**Player:** PLEASE TELL ME YOUR NAME.
+
+**Desired:** MY NAME IS ARIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** MY NAME IS ARIN. (PERSONA_TEMPLATE)
+
+## hypothetical (trained lesson)
+
+**Player:** SUPPOSE I BOUGHT ONE ROPE.
+
+**Desired:** THAT IS ONLY A POSSIBILITY.
+
+**Previous pilot:** A LITTLE. COME HELP A LONG DAY A DAY.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** SHOW ME YOUR WARES.
+
+**Desired:** I HAVE HEALTH POTION, IRON SWORD AND ROPE.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** MY NAME IS ARIN. (PERSONA_TEMPLATE)
+
+**Player:** DO NOT PURCHASE ONE ROPE.
+
+**Desired:** ALL RIGHT.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+**Player:** WHERE ARE WE?
+
+**Desired:** YOU ARE AT VILLAGE MARKET.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+## quotation (trained lesson)
+
+**Player:** SOMEONE SAID "BUY ONE ROPE".
+
+**Desired:** I SEE.
+
+**Previous pilot:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** HOW ARE THINGS WITH YOU?
+
+**Desired:** GLAD TO HAVE A MOMENT TO TALK.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I AM NOT CERTAIN ABOUT THAT. (FALLBACK)
+
+**Player:** WHO ARE YOU?
+
+**Desired:** MY NAME IS ARIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** MY NAME IS ARIN. (PERSONA_TEMPLATE)
+
+**Player:** WHERE CAN I FIND THE INN?
+
+**Desired:** INN IS NORTH BY THE FOUNTAIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I AM NOT CERTAIN ABOUT THAT. (FALLBACK)
+
+## home (trained lesson)
+
+**Player:** MY HOME IS CEDAR HOLLOW.
+
+**Desired:** THANKS FOR TELLING ME.
+
+**Previous pilot:** SURE. DID IT ON PAGE WHERE IS FEEL NEW.
+
+**Diagnostic:** THANKS FOR TELLING ME. (CONVERSATIONAL_GENERATED)
+
+**Player:** I HAD A LONG DAY.
+
+**Desired:** THAT SOUNDS TIRING. TAKE YOUR TIME.
+
+**Previous pilot:** I UNDERSTAND.
+
+**Diagnostic:** GLAD TO HAVE A MOMENT TO TALK. (CONVERSATIONAL_GENERATED)
+
+**Player:** WHERE DID I SAY MY HOME IS?
+
+**Desired:** YOU SAID YOUR HOME IS CEDAR HOLLOW.
+
+**Previous pilot:** I AM NOT CERTAIN ABOUT THAT.
+
+**Diagnostic:** OUR CONVERSATION RECORDS THIS ABOUT YOU: HOME CEDAR HOLLOW. (FALLBACK)
+
+**Player:** CORRECTION: MY HOME IS COPPER BAY.
+
+**Desired:** THANKS FOR CORRECTING ME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** THANK YOU FOR THE CORRECTION. (FALLBACK)
+
+## new_arrival (development probe)
+
+**Player:** HEY
+
+**Desired:** HELLO.
+
+**Previous pilot:** HI THERE.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** CAN YOU TELL ME WHERE I AM?
+
+**Desired:** YOU ARE AT VILLAGE MARKET.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I AM NOT SURE HOW TO RESPOND TO THAT. (FALLBACK)
+
+**Player:** WHAT SHOULD I CALL YOU?
+
+**Desired:** MY NAME IS ARIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** WHICH WAY TO THE INN?
+
+**Desired:** INN IS NORTH BY THE FOUNTAIN.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I AM NOT SURE HOW TO RESPOND TO THAT. (FALLBACK)
+
+## change_subject (development probe)
+
+**Player:** GOOD EVENING.
+
+**Desired:** HELLO.
+
+**Previous pilot:** WELL MET, FRIEND.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** HOW ARE YOU DOING TODAY?
+
+**Desired:** GLAD TO HAVE A MOMENT TO TALK.
+
+**Previous pilot:** I AM NOT CERTAIN ABOUT THAT.
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+**Player:** NEVERMIND, WHAT DO YOU HAVE FOR SALE?
+
+**Desired:** I HAVE HEALTH POTION, IRON SWORD AND ROPE.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+**Player:** DO NOT BUY ONE ROPE FOR ME.
+
+**Desired:** ALL RIGHT.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+## fresh_questions (development probe)
+
+**Player:** TELL ME WHERE WE ARE.
+
+**Desired:** YOU ARE AT VILLAGE MARKET.
+
+**Previous pilot:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** TELL ME WHAT YOU SELL.
+
+**Desired:** I HAVE HEALTH POTION, IRON SWORD AND ROPE.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** I FEEL WORN OUT.
+
+**Desired:** THAT SOUNDS TIRING. TAKE YOUR TIME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** THANKS FOR YOUR HELP.
+
+**Desired:** YOU'RE WELCOME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I UNDERSTAND. (FALLBACK)
+
+## new_home (development probe)
+
+**Player:** MY HOME IS WILLOW QUAY.
+
+**Desired:** THANKS FOR TELLING ME.
+
+**Previous pilot:** I UNDERSTAND.
+
+**Diagnostic:** I HAVE NOT TAKEN THAT ACTION. PLEASE CLARIFY YOUR REQUEST. (CLARIFICATION_TEMPLATE)
+
+**Player:** THE JOURNEY WAS EXHAUSTING.
+
+**Desired:** THAT SOUNDS TIRING. TAKE YOUR TIME.
+
+**Previous pilot:** I UNDERSTAND.
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+**Player:** WHAT HOME DID I TELL YOU ABOUT?
+
+**Desired:** YOU SAID YOUR HOME IS WILLOW QUAY.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** YOU'RE WELCOME. (CONVERSATIONAL_GENERATED)
+
+**Player:** CORRECTION: MY HOME IS MARBLE PORT.
+
+**Desired:** THANKS FOR CORRECTING ME.
+
+**Previous pilot:** COULD YOU EXPLAIN WHAT YOU MEAN?
+
+**Diagnostic:** I UNDERSTAND. (FALLBACK)

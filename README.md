@@ -11,6 +11,9 @@ The [conversation-v4 dataset and bounded pilot](CONVERSATION_V4.md) revise its
 training data and compare actual conversations before another full training decision.
 The 50,000-update pilot also failed its gates; see the
 [results and 50 paired conversations](CONVERSATION_V4_RESULTS.md).
+The subsequent [simulated-conversation teaching diagnostic](TEACHING_DIAGNOSTIC.md)
+shows that the same architecture can fit small lessons, but remains sensitive to
+new wording and runtime dialogue state. It is not a replacement model.
 Native acceptance and two-human review remain required before release.
 Long-context inference currently exceeds the 100 ms engineering target.
 

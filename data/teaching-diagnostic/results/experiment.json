@@ -1,0 +1,49 @@
+{
+  "schedule": {
+    "name": "TEACHING_DIAGNOSTIC_V1",
+    "joint": 2000,
+    "decoderOnly": 500,
+    "batchSize": 32,
+    "seed": 42,
+    "peakLearningRate": 0.0003,
+    "decoderLearningRate": 0.0001,
+    "warmup": 100,
+    "clipNorm": 1,
+    "supervisionCadence": "7 semantic / 3 authored realization",
+    "endpoint": 2500,
+    "releaseEligible": false
+  },
+  "binding": "a6fda39d5200daa805d0e71d4756f29c54220bae7e543e107bc2a4ce5c6f3653",
+  "corpus": {
+    "schema": "TEACHING_DIAGNOSTIC_V1",
+    "seed": 42,
+    "counts": {
+      "train": 32,
+      "validation": 8,
+      "test": 8
+    },
+    "sourceHash": "39d239c9327bf3d4526adaac8386fe9d95cba2ba11ea9ca890334ea331323662",
+    "splitHashes": {
+      "train": "2a88af6049a1787862d7079e0d7402c18e17d0d024f21838af3aeb9f823c2a2b",
+      "validation": "90d826c2d9e74a28743b81d8ea6d43c417df04e4914f60eaceef7390b7901220",
+      "test": "dce2642341c52993606ae0f130c6ef0f70ab30deff58578efcb0409235c69b0a"
+    },
+    "interpretation": "Small development lessons and related paraphrase probes; not independent unseen evaluation.",
+    "authority": "Persona/tool values appear only in gold histories and typed semantic targets; never decoder targets.",
+    "originalCorpusModified": false,
+    "releaseEligible": false
+  },
+  "gpu": "AMD Radeon RX 9070 XT",
+  "thresholds": {
+    "BUY": 1.01,
+    "GET_BALANCE": 1.01,
+    "GET_CURRENT_LOCATION": 1.01,
+    "LIST_INVENTORY": 1.01,
+    "LIST_WARES": 1.01,
+    "LOOKUP_LOCATION": 1.01,
+    "LOOKUP_PRICE": 1.01,
+    "LOOKUP_WORLD_FACT": 1.01,
+    "SELL": 1.01
+  },
+  "exportNote": "FBM NextPhase is the fixed format schedule field; actual diagnostic phase lives in progress.json and training.pt."
+}

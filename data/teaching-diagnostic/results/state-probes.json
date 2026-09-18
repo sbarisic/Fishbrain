@@ -1,0 +1,427 @@
+{
+  "baseExample": {
+    "input": "PLAYER HI NPC HI THERE. PLAYER WHERE AM I?",
+    "state": {
+      "rapport": 1,
+      "mood": "NEUTRAL",
+      "lastIntent": "UNKNOWN",
+      "lastAffect": "NEUTRAL",
+      "activeTopic": "NONE",
+      "activeGoal": "NONE"
+    },
+    "perception": {
+      "intent": "STATEMENT",
+      "affect": "NEUTRAL",
+      "responseExpected": true
+    },
+    "action": "RESPOND",
+    "response": null,
+    "source": "AUTHORED_TEACHING_DIAGNOSTIC",
+    "split": "train",
+    "groupId": "TEACHING:arrival",
+    "family": "location",
+    "semanticFamilyId": "TEACHING:arrival",
+    "sourceLicense": "PROJECT-OWNED",
+    "sourceRevision": "teaching-diagnostic-v1",
+    "sourceChecksum": "39d239c9327bf3d4526adaac8386fe9d95cba2ba11ea9ca890334ea331323662",
+    "structuredPerception": {
+      "speechActs": [
+        "ASK"
+      ],
+      "domains": [
+        "LOCATION_NAVIGATION"
+      ],
+      "goals": [
+        "INFORMATION_EXCHANGE"
+      ],
+      "affect": "NEUTRAL",
+      "stance": "NEUTRAL",
+      "policy": "EXECUTE_TOOL",
+      "slots": [],
+      "contentFlags": [],
+      "knowledgeTarget": "CURRENT_LOCATION",
+      "confidence": {},
+      "toolSchema": "GET_CURRENT_LOCATION"
+    },
+    "supervisedHeads": [
+      "speechActs",
+      "domains",
+      "goals",
+      "policy",
+      "slots",
+      "tool",
+      "knowledgeTarget",
+      "discourseAct",
+      "discourseSubject",
+      "discourseTarget",
+      "factKind",
+      "factPolarity",
+      "factSpan",
+      "antecedent",
+      "affect",
+      "stance",
+      "content"
+    ],
+    "turns": [
+      {
+        "sequence": 0,
+        "speaker": "PLAYER",
+        "text": "HI"
+      },
+      {
+        "sequence": 1,
+        "speaker": "NPC",
+        "text": "HI THERE."
+      },
+      {
+        "sequence": 2,
+        "speaker": "PLAYER",
+        "text": "WHERE AM I?"
+      }
+    ],
+    "initialDialogueState": {
+      "rapport": 1,
+      "trust": 1,
+      "familiarity": 0,
+      "hostility": 0,
+      "mood": "NEUTRAL",
+      "activeDomains": [],
+      "activeGoals": [],
+      "pendingActions": [],
+      "references": {},
+      "sessionFacts": [],
+      "topicSummaries": [],
+      "agenda": []
+    },
+    "persona": {
+      "id": "DEMO_TRAVELER",
+      "name": "ARIN",
+      "role": "TRAVELER",
+      "origin": "THIS VILLAGE",
+      "home": "THE OLD MILL",
+      "family": "A SISTER IN THE NORTH",
+      "occupation": "ROAD WARDEN",
+      "traits": [
+        "HELPFUL",
+        "CAUTIOUS"
+      ]
+    },
+    "sourceUrl": "PROJECT://FISHBRAIN/TEACHING-DIAGNOSTIC",
+    "attribution": "Fishbrain project contributors; AI-authored development lessons",
+    "id": "TEACHING:arrival:1",
+    "category": "location",
+    "training": {
+      "version": 4,
+      "pool": "authored",
+      "responseEligible": false,
+      "episodeId": "TEACHING:arrival",
+      "augmentationFamily": "TEACHING:arrival",
+      "license": "PROJECT-OWNED",
+      "sourceRevision": "teaching-diagnostic-v1",
+      "sourceChecksum": "39d239c9327bf3d4526adaac8386fe9d95cba2ba11ea9ca890334ea331323662",
+      "exampleId": "TEACHING:arrival:1",
+      "claimPositiveEligible": false,
+      "claimNegativeEligible": true
+    },
+    "contextual": {
+      "frames": [
+        {
+          "start": 0,
+          "length": 11,
+          "speechAct": "ASK",
+          "subject": "PLAYER",
+          "target": "NPC",
+          "toolName": "GET_CURRENT_LOCATION",
+          "arguments": [],
+          "status": "QUESTION",
+          "confidence": 1,
+          "fact": {
+            "act": "NONE",
+            "subject": "NONE",
+            "target": "NONE",
+            "negated": false,
+            "confidence": 1,
+            "evidence": "AUTHORED_V4"
+          }
+        }
+      ],
+      "plan": [
+        {
+          "act": "EXECUTE_TOOL",
+          "frameIndex": 0
+        }
+      ],
+      "relevantFacts": [],
+      "agenda": []
+    },
+    "rejectedResponse": "YOU BOUGHT FIVE IRON SWORD FOR TEN GOLD."
+  },
+  "experiments": [
+    {
+      "name": "gold_state",
+      "stateChanges": {},
+      "metrics": {
+        "Rows": 1,
+        "FrameExact": 1,
+        "PlanExact": 1,
+        "MemoryExact": 1,
+        "CorrectionExact": 0,
+        "AgendaExact": 1,
+        "UnintendedMutations": 0,
+        "AuthoritativeAlterations": 0,
+        "InvalidResponses": 0,
+        "UnderstandingP95": 220.4326,
+        "ReplyP95": 253.2413,
+        "AutomatedPass": false,
+        "ToolDecisions": [
+          {
+            "Tool": "GET_CURRENT_LOCATION",
+            "Confidence": 0.9993569254875183,
+            "Correct": true
+          }
+        ],
+        "Operational": {
+          "speechActs": 1,
+          "domains": 1,
+          "goals": 1,
+          "content": 0,
+          "affect": 1,
+          "policy": 1,
+          "slots": 0,
+          "tool": 1,
+          "mutatingToolPrecision": 1,
+          "knowledgeTarget": 1,
+          "discourseAct": 1,
+          "speakerAttribution": 0,
+          "factSpan": 0,
+          "antecedent": 0,
+          "correctionState": 0
+        },
+        "RetiredMetrics": [
+          "CATALOG_RESPONSE_TOP1",
+          "CATALOG_RESPONSE_TOP3",
+          "VARIATION_RECALL_AT10",
+          "VARIATION_MRR"
+        ]
+      }
+    },
+    {
+      "name": "friendly_mood",
+      "stateChanges": {
+        "mood": "FRIENDLY"
+      },
+      "metrics": {
+        "Rows": 1,
+        "FrameExact": 1,
+        "PlanExact": 1,
+        "MemoryExact": 1,
+        "CorrectionExact": 0,
+        "AgendaExact": 1,
+        "UnintendedMutations": 0,
+        "AuthoritativeAlterations": 0,
+        "InvalidResponses": 0,
+        "UnderstandingP95": 127.6301,
+        "ReplyP95": 152.3829,
+        "AutomatedPass": false,
+        "ToolDecisions": [
+          {
+            "Tool": "GET_CURRENT_LOCATION",
+            "Confidence": 0.943648636341095,
+            "Correct": true
+          }
+        ],
+        "Operational": {
+          "speechActs": 1,
+          "domains": 0,
+          "goals": 1,
+          "content": 0,
+          "affect": 1,
+          "policy": 1,
+          "slots": 0,
+          "tool": 1,
+          "mutatingToolPrecision": 1,
+          "knowledgeTarget": 1,
+          "discourseAct": 1,
+          "speakerAttribution": 0,
+          "factSpan": 0,
+          "antecedent": 0,
+          "correctionState": 0
+        },
+        "RetiredMetrics": [
+          "CATALOG_RESPONSE_TOP1",
+          "CATALOG_RESPONSE_TOP3",
+          "VARIATION_RECALL_AT10",
+          "VARIATION_MRR"
+        ]
+      }
+    },
+    {
+      "name": "rapport_goal",
+      "stateChanges": {
+        "activeGoals": [
+          "RAPPORT"
+        ]
+      },
+      "metrics": {
+        "Rows": 1,
+        "FrameExact": 1,
+        "PlanExact": 1,
+        "MemoryExact": 1,
+        "CorrectionExact": 0,
+        "AgendaExact": 1,
+        "UnintendedMutations": 0,
+        "AuthoritativeAlterations": 0,
+        "InvalidResponses": 0,
+        "UnderstandingP95": 116.7093,
+        "ReplyP95": 138.1164,
+        "AutomatedPass": false,
+        "ToolDecisions": [
+          {
+            "Tool": "GET_CURRENT_LOCATION",
+            "Confidence": 0.9459967017173767,
+            "Correct": true
+          }
+        ],
+        "Operational": {
+          "speechActs": 1,
+          "domains": 0,
+          "goals": 1,
+          "content": 0,
+          "affect": 1,
+          "policy": 1,
+          "slots": 0,
+          "tool": 1,
+          "mutatingToolPrecision": 1,
+          "knowledgeTarget": 1,
+          "discourseAct": 1,
+          "speakerAttribution": 0,
+          "factSpan": 0,
+          "antecedent": 0,
+          "correctionState": 0
+        },
+        "RetiredMetrics": [
+          "CATALOG_RESPONSE_TOP1",
+          "CATALOG_RESPONSE_TOP3",
+          "VARIATION_RECALL_AT10",
+          "VARIATION_MRR"
+        ]
+      }
+    },
+    {
+      "name": "social_summary",
+      "stateChanges": {
+        "topicSummaries": [
+          {
+            "topic": "SOCIAL",
+            "sourceUtterance": 0
+          }
+        ]
+      },
+      "metrics": {
+        "Rows": 1,
+        "FrameExact": 0,
+        "PlanExact": 1,
+        "MemoryExact": 1,
+        "CorrectionExact": 0,
+        "AgendaExact": 1,
+        "UnintendedMutations": 0,
+        "AuthoritativeAlterations": 0,
+        "InvalidResponses": 0,
+        "UnderstandingP95": 119.7906,
+        "ReplyP95": 141.8288,
+        "AutomatedPass": false,
+        "ToolDecisions": [
+          {
+            "Tool": "GET_CURRENT_LOCATION",
+            "Confidence": 0.6581032276153564,
+            "Correct": true
+          }
+        ],
+        "Operational": {
+          "speechActs": 1,
+          "domains": 0,
+          "goals": 1,
+          "content": 0,
+          "affect": 1,
+          "policy": 0,
+          "slots": 0,
+          "tool": 1,
+          "mutatingToolPrecision": 1,
+          "knowledgeTarget": 0,
+          "discourseAct": 1,
+          "speakerAttribution": 0,
+          "factSpan": 0,
+          "antecedent": 0,
+          "correctionState": 0
+        },
+        "RetiredMetrics": [
+          "CATALOG_RESPONSE_TOP1",
+          "CATALOG_RESPONSE_TOP3",
+          "VARIATION_RECALL_AT10",
+          "VARIATION_MRR"
+        ]
+      }
+    },
+    {
+      "name": "friendly_goal_summary",
+      "stateChanges": {
+        "mood": "FRIENDLY",
+        "activeGoals": [
+          "RAPPORT"
+        ],
+        "topicSummaries": [
+          {
+            "topic": "SOCIAL",
+            "sourceUtterance": 0
+          }
+        ]
+      },
+      "metrics": {
+        "Rows": 1,
+        "FrameExact": 1,
+        "PlanExact": 1,
+        "MemoryExact": 1,
+        "CorrectionExact": 0,
+        "AgendaExact": 1,
+        "UnintendedMutations": 0,
+        "AuthoritativeAlterations": 0,
+        "InvalidResponses": 0,
+        "UnderstandingP95": 120.3282,
+        "ReplyP95": 141.1396,
+        "AutomatedPass": false,
+        "ToolDecisions": [
+          {
+            "Tool": "GET_CURRENT_LOCATION",
+            "Confidence": 0.9956423044204712,
+            "Correct": true
+          }
+        ],
+        "Operational": {
+          "speechActs": 1,
+          "domains": 0,
+          "goals": 1,
+          "content": 0,
+          "affect": 1,
+          "policy": 1,
+          "slots": 0,
+          "tool": 1,
+          "mutatingToolPrecision": 1,
+          "knowledgeTarget": 0,
+          "discourseAct": 1,
+          "speakerAttribution": 0,
+          "factSpan": 0,
+          "antecedent": 0,
+          "correctionState": 0
+        },
+        "RetiredMetrics": [
+          "CATALOG_RESPONSE_TOP1",
+          "CATALOG_RESPONSE_TOP3",
+          "VARIATION_RECALL_AT10",
+          "VARIATION_MRR"
+        ]
+      }
+    }
+  ],
+  "trainedOn": false,
+  "note": "Post-training single-example sensitivity test; same utterances and meaning in every condition. Not an independent evaluation."
+}

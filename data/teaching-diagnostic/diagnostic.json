@@ -1,0 +1,19 @@
+{
+  "schema": "TEACHING_DIAGNOSTIC_V1",
+  "seed": 42,
+  "counts": {
+    "train": 32,
+    "validation": 8,
+    "test": 8
+  },
+  "sourceHash": "39d239c9327bf3d4526adaac8386fe9d95cba2ba11ea9ca890334ea331323662",
+  "splitHashes": {
+    "train": "2a88af6049a1787862d7079e0d7402c18e17d0d024f21838af3aeb9f823c2a2b",
+    "validation": "90d826c2d9e74a28743b81d8ea6d43c417df04e4914f60eaceef7390b7901220",
+    "test": "dce2642341c52993606ae0f130c6ef0f70ab30deff58578efcb0409235c69b0a"
+  },
+  "interpretation": "Small development lessons and related paraphrase probes; not independent unseen evaluation.",
+  "authority": "Persona/tool values appear only in gold histories and typed semantic targets; never decoder targets.",
+  "originalCorpusModified": false,
+  "releaseEligible": false
+}

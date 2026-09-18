@@ -1,0 +1,48 @@
+{"sessionId":"arrival","turnIndex":0,"input":"HI","expected":"HI THERE.","kind":"greet","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"arrival","turnIndex":1,"input":"WHERE AM I?","expected":"YOU ARE AT VILLAGE MARKET.","kind":"location","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"arrival","turnIndex":2,"input":"TELL ME YOUR NAME","expected":"MY NAME IS ARIN.","kind":"name","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"arrival","turnIndex":3,"input":"WHERE IS THE INN?","expected":"INN IS NORTH BY THE FOUNTAIN.","kind":"inn","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":0,"input":"HELLO","expected":"HELLO.","kind":"greet","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":1,"input":"WHAT DO YOU HAVE FOR SALE?","expected":"I HAVE HEALTH POTION, IRON SWORD AND ROPE.","kind":"wares","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":2,"input":"DO NOT BUY ONE ROPE.","expected":"ALL RIGHT.","kind":"negated","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":3,"input":"THANKS","expected":"YOU'RE WELCOME.","kind":"thanks","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":0,"input":"GOOD MORNING","expected":"GOOD MORNING.","kind":"greet","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":1,"input":"HOW ARE YOU?","expected":"GLAD TO HAVE A MOMENT TO TALK.","kind":"wellbeing","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":2,"input":"I HAD A TIRING JOURNEY.","expected":"THAT SOUNDS TIRING. TAKE YOUR TIME.","kind":"tired","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":3,"input":"WHAT IS YOUR NAME?","expected":"MY NAME IS ARIN.","kind":"name","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":0,"input":"WHERE AM I RIGHT NOW?","expected":"YOU ARE AT VILLAGE MARKET.","kind":"location","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":1,"input":"CAN YOU TELL ME WHERE THE INN IS?","expected":"INN IS NORTH BY THE FOUNTAIN.","kind":"inn","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":2,"input":"WHAT GOODS ARE FOR SALE?","expected":"I HAVE HEALTH POTION, IRON SWORD AND ROPE.","kind":"wares","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":3,"input":"THANK YOU.","expected":"YOU'RE WELCOME.","kind":"thanks","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":0,"input":"HELLO THERE.","expected":"HELLO.","kind":"greet","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":1,"input":"HOW IS YOUR DAY GOING?","expected":"GLAD TO HAVE A MOMENT TO TALK.","kind":"wellbeing","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":2,"input":"I AM TIRED.","expected":"THAT SOUNDS TIRING. TAKE YOUR TIME.","kind":"tired","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":3,"input":"PLEASE TELL ME YOUR NAME.","expected":"MY NAME IS ARIN.","kind":"name","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":0,"input":"SUPPOSE I BOUGHT ONE ROPE.","expected":"THAT IS ONLY A POSSIBILITY.","kind":"hypothetical","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":1,"input":"SHOW ME YOUR WARES.","expected":"I HAVE HEALTH POTION, IRON SWORD AND ROPE.","kind":"wares_request","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":2,"input":"DO NOT PURCHASE ONE ROPE.","expected":"ALL RIGHT.","kind":"negated","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":3,"input":"WHERE ARE WE?","expected":"YOU ARE AT VILLAGE MARKET.","kind":"location","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":0,"input":"SOMEONE SAID \"BUY ONE ROPE\".","expected":"I SEE.","kind":"quoted","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":1,"input":"HOW ARE THINGS WITH YOU?","expected":"GLAD TO HAVE A MOMENT TO TALK.","kind":"wellbeing","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":2,"input":"WHO ARE YOU?","expected":"MY NAME IS ARIN.","kind":"name","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":3,"input":"WHERE CAN I FIND THE INN?","expected":"INN IS NORTH BY THE FOUNTAIN.","kind":"inn","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":0,"input":"MY HOME IS CEDAR HOLLOW.","expected":"THANKS FOR TELLING ME.","kind":"inform_home","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":1,"input":"I HAD A LONG DAY.","expected":"THAT SOUNDS TIRING. TAKE YOUR TIME.","kind":"tired","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":2,"input":"WHERE DID I SAY MY HOME IS?","expected":"YOU SAID YOUR HOME IS CEDAR HOLLOW.","kind":"recall_home","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":3,"input":"CORRECTION: MY HOME IS COPPER BAY.","expected":"THANKS FOR CORRECTING ME.","kind":"correct_home","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":0,"input":"HEY","expected":"HELLO.","kind":"greet","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":1,"input":"CAN YOU TELL ME WHERE I AM?","expected":"YOU ARE AT VILLAGE MARKET.","kind":"location","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":2,"input":"WHAT SHOULD I CALL YOU?","expected":"MY NAME IS ARIN.","kind":"name","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":3,"input":"WHICH WAY TO THE INN?","expected":"INN IS NORTH BY THE FOUNTAIN.","kind":"inn","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":0,"input":"GOOD EVENING.","expected":"HELLO.","kind":"greet","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":1,"input":"HOW ARE YOU DOING TODAY?","expected":"GLAD TO HAVE A MOMENT TO TALK.","kind":"wellbeing","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":2,"input":"NEVERMIND, WHAT DO YOU HAVE FOR SALE?","expected":"I HAVE HEALTH POTION, IRON SWORD AND ROPE.","kind":"wares","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":3,"input":"DO NOT BUY ONE ROPE FOR ME.","expected":"ALL RIGHT.","kind":"negated","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":0,"input":"TELL ME WHERE WE ARE.","expected":"YOU ARE AT VILLAGE MARKET.","kind":"location_request","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":1,"input":"TELL ME WHAT YOU SELL.","expected":"I HAVE HEALTH POTION, IRON SWORD AND ROPE.","kind":"wares_request","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":2,"input":"I FEEL WORN OUT.","expected":"THAT SOUNDS TIRING. TAKE YOUR TIME.","kind":"tired","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":3,"input":"THANKS FOR YOUR HELP.","expected":"YOU'RE WELCOME.","kind":"thanks","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":0,"input":"MY HOME IS WILLOW QUAY.","expected":"THANKS FOR TELLING ME.","kind":"inform_home","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":1,"input":"THE JOURNEY WAS EXHAUSTING.","expected":"THAT SOUNDS TIRING. TAKE YOUR TIME.","kind":"tired","decoderTarget":true,"topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":2,"input":"WHAT HOME DID I TELL YOU ABOUT?","expected":"YOU SAID YOUR HOME IS WILLOW QUAY.","kind":"recall_home","decoderTarget":false,"topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":3,"input":"CORRECTION: MY HOME IS MARBLE PORT.","expected":"THANKS FOR CORRECTING ME.","kind":"correct_home","decoderTarget":true,"topicSwitchApplicable":false}

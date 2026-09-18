@@ -1,0 +1,48 @@
+{"sessionId":"arrival","turnIndex":1,"input":"HI","topicSwitchApplicable":false}
+{"sessionId":"arrival","turnIndex":2,"input":"WHERE AM I?","topicSwitchApplicable":false}
+{"sessionId":"arrival","turnIndex":3,"input":"TELL ME YOUR NAME","topicSwitchApplicable":false}
+{"sessionId":"arrival","turnIndex":4,"input":"WHERE IS THE INN?","topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":1,"input":"HELLO","topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":2,"input":"WHAT DO YOU HAVE FOR SALE?","topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":3,"input":"DO NOT BUY ONE ROPE.","topicSwitchApplicable":false}
+{"sessionId":"shopping","turnIndex":4,"input":"THANKS","topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":1,"input":"GOOD MORNING","topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":2,"input":"HOW ARE YOU?","topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":3,"input":"I HAD A TIRING JOURNEY.","topicSwitchApplicable":false}
+{"sessionId":"company","turnIndex":4,"input":"WHAT IS YOUR NAME?","topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":1,"input":"WHERE AM I RIGHT NOW?","topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":2,"input":"CAN YOU TELL ME WHERE THE INN IS?","topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":3,"input":"WHAT GOODS ARE FOR SALE?","topicSwitchApplicable":false}
+{"sessionId":"directions","turnIndex":4,"input":"THANK YOU.","topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":1,"input":"HELLO THERE.","topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":2,"input":"HOW IS YOUR DAY GOING?","topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":3,"input":"I AM TIRED.","topicSwitchApplicable":false}
+{"sessionId":"quiet","turnIndex":4,"input":"PLEASE TELL ME YOUR NAME.","topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":1,"input":"SUPPOSE I BOUGHT ONE ROPE.","topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":2,"input":"SHOW ME YOUR WARES.","topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":3,"input":"DO NOT PURCHASE ONE ROPE.","topicSwitchApplicable":false}
+{"sessionId":"hypothetical","turnIndex":4,"input":"WHERE ARE WE?","topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":1,"input":"SOMEONE SAID \"BUY ONE ROPE\".","topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":2,"input":"HOW ARE THINGS WITH YOU?","topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":3,"input":"WHO ARE YOU?","topicSwitchApplicable":false}
+{"sessionId":"quotation","turnIndex":4,"input":"WHERE CAN I FIND THE INN?","topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":1,"input":"MY HOME IS CEDAR HOLLOW.","topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":2,"input":"I HAD A LONG DAY.","topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":3,"input":"WHERE DID I SAY MY HOME IS?","topicSwitchApplicable":false}
+{"sessionId":"home","turnIndex":4,"input":"CORRECTION: MY HOME IS COPPER BAY.","topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":1,"input":"HEY","topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":2,"input":"CAN YOU TELL ME WHERE I AM?","topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":3,"input":"WHAT SHOULD I CALL YOU?","topicSwitchApplicable":false}
+{"sessionId":"new_arrival","turnIndex":4,"input":"WHICH WAY TO THE INN?","topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":1,"input":"GOOD EVENING.","topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":2,"input":"HOW ARE YOU DOING TODAY?","topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":3,"input":"NEVERMIND, WHAT DO YOU HAVE FOR SALE?","topicSwitchApplicable":false}
+{"sessionId":"change_subject","turnIndex":4,"input":"DO NOT BUY ONE ROPE FOR ME.","topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":1,"input":"TELL ME WHERE WE ARE.","topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":2,"input":"TELL ME WHAT YOU SELL.","topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":3,"input":"I FEEL WORN OUT.","topicSwitchApplicable":false}
+{"sessionId":"fresh_questions","turnIndex":4,"input":"THANKS FOR YOUR HELP.","topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":1,"input":"MY HOME IS WILLOW QUAY.","topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":2,"input":"THE JOURNEY WAS EXHAUSTING.","topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":3,"input":"WHAT HOME DID I TELL YOU ABOUT?","topicSwitchApplicable":false}
+{"sessionId":"new_home","turnIndex":4,"input":"CORRECTION: MY HOME IS MARBLE PORT.","topicSwitchApplicable":false}

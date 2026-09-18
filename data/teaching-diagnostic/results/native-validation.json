@@ -1,0 +1,44 @@
+{
+  "Rows": 8,
+  "FrameExact": 0,
+  "PlanExact": 0.5,
+  "MemoryExact": 1,
+  "CorrectionExact": 0,
+  "AgendaExact": 1,
+  "UnintendedMutations": 0,
+  "AuthoritativeAlterations": 0,
+  "InvalidResponses": 0,
+  "UnderstandingP95": 146.1149,
+  "ReplyP95": 171.3219,
+  "AutomatedPass": false,
+  "ToolDecisions": [
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9961913824081421,
+      "Correct": false
+    }
+  ],
+  "Operational": {
+    "speechActs": 0.6666666666666666,
+    "domains": 0.4333333333333333,
+    "goals": 0.873015873015873,
+    "content": 0,
+    "affect": 1,
+    "policy": 0.875,
+    "slots": 0.5714285714285714,
+    "tool": 0.5,
+    "mutatingToolPrecision": 1,
+    "knowledgeTarget": 0.75,
+    "discourseAct": 1,
+    "speakerAttribution": 0,
+    "factSpan": 0,
+    "antecedent": 0,
+    "correctionState": 0
+  },
+  "RetiredMetrics": [
+    "CATALOG_RESPONSE_TOP1",
+    "CATALOG_RESPONSE_TOP3",
+    "VARIATION_RECALL_AT10",
+    "VARIATION_MRR"
+  ]
+}

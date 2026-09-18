@@ -1,0 +1,152 @@
+[
+  {
+    "step": 500,
+    "train": {
+      "allCategorical": {
+        "correct": 28,
+        "total": 32,
+        "accuracy": 0.875
+      },
+      "frameCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "planCategorical": {
+        "correct": 30,
+        "total": 32,
+        "accuracy": 0.9375
+      },
+      "knowledge": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "decoderTeacherToken": {
+        "correct": 106,
+        "total": 107,
+        "accuracy": 0.9906542056074766
+      }
+    }
+  },
+  {
+    "step": 1000,
+    "train": {
+      "allCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "frameCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "planCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "knowledge": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "decoderTeacherToken": {
+        "correct": 106,
+        "total": 107,
+        "accuracy": 0.9906542056074766
+      }
+    }
+  },
+  {
+    "step": 1500,
+    "train": {
+      "allCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "frameCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "planCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "knowledge": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "decoderTeacherToken": {
+        "correct": 107,
+        "total": 107,
+        "accuracy": 1.0
+      }
+    }
+  },
+  {
+    "step": 2000,
+    "train": {
+      "allCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "frameCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "planCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "knowledge": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "decoderTeacherToken": {
+        "correct": 107,
+        "total": 107,
+        "accuracy": 1.0
+      }
+    }
+  },
+  {
+    "step": 2500,
+    "train": {
+      "allCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "frameCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "planCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "knowledge": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "decoderTeacherToken": {
+        "correct": 107,
+        "total": 107,
+        "accuracy": 1.0
+      }
+    }
+  }
+]

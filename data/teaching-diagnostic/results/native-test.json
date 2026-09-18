@@ -1,0 +1,49 @@
+{
+  "Rows": 8,
+  "FrameExact": 0,
+  "PlanExact": 0.375,
+  "MemoryExact": 0.875,
+  "CorrectionExact": 0,
+  "AgendaExact": 1,
+  "UnintendedMutations": 0,
+  "AuthoritativeAlterations": 0,
+  "InvalidResponses": 0,
+  "UnderstandingP95": 147.3964,
+  "ReplyP95": 176.9545,
+  "AutomatedPass": false,
+  "ToolDecisions": [
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.9996235370635986,
+      "Correct": true
+    },
+    {
+      "Tool": "GET_CURRENT_LOCATION",
+      "Confidence": 0.7036717534065247,
+      "Correct": false
+    }
+  ],
+  "Operational": {
+    "speechActs": 0.3904761904761904,
+    "domains": 0.5333333333333333,
+    "goals": 0.6666666666666667,
+    "content": 0,
+    "affect": 1,
+    "policy": 0.5,
+    "slots": 0,
+    "tool": 0.625,
+    "mutatingToolPrecision": 1,
+    "knowledgeTarget": 0.875,
+    "discourseAct": 0.625,
+    "speakerAttribution": 0.6666666666666666,
+    "factSpan": 0,
+    "antecedent": 0,
+    "correctionState": 0
+  },
+  "RetiredMetrics": [
+    "CATALOG_RESPONSE_TOP1",
+    "CATALOG_RESPONSE_TOP3",
+    "VARIATION_RECALL_AT10",
+    "VARIATION_MRR"
+  ]
+}

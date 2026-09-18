@@ -1,0 +1,89 @@
+{
+  "trainingSeconds": 335.68380660004914,
+  "metrics": {
+    "train": {
+      "allCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "frameCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "planCategorical": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "knowledge": {
+        "correct": 32,
+        "total": 32,
+        "accuracy": 1.0
+      },
+      "decoderTeacherToken": {
+        "correct": 107,
+        "total": 107,
+        "accuracy": 1.0
+      }
+    },
+    "validation": {
+      "allCategorical": {
+        "correct": 0,
+        "total": 8,
+        "accuracy": 0.0
+      },
+      "frameCategorical": {
+        "correct": 1,
+        "total": 8,
+        "accuracy": 0.125
+      },
+      "planCategorical": {
+        "correct": 5,
+        "total": 8,
+        "accuracy": 0.625
+      },
+      "knowledge": {
+        "correct": 6,
+        "total": 8,
+        "accuracy": 0.75
+      },
+      "decoderTeacherToken": {
+        "correct": 16,
+        "total": 19,
+        "accuracy": 0.8421052631578947
+      }
+    },
+    "test": {
+      "allCategorical": {
+        "correct": 0,
+        "total": 8,
+        "accuracy": 0.0
+      },
+      "frameCategorical": {
+        "correct": 0,
+        "total": 8,
+        "accuracy": 0.0
+      },
+      "planCategorical": {
+        "correct": 3,
+        "total": 8,
+        "accuracy": 0.375
+      },
+      "knowledge": {
+        "correct": 7,
+        "total": 8,
+        "accuracy": 0.875
+      },
+      "decoderTeacherToken": {
+        "correct": 31,
+        "total": 34,
+        "accuracy": 0.9117647058823529
+      }
+    }
+  },
+  "decoderFreezeVerified": true,
+  "promoted": false,
+  "note": "Categorical-head fit uses predicted prior frame/plan labels, but gold memory inputs; native metrics and actual rollouts are separate."
+}

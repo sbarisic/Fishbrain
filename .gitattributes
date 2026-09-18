@@ -2,3 +2,8 @@
 data/conversation-v4/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 data/conversation-v4/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 data/conversation-v4/*.sha256 -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/teaching-diagnostic/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/teaching-diagnostic/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/teaching-diagnostic/generator-snapshot.py -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/teaching-diagnostic/results/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/teaching-diagnostic/results/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

@@ -1,0 +1,9 @@
+{
+  "status": "DIAGNOSTIC_COMPLETE",
+  "completedSteps": 2500,
+  "endpoint": 2500,
+  "trainingSeconds": 335.68380660004914,
+  "totalSeconds": 347.0866695996374,
+  "promoted": false,
+  "allToolsDisabled": true
+}
