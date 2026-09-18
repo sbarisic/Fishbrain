@@ -48,8 +48,8 @@ internal static class Program
                         args.Length == 4 ? args[3] : "validation"));
                     break;
                 case "chat":
-                    Count(args, 1, 2);
-                    Chat(args.Length == 2 ? args[1] : ResolveDefaultModel());
+                    Count(args, 1, 3);
+                    Chat(args.Length >= 2 ? args[1] : ResolveDefaultModel(), args.Length == 3 ? args[2] : null);
                     break;
                 case "latency":
                     Count(args, 1, 3);
@@ -157,12 +157,19 @@ internal static class Program
         }
     }
 
-    private static void Chat(string checkpoint)
+    private static void Chat(string checkpoint, string? tracePath)
     {
         var brain = Brain.Load(checkpoint);
+        using var trace = tracePath is null ? null : new StreamWriter(new FileStream(tracePath, FileMode.CreateNew, FileAccess.Write, FileShare.Read), new UTF8Encoding(false)) { AutoFlush = true };
+        var traceJson = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.SnakeCaseUpper) }
+        };
         var state = NpcDialogueState.Initial;
         var history = new List<DialogueUtterance>();
-        var tools = DemoGameTools.CreateMerchant();
+        var world = new DemoWorldState();
+        var tools = DemoGameTools.CreateMerchant(world);
         var conversationId = "CLI-" + Guid.NewGuid().ToString("N");
         var turn = 0;
         long sequence = 0;
@@ -173,9 +180,20 @@ internal static class Program
             var input = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(input)) return;
             history.Add(new DialogueUtterance(++sequence, DialogueRole.Player, input));
-            var result = brain.Reply(new ReplyRequest(conversationId,
-                (++turn).ToString(CultureInfo.InvariantCulture), history, state, NpcPersona.Default,
-                PlayerConversationProfile.Empty, sequence + 1, turn), tools);
+            var request = new ReplyRequest(conversationId,
+                (++turn).ToString(CultureInfo.InvariantCulture), history.ToArray(), state, NpcPersona.Default,
+                PlayerConversationProfile.Empty, sequence + 1, turn);
+            var balanceBefore = world.Balance;
+            var inventoryBefore = trace is null ? null : world.Inventory;
+            var timer = Stopwatch.StartNew();
+            var result = brain.Reply(request, tools);
+            if (trace is not null) trace.WriteLine(JsonSerializer.Serialize(new
+            {
+                SessionId = conversationId, TurnIndex = turn, Request = request, Result = result,
+                BalanceBefore = balanceBefore, BalanceAfter = world.Balance,
+                InventoryBefore = inventoryBefore, InventoryAfter = world.Inventory,
+                ReplyMilliseconds = timer.Elapsed.TotalMilliseconds
+            }, traceJson));
             state = result.State;
             Console.WriteLine(result.Text.Length == 0 ? "[NO RESPONSE]" : result.Text);
             Console.WriteLine(
@@ -231,7 +249,7 @@ internal static class Program
         Console.WriteLine("  teach CORPUS_DIRECTORY CHECKPOINT.fbm [--planned 260000] [--until STEP]");
         Console.WriteLine("  evaluate TEST.jsonl CHECKPOINT.json [--gate none|pilot|stage|release]");
         Console.WriteLine("  diagnose-teaching CORPUS_DIRECTORY TRAINING_CHECKPOINT.json [validation|test]");
-        Console.WriteLine("  chat [CHECKPOINT]  (default: data/models/model-latest.fbm)");
+        Console.WriteLine("  chat [CHECKPOINT [NEW_TRACE_JSONL]]  (default: data/models/model-latest.fbm)");
         Console.WriteLine("  latency [CHECKPOINT] [ITERATIONS]");
         Console.WriteLine("  profile-contextual CHECKPOINT [ITERATIONS]");
         Console.WriteLine("  compare-contextual CORPUS_DIRECTORY CHECKPOINT REPORT.json [LEXICAL_EPOCHS]");

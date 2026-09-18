@@ -102,6 +102,8 @@ public sealed partial class Brain
             .Select(a => frames[a.FrameIndex!.Value].ToolName).FirstOrDefault();
         var raw = perception with { ToolSchema = firstPlannedTool };
         var vetoes = new List<string>();
+        var unboundToolPlan = HasUnboundToolAct(acts, frames);
+        if (unboundToolPlan) vetoes.Add("UNBOUND_TOOL_PLAN");
         var actionCandidates = new List<ValidatedActionCandidate>();
         GameToolInvocation? invocation = null;
         GameToolResult? toolResult = null;
@@ -115,7 +117,7 @@ public sealed partial class Brain
         var clarified = false;
         var orderedFrameIndices = acts.Where(a => a.Act == DialogueResponseAct.ExecuteTool && a.FrameIndex is not null)
             .Select(a => a.FrameIndex!.Value).Concat(Enumerable.Range(0, frames.Length)).Distinct().ToArray();
-        foreach (var index in orderedFrameIndices)
+        foreach (var index in unboundToolPlan ? Array.Empty<int>() : orderedFrameIndices)
         {
             var frame = frames[index];
             if (frame.ToolName is null) continue;
@@ -266,6 +268,10 @@ public sealed partial class Brain
         T[] Multi<T>(string name, int maximum) where T : struct, Enum => output.Heads[name].Data.Select((x, i) => (x, i))
             .Where(x => x.x >= 0).OrderByDescending(x => x.x).Take(maximum).Select(x => (T)Enum.ToObject(typeof(T), x.i)).ToArray();
     }
+
+    internal static bool HasUnboundToolAct(IReadOnlyList<PlannedResponseAct> acts, IReadOnlyList<SemanticFrame> frames) =>
+        acts.Any(a => a.Act == DialogueResponseAct.ExecuteTool &&
+            (a.FrameIndex is not { } index || index < 0 || index >= frames.Count || frames[index].ToolName is null));
 
     internal static SemanticFrame[] DecodeFrames(ContextualNetwork model, NetworkOutput output, PackedInput packed, string current,
         IReadOnlyList<DialogueSlot> slots)

@@ -10,6 +10,7 @@ internal static class ContextualArchitectureTests
         QuotedActionBoundaries();
         ConversationMetadata();
         TeachingInputAndMemory();
+        UnboundToolPlans();
         foreach (var input in new[] { "DO NOT BUY 2 ROPE", "IF I BUY 2 ROPE", "I DO NOT WANT TO BUY 2 ROPE", "CANCEL BUY 2 ROPE", "HE SAID BUY 2 ROPE" })
         {
             var world = new DemoWorldState();
@@ -36,6 +37,19 @@ internal static class ContextualArchitectureTests
         StructuredBoundaries();
         ContextualLearningAndResume();
         DomainPlanning();
+    }
+
+    private static void UnboundToolPlans()
+    {
+        SemanticFrame question = new(0, 16, SpeechAct.Ask, DialogueParticipant.Player,
+            DialogueParticipant.Npc, "LIST_WARES", [], null, ActionStatus.Question, 1);
+        Assert(!Brain.HasUnboundToolAct([new(DialogueResponseAct.ExecuteTool, 0)], [question]), "A bound tool plan was rejected.");
+        Assert(!Brain.HasUnboundToolAct([new(DialogueResponseAct.Acknowledge)], []), "A social act requires a tool frame.");
+        foreach (int? index in new int?[] { null, -1, 1 })
+            Assert(Brain.HasUnboundToolAct([new(DialogueResponseAct.ExecuteTool, index)], [question]), "An unbound tool act passed validation.");
+        Assert(Brain.HasUnboundToolAct([new(DialogueResponseAct.ExecuteTool, 0)], [question with { ToolName = null }]), "A tool act referenced a social frame.");
+        Assert(Brain.HasUnboundToolAct([new(DialogueResponseAct.ExecuteTool, 0), new(DialogueResponseAct.ExecuteTool)], [question]),
+            "A partly invalid tool plan could execute its valid prefix.");
     }
 
     private static void TeachingInputAndMemory()

@@ -98,6 +98,16 @@ Inspect the lessons and audit before starting this bounded experiment:
 dotnet $cli chat data/training/my-game-run/calibrated.fbm
 ```
 
+To diagnose interactive chat, append a new JSONL trace path after the model path.
+Its parent directory must exist; an existing file is rejected to preserve earlier
+evidence. Each flushed row records the exact request, seed, returned state, frames,
+plan, vetoes, reply and demo-world changes. The trace contains the conversation text.
+For example:
+
+```powershell
+dotnet $cli chat data/training/game-teaching-run-v4/calibrated.fbm data/training/my-chat-trace.jsonl
+```
+
 The schedule is seed 42, batch 32, FP32: 5,000 joint updates (seven understanding
 and three realization per ten), then 1,000 decoder-only updates. AdamW uses norm
 clipping at 1 and phase-local warmup/cosine schedules at 0.0003/0.0001. It omits
