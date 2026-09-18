@@ -1,0 +1,19 @@
+  Determining projects to restore...
+  All projects are up-to-date for restore.
+  Fishbrain.CausalRuntime -> E:\Projects\Fishbrain\Fishbrain.CausalRuntime\bin\Release\net10.0\Fishbrain.CausalRuntime.dll
+  Fishbrain.Runtime -> E:\Projects\Fishbrain\Fishbrain.Runtime\bin\Release\net10.0\Fishbrain.Runtime.dll
+  Fishbrain.CausalDemo -> E:\Projects\Fishbrain\Fishbrain.CausalDemo\bin\Release\net10.0\Fishbrain.CausalDemo.dll
+  Fishbrain.DemoDomain -> E:\Projects\Fishbrain\Fishbrain.DemoDomain\bin\Release\net10.0\Fishbrain.DemoDomain.dll
+  Fishbrain.Training -> E:\Projects\Fishbrain\Fishbrain.Training\bin\Release\net10.0\Fishbrain.Training.dll
+  Fishbrain -> E:\Projects\Fishbrain\Fishbrain\bin\Release\net10.0\Fishbrain.dll
+  Fishbrain.CausalTests -> E:\Projects\Fishbrain\Fishbrain.CausalTests\bin\Release\net10.0\Fishbrain.CausalTests.dll
+  Fishbrain.LegacyCli -> E:\Projects\Fishbrain\Fishbrain.LegacyCli\bin\Release\net10.0\Fishbrain.dll
+  Fishbrain.DataGenerator -> E:\Projects\Fishbrain\Fishbrain.DataGenerator\bin\Release\net10.0\Fishbrain.DataGenerator.dll
+  Fishbrain.Tests -> E:\Projects\Fishbrain\Fishbrain.Tests\bin\Release\net10.0\Fishbrain.Tests.dll
+  Fishbrain.DataGenerator.Tests -> E:\Projects\Fishbrain\Fishbrain.DataGenerator.Tests\bin\Release\net10.0\Fishbrain.DataGenerator.Tests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:03.51

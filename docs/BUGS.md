@@ -138,11 +138,11 @@ returns a nonzero exit code while the three independent neural misses remain:
 
 ```powershell
 dotnet build Fishbrain.slnx -c Release --artifacts-path data/logs/final-solution-artifacts -p:UseAppHost=false
-dotnet run -c Release --project Fishbrain -- selftest
+dotnet run -c Release --project Fishbrain.LegacyCli -- selftest
 dotnet run -c Release --project Fishbrain.Tests
 dotnet run -c Release --project Fishbrain.DataGenerator.Tests
 dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled --raw data/raw --manifest data/sources.json
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled/test.jsonl data/models/model-latest.fbm --gate release
+dotnet run -c Release --project Fishbrain.LegacyCli -- evaluate data/compiled/test.jsonl data/models/model-latest.fbm --gate release
 ```
 
 The audit intentionally keeps the partial, rejected, and open items visible. They are

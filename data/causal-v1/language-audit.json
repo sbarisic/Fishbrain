@@ -1,0 +1,38 @@
+{
+  "counts": {
+    "wikitext-test": {
+      "documents": 62,
+      "tokens": 314462
+    },
+    "tinystories-test": {
+      "documents": 0,
+      "tokens": 0
+    },
+    "wikitext-validation": {
+      "documents": 60,
+      "tokens": 275472
+    },
+    "tinystories-validation": {
+      "documents": 27630,
+      "tokens": 3791303
+    },
+    "wikitext-train": {
+      "documents": 28988,
+      "tokens": 129362702
+    },
+    "tinystories-train": {
+      "documents": 2717481,
+      "tokens": 375744555
+    }
+  },
+  "exclusions": {
+    "exact_document": 448,
+    "near_document": 1,
+    "short_document": 13
+  },
+  "elapsedSeconds": 1936.8313342006877,
+  "nearDuplicateMethod": "64-bit SimHash over sampled word shingles; Hamming <=3; four bands. Approximate detection, not an exhaustive similarity proof.",
+  "bytes": 4087352998,
+  "tokenizerTrainOnly": true,
+  "tokenizerHash": "3e1a5266548c5d78e35bc9e58b48020e65dbf270fbce79c8b998780cdca3eb6d"
+}

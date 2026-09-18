@@ -1,0 +1,250 @@
+{
+  "acceptedEpisodes": 2638,
+  "sourceEpisodes": 2650,
+  "rejectedFamilies": {
+    "tool-path-BUY:ROPE-LOOKUP_WORLD_FACT:CASTLE": "FROZEN_INPUT",
+    "tool-path-SELL:ROPE-READ_PERSONA:HOME": "FROZEN_INPUT",
+    "tool-path-BUY:ROPE-GET_CURRENT_LOCATION": "FROZEN_INPUT",
+    "tool-path-LIST_CAPABILITIES-SELL:ROPE": "FROZEN_INPUT",
+    "tool-path-BUY:ROPE-LIST_INVENTORY": "FROZEN_INPUT",
+    "tool-path-SELL:ROPE-READ_PERSONA:OCCUPATION": "FROZEN_INPUT",
+    "tool-path-READ_PERSONA:NAME-SELL:ROPE": "FROZEN_INPUT",
+    "tool-path-BUY:ROPE-LOOKUP_LOCATION:INN": "FROZEN_INPUT",
+    "tool-path-LOOKUP_WORLD_FACT:CASTLE-BUY:ROPE": "FROZEN_INPUT",
+    "tool-path-SELL:ROPE-LOOKUP_PRICE:ROPE": "FROZEN_INPUT",
+    "negative-3": "FROZEN_INPUT"
+  },
+  "crossSplitDuplicatesRemoved": [],
+  "targetRows": {
+    "train:public": 1673,
+    "validation:public": 362,
+    "test:public": 315,
+    "train:social": 204,
+    "validation:social": 20,
+    "test:social": 16,
+    "train:tools": 1088,
+    "validation:tools": 119,
+    "test:tools": 85
+  },
+  "historyCoverage": {
+    "short": 740,
+    "fresh": 458,
+    "long": 1767
+  },
+  "topResponses": [
+    [
+      "{\"type\":\"tool_call\",\"name\":\"GET_BALANCE\",\"arguments\":{}}",
+      58
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU HAVE 100 GOLD.\"}",
+      47
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"NAME\"}}",
+      39
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"Arin\"}",
+      37
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"HOME\"}}",
+      24
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"INN\"}}",
+      23
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}",
+      22
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"the old mill\"}",
+      22
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"INN IS NORTH BY THE FOUNTAIN.\"}",
+      22
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_INVENTORY\",\"arguments\":{}}",
+      22
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"GET_CURRENT_LOCATION\",\"arguments\":{}}",
+      22
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU ARE AT VILLAGE MARKET.\"}",
+      22
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}",
+      21
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"ROPE\"}}",
+      21
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"ROPE COSTS 3 GOLD.\"}",
+      21
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"CASTLE\"}}",
+      21
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}",
+      21
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"SELL\",\"arguments\":{\"ITEM\":\"ROPE\",\"QUANTITY\":1}}",
+      20
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"HEALTH POTION COSTS 8 GOLD.\"}",
+      20
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"OCCUPATION\"}}",
+      20
+    ]
+  ],
+  "sampling": {
+    "public": 0.4,
+    "tools": 0.4,
+    "social": 0.2
+  },
+  "nativePacker": true,
+  "missingClassificationTargets": "not present",
+  "suiteHash": "b35af205ec6f37f9d74596f2bb835da9955d13c31a0f0f5fbe14038f978b9b1b",
+  "specializationHash": "d0e214a1c6d19163e4005aa0907af98e7b0642d2d9548778a3e1d100a749890f",
+  "authoredPlanHash": "96e2a87926aeadc9dc220af562dcfefbb6f72f2c30d30e918b3de9d778fa2d5a",
+  "preservedAcceptanceHash": "4ca7370f9a369fa7d26758646df0b632650ee97007bca6336e2409d3e2b1b664",
+  "effectiveExactTargetProbability": [
+    [
+      "{\"type\":\"tool_call\",\"name\":\"GET_BALANCE\",\"arguments\":{}}",
+      0.02132352941176471
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU HAVE 100 GOLD.\"}",
+      0.017279411764705883
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"NAME\"}}",
+      0.014338235294117648
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"Arin\"}",
+      0.013602941176470588
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"HOME\"}}",
+      0.008823529411764707
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"INN\"}}",
+      0.008455882352941178
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}",
+      0.008088235294117648
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"the old mill\"}",
+      0.008088235294117648
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"INN IS NORTH BY THE FOUNTAIN.\"}",
+      0.008088235294117648
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_INVENTORY\",\"arguments\":{}}",
+      0.008088235294117648
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"GET_CURRENT_LOCATION\",\"arguments\":{}}",
+      0.008088235294117648
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU ARE AT VILLAGE MARKET.\"}",
+      0.008088235294117648
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}",
+      0.007720588235294118
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"ROPE\"}}",
+      0.007720588235294118
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"ROPE COSTS 3 GOLD.\"}",
+      0.007720588235294118
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"CASTLE\"}}",
+      0.007720588235294118
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}",
+      0.007720588235294118
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"SELL\",\"arguments\":{\"ITEM\":\"ROPE\",\"QUANTITY\":1}}",
+      0.007352941176470588
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"HEALTH POTION COSTS 8 GOLD.\"}",
+      0.007352941176470588
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"OCCUPATION\"}}",
+      0.007352941176470588
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"road warden\"}",
+      0.007352941176470588
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU SOLD 1 ROPE FOR 1 GOLD. YOUR BALANCE IS 101 GOLD.\"}",
+      0.006985294117647059
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"I HAVE HEALTH POTION: 50 IN STOCK, IRON SWORD: 20 IN STOCK, ROPE: 30 IN STOCK.\"}",
+      0.006985294117647059
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"THE CASTLE STANDS ON THE HILL ABOVE THE VILLAGE.\"}",
+      0.006985294117647059
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"BUY\",\"arguments\":{\"ITEM\":\"ROPE\",\"QUANTITY\":2}}",
+      0.006617647058823529
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU CARRY 1 HEALTH POTION, 2 ROPE.\"}",
+      0.006617647058823529
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU BOUGHT 2 ROPE FOR 6 GOLD. YOUR BALANCE IS 94 GOLD.\"}",
+      0.00625
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"Of course.\"}",
+      0.0051470588235294126
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"What do you enjoy about walking?\"}",
+      0.004901960784313725
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"You're welcome.\"}",
+      0.004779411764705883
+    ]
+  ],
+  "finalUtterancesAcrossSplits": 31
+}

@@ -1,5 +1,9 @@
 # Stateful in-game teaching experiment
 
+Historical structured-model workflow. Use [the causal model guide](CAUSAL_MODEL.md)
+for the replacement architecture and bounded pilot. Existing comparison binaries
+and artifacts remain preserved.
+
 This follow-up targets the failures in ordinary in-game chat: introductions,
 location, shopping, remembered homes, corrections, and compound requests.
 It preserves the old candidates and the shipped artifact. No model is promoted.
@@ -80,7 +84,7 @@ Use fresh output directories; these commands retain existing experiments.
 ```powershell
 $py = 'data/training/torch-env/Scripts/python.exe'
 $cli = 'data/training/game-teaching-tools/Fishbrain.dll'
-dotnet build Fishbrain/Fishbrain.csproj -c Release -o data/training/game-teaching-tools
+dotnet build Fishbrain.LegacyCli/Fishbrain.LegacyCli.csproj -c Release -o data/training/game-teaching-tools
 
 & $py scripts/conversation_data/game_lessons.py --cli $cli --reference data/compiled-conversation-v4-release/train.jsonl --output data/training/my-game-authored
 dotnet $cli replay-teaching data/training/my-game-authored data/compiled-my-game-raw

@@ -1,177 +1,91 @@
 # Fishbrain
 
-Fishbrain is a C# NPC dialogue runtime with dependency-free .NET CPU inference.
-The contextual replacement uses a bidirectional encoder, bounded memory, semantic
-frames, an ordered dialogue planner, and a separate generative decoder.
+Fishbrain is an experimental conversational language model with validated game and
+memory tools. The default CLI now uses one causal Transformer, trained from
+scratch. It has no emotion, intent, policy, semantic-frame, relationship, mood,
+agenda, or learned memory-selection system.
 
-**Release status:** the replacement is implemented as a development candidate.
-The checked-in `data/models/model-latest.fbm` is incompatible. It has not been
-replaced. The previous 260,000-update GPU model failed quality gates.
-The [conversation-v4 dataset and bounded pilot](CONVERSATION_V4.md) revise its
-training data and compare actual conversations before another full training decision.
-The 50,000-update pilot also failed its gates; see the
-[results and 50 paired conversations](CONVERSATION_V4_RESULTS.md).
-The subsequent [simulated-conversation teaching diagnostic](TEACHING_DIAGNOSTIC.md)
-shows that the same architecture can fit small lessons, but remains sensitive to
-new wording and runtime dialogue state. It is not a replacement model.
-The [stateful in-game teaching follow-up](GAME_TEACHING.md) adds varied histories,
-character-based fact copying, memory-selection changes and actual game simulations.
-See its [measured results and limitations](GAME_TEACHING_RESULTS.md) before testing.
-Native acceptance and two-human review remain required before release.
-Long-context inference currently exceeds the 100 ms engineering target.
+**No replacement model has been promoted.** Historical `.fbm` candidates remain
+available with their matching legacy runtime. The new runtime accepts only causal
+V1 `.fbc` artifacts. See [the causal implementation and pilot](CAUSAL_MODEL.md)
+for the architecture, commands and safeguards, and [the measured pilot results](CAUSAL_RESULTS.md)
+for quality, resources and paired conversations.
 
-See [implementation status](CONTEXTUAL_IMPLEMENTATION.md) for evidence and remaining
-work, [model architecture](AI_MODEL.md) for the neural design, and
-[engineering boundaries](INFO.md) for ownership and release rules.
+## Build and test
 
-## Build and verify
-
-Requires the .NET 10 SDK. There are no runtime NuGet dependencies.
+Requires .NET 10. CPU inference has no NuGet or Python dependencies.
 
 ```powershell
 dotnet build Fishbrain.slnx -c Release
-dotnet run --no-build -c Release --project Fishbrain -- selftest
-dotnet run --no-build -c Release --project Fishbrain.Tests -- --unit
-dotnet run --no-build -c Release --project Fishbrain.DataGenerator.Tests
+dotnet run --no-build -c Release --project Fishbrain.CausalTests
 ```
 
-The `--unit` option explicitly excludes the shipped-artifact smoke test.
-Running `Fishbrain.Tests` without it must load and exercise the shipped model;
-rejection is a failure. Corrupt/incompatible artifact rejection is a separate check.
+Python/PyTorch with ROCm is used only for training and data preparation.
+
+## Chat with a causal candidate
+
+The completed pilot failed quality gates. To inspect it locally with its matching
+runtime and model package:
+
+```powershell
+dotnet data/training/causal-v1/candidate-package/Fishbrain.dll chat data/training/causal-v1/candidate-package/candidate.fbc
+```
+
+An optional third argument writes JSONL diagnostics:
+
+```powershell
+dotnet data/training/causal-v1/candidate-package/Fishbrain.dll chat data/training/causal-v1/candidate-package/candidate.fbc data/training/chat-trace.jsonl
+```
+
+Chat prints replies without the old `STATE ...` line. The demo offers wares,
+prices, inventory, gold, locations, purchases, sales, persona reads and explicit
+reported-memory operations. The host validates proposed transactions. Availability
+of a tool does not imply the candidate has learned to use it reliably.
 
 ## Host API
 
-Reference `Fishbrain.Runtime/Fishbrain.Runtime.csproj` or the matching runtime DLL.
-This merchant example also references `Fishbrain.DemoDomain`.
+Reference `Fishbrain.CausalRuntime`; the demo also uses `Fishbrain.CausalDemo`.
+Do not reference the legacy and causal runtimes in the same application: they
+intentionally provide different schemas under the same `Fishbrain` namespace.
 
 ```csharp
 using Fishbrain;
 
-var brain = Brain.Load("candidate.fbm", DemoDialogueDomains.Merchant);
-var tools = DemoGameTools.CreateMerchant();
-var request = new ReplyRequest(
-    "conversation-17", "turn-4",
-    [new DialogueUtterance(7, DialogueRole.Player, "How much money do I have?")],
-    NpcDialogueState.Initial, NpcPersona.Default,
-    PlayerConversationProfile.Empty, 8, 42);
-
-var result = brain.Reply(request, tools);
-// Persist result.State through the host's own session storage.
+var world = new DemoWorldState();
+var memory = new SessionMemoryStore();
+var tools = DemoGameTools.CreateMerchant(world)
+    .WithTools(ConversationTools.Create())
+    .WithTools(memory.CreateTools());
+var journal = new ExecutionJournal();
+var brain = Brain.Load("candidate.fbc", tools, journal, DemoAuthorization.Allow);
+var history = new List<ChatMessage>
+{
+    new(MessageRole.Player, "What do you have for sale?", 0)
+};
+var result = brain.Reply(new ReplyRequest("conversation-17", "turn-1",
+    history, NpcPersona.Default));
+history.AddRange(result.MessagesToAppend);
+Console.WriteLine(result.Text);
 ```
 
-`Brain.Load(path)` reads the domain embedded in the model. The explicit-domain
-overload requires the exact immutable `DialogueDomainDefinition` used for training.
-Registering an `IGameTool` does not teach a new capability.
+The caller owns ordered history, persona, memory storage, persistence, and world
+state. Reuse the host execution journal across runtimes serving the same world.
+Each new player message needs a sequence greater than every retained message.
+Persist complete tool exchanges from `MessagesToAppend`.
 
-The host supplies persona, approved player facts, tools, history, and session
-state. The runtime returns new state; it never approves or writes persistent
-player facts. Share one loaded brain across calls, but give each session its own
-state and keep request collections stable during a call.
+## Preserved implementation
 
-`result.Contextual` exposes selected memories, clause frames, response acts,
-validated action candidates, confidence, execution vetoes, and agenda changes.
-`ResponseMode.DeterministicOnly` disables social generation.
-
-Input is normalized to uppercase. Known words use word tokens; unknown words use
-character fallback with exact normalized source offsets. The current utterance
-and required persona/state must fit the input budget; an oversized request throws
-instead of silently truncating its meaning.
-
-## Conversation dataset and pilot
-
-Use [the conversation-v4 guide](CONVERSATION_V4.md) to reproduce the revised data,
-audits, frozen challenge suite and bounded 50,000-update pilot. It uses explicit
-response eligibility, balanced sampling and frozen public-response batches.
-Another full training run is a separate decision.
-
-## Historical v3 training
-
-GPU training is available through [PyTorch/ROCm](scripts/torch_training/README.md),
-with the same dependency-free C# inference runtime. The RX 9070 XT development
-benchmark projects about 7.7 hours for all 260,000 updates, before validation,
-checkpoint and native evaluation overhead. This is a throughput estimate, not
-a quality guarantee. The commands below reproduce the older v3 workflow. The native
-C# sampler does not support conversation-v4.
-
-The source manifest and existing preparation scripts govern source provenance.
-After the raw data is available:
+The old architecture and commands are documented in
+[the legacy README](LEGACY_README.md). Use `--project Fishbrain.LegacyCli` for those
+commands. The old public types live in `Fishbrain.Runtime`; they are not loaded by
+the new production CLI. Existing binaries under `data/training/*-tools` remain
+untouched for comparison.
 
 ```powershell
-dotnet run -c Release --project Fishbrain.DataGenerator -- compile --output data/compiled-contextual --seed 42
-dotnet run -c Release --project Fishbrain.DataGenerator -- audit --input data/compiled-contextual
-dotnet run -c Release --project Fishbrain -- teach data/compiled-contextual data/training/contextual-training.fbm --planned 260000 --until 260000
+dotnet run --no-build -c Release --project Fishbrain.LegacyCli -- selftest
+dotnet run --no-build -c Release --project Fishbrain.Tests -- --unit
 ```
 
-An existing matching training checkpoint resumes exactly. Use a smaller `--until`
-for a bounded engineering run. Ctrl+C finishes the current update and saves.
-For a background job, create `CHECKPOINT.fbm.stop` to request the same clean stop.
-Remove that stop file before resuming. Progress is in `CHECKPOINT.fbm.progress.json`.
-Complete state is saved every 100 updates, and validation runs every 5,000 updates.
-A file lock prevents concurrent writers to the same checkpoint.
-Checkpoints bind weights, token order, schema, domain, corpus, calibration, phase,
-sampler, optimizer, and RNG state. Old weights are not migrated.
-
-Training is CPU-intensive. Sequential microbatches remain the default. To use the
-validated six-worker configuration on the development CPU:
-
-```powershell
-$env:FISHBRAIN_TRAINING_WORKERS = '6'
-dotnet run --no-build -c Release --project Fishbrain -- teach data/compiled-contextual-v3 data/training/contextual-v3-training.fbm --planned 260000 --until 260000
-```
-
-Workers share read-only weights and own their temporary gradients. Effective batch
-size stays 32; masking RNG and gradient sums keep sample order. More workers use
-more memory. Values from 1 to 6 are supported, including when resuming a checkpoint.
-This configuration needs no GPU or native math library.
-
-For a reproducible speed comparison, stop training and benchmark a saved checkpoint:
-
-```powershell
-dotnet run --no-build -c Release --project Fishbrain -- benchmark-training data/compiled-contextual-v3 data/training/contextual-v3-training.fbm data/training/speed-report.json 3
-```
-
-The command tests all four phases with one warmup and three measured updates each.
-It does not save its updated weights or change the source checkpoint. On the
-development CPU, six workers reduced pretraining from 6.38 to 1.77 seconds per
-update in a paired short benchmark; later phases improved by 1.85-2.46 times.
-These timings exclude validation and checkpoint writes. Full training still takes
-days. See [measurement details](CONTEXTUAL_IMPLEMENTATION.md#training-throughput).
-
-## Evaluate and release
-
-```powershell
-dotnet run -c Release --project Fishbrain -- export data/training/contextual-training.fbm data/training/candidate.fbm data/compiled-contextual
-dotnet run -c Release --project Fishbrain -- evaluate data/compiled-contextual/test.jsonl data/training/candidate.fbm --gate release
-dotnet run -c Release --project Fishbrain -- profile-contextual data/training/candidate.fbm 32
-dotnet run -c Release --project Fishbrain -- acceptance-contextual data/training/candidate.fbm data/logs/acceptance.json
-dotnet run -c Release --project Fishbrain -- compare-contextual data/compiled-contextual data/training/candidate.fbm data/logs/comparison.json
-dotnet run -c Release --project Fishbrain -- conversation-sample data/training/candidate.fbm data/benchmarks/conversation-scenarios.jsonl data/logs/conversation-sample.jsonl
-```
-
-Two people must complete the exported review. Reviews include memory, agenda, and
-compound-turn ratings where applicable. Then run:
-
-```powershell
-./scripts/validate-discourse-release.ps1 -TrainingCheckpoint data/training/contextual-training.fbm -ReviewedConversationFile data/logs/reviewed.jsonl
-```
-
-The script checks numerical/runtime tests, corpus provenance, held-out metrics,
-human review, artifact compatibility, resources, and ablations before packaging
-the matching runtime and model. It does not overwrite the repository's shipped
-artifact. A completed training run alone is never sufficient for release.
-
-## Project layout
-
-- `Fishbrain.Runtime`: dependency-free contextual inference and host-facing API.
-- `Fishbrain.Training`: trainers, optimizer state, evaluation and the legacy lexical baseline.
-- `Fishbrain.DemoDomain`: merchant tools, world fixture and domain definitions.
-- `Fishbrain/Neural`: float32 network, differentiation, optimizer, checkpoint code.
-- `Fishbrain`: CLI plus runtime/training source linked into the library.
-- `Fishbrain.DataGenerator`: deterministic corpus compilation and audits.
-- `Fishbrain.Tests`, `Fishbrain.DataGenerator.Tests`: numerical, runtime, and data checks.
-
-Legacy scalar/lexical code remains for baseline comparisons and regression tests.
-The contextual production path does not allocate its parameters or optimizer.
-The runtime has no project references to training, CLI or demo-domain assemblies.
-Assembly-boundary tests check this separation. `Brain.Load(path)` uses the immutable
-domain embedded in the checkpoint; the explicit-domain overload verifies its fingerprint.
+The checked-in `data/models/model-latest.fbm` remains incompatible. Its historical
+shipped-artifact smoke test still fails; this is separate from malformed-artifact
+rejection tests and from the new candidate's implementation checks.

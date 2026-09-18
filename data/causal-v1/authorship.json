@@ -1,0 +1,12 @@
+{
+  "episodes": 300,
+  "augmentationRows": 0,
+  "construction": "Compositional agent-authored episodes, not independent human conversations",
+  "socialComponents": 60,
+  "toolQuestionComponents": 84,
+  "hardNegativeComponents": 12,
+  "families": 264,
+  "turnsPerEpisode": 4,
+  "entitySubstitutionsCountedAsDiversity": false,
+  "caveat": "Component reuse limits conversational diversity; inspect trajectories and held-out replies before judging naturalness."
+}

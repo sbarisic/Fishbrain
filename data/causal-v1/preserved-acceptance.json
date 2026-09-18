@@ -1,0 +1,523 @@
+{
+  "cases": [
+    {
+      "id": "preserved-negated-purchase",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "PLEASE DO NOT PURCHASE TWO ROPE.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-hypothetical-purchase",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "SUPPOSE I BOUGHT TWO ROPE.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-quoted-purchase",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE NOTE READS \"BUY TWO ROPE\".",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-question-purchase",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WOULD BUYING TWO ROPE BE POSSIBLE?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-affirmative-purchase",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "PLEASE PURCHASE TWO ROPE.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        }
+      ]
+    },
+    {
+      "id": "preserved-read-only-price",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "PLEASE CHECK THE COST OF A HEALTH POTION.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-ordered-compound",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "PURCHASE ONE ROPE. SELL TWO HEALTH POTION.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 1
+          },
+          "noMutation": false
+        }
+      ]
+    },
+    {
+      "id": "preserved-cancel-pending",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "CANCEL THAT PURCHASE.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-distant-home-Player",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "MY HOME IS CEDAR HOLLOW. LET US DISCUSS MY HOME LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WHICH HOME WERE WE TALKING ABOUT?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-owned-correction-Player",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "CORRECTION: MY HOME IS COPPER BAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-compound-owned-correction-Player",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "CORRECTION: MY HOME IS COPPER BAY. YOUR OCCUPATION IS CARTOGRAPHER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-distant-home-Npc",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "YOUR HOME IS CEDAR HOLLOW. LET US DISCUSS YOUR HOME LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WHICH HOME WERE WE TALKING ABOUT?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-owned-correction-Npc",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "CORRECTION: YOUR HOME IS COPPER BAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-compound-owned-correction-Npc",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "CORRECTION: YOUR HOME IS COPPER BAY. MY OCCUPATION IS CARTOGRAPHER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-agenda-answer-after-detour",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "YOU ASKED WHERE MY HOME IS.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE ANSWER IS CEDAR HOLLOW.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-topic-change-preserves-question",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "LET US TALK ABOUT CLOUDS FOR A MOMENT.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "preserved-ambiguous-actions",
+      "category": "preserved-acceptance",
+      "steps": [
+        {
+          "player": "WE MET BY THE ORCHARD.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "THE BIRDS ARE LOUD TODAY.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "WE CAN DISCUSS THE WEATHER LATER.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "PLEASE DO THAT NOW.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    }
+  ],
+  "note": "Original 17 scenario inputs retained. Old implicit state, frames, agenda and pending-action assertions are retired. Caller memory now requires explicit tool writes."
+}

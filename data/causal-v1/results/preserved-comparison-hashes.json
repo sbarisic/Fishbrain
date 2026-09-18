@@ -1,0 +1,18 @@
+[
+  {
+    "Path": "E:\\Projects\\Fishbrain\\data\\training\\game-teaching-tools\\Fishbrain.dll",
+    "Hash": "61BE5917D0353BDAE5193F6F1CCCA06D20E2D7473FA7EF50F4063694A089BD65"
+  },
+  {
+    "Path": "E:\\Projects\\Fishbrain\\data\\training\\game-teaching-run-v4\\calibrated.fbm",
+    "Hash": "309FA19DD03373D972E6AE60B8D50EA8599A98E197E3246AF3497AF0FA4E019B"
+  },
+  {
+    "Path": "E:\\Projects\\Fishbrain\\data\\training\\causal-v1\\preserved-binary-chat.log",
+    "Hash": "BA52AE1A5D968B3AB50AB942AD8FF0A1124F56BAAB7D0EDAEF8767E3DBEAE8EC"
+  },
+  {
+    "Path": "E:\\Projects\\Fishbrain\\data\\training\\causal-v1\\legacy-adapter-chat.log",
+    "Hash": "BA52AE1A5D968B3AB50AB942AD8FF0A1124F56BAAB7D0EDAEF8767E3DBEAE8EC"
+  }
+]

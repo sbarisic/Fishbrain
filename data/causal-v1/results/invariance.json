@@ -1,0 +1,504 @@
+{
+  "cases": [
+    {
+      "id": "causal-heldout-000",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "Before we trade, how do people address you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-001",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "Could you introduce yourself by name?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-002",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I've forgotten what you are called.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-003",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "Say your name for me, please.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-004",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "What name do you go by around here?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-005",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "After all that shopping, remind me who you are.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-006",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "What is your job?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-007",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "What's your job?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-008",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "Count the coins I have left.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-009",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "Tell me my remaining gold total.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-010",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "Can you check how many gold pieces belong to me?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-011",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "What does my purse contain in gold?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-012",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "Read out my current funds.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-013",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "How many gold pieces are available to me?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-014",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "Before doing anything, check my money.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-015",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I need to know the gold in my wallet.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-016",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "Let me browse the goods you offer.",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-017",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "Which products are on offer here?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-018",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "Show the merchandise I could purchase.",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-019",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "What is on the shop shelves?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-020",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "Could I see a list of sale items?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-021",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "Which goods are in stock with the merchant?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-022",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "Tell me the items available to buy.",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-023",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "May I browse what the merchant sells?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-024",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Read out the contents of my pack.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-025",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Which objects belong to me right now?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-026",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Can you list the things in my bag?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-027",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Show everything I currently possess.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-028",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Check which items I already own.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-029",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Tell me the contents of my backpack.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-030",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Which supplies am I carrying with me?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-031",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Give me a list of my belongings.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-032",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "Name the place we are standing in.",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-033",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "Which location are we at currently?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-034",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "Tell me where this conversation is taking place.",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-035",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "What is the name of this spot?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-036",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "Which area have I arrived in?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-037",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "Where exactly are we standing?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-038",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "Identify our present location.",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-039",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "What location am I occupying?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    }
+  ],
+  "sourceSha256": "b35af205ec6f37f9d74596f2bb835da9955d13c31a0f0f5fbe14038f978b9b1b",
+  "note": "Derived from the frozen challenge by removing only its two explicitly irrelevant opening turns. This is a paired invariance check, not 40 additional independently authored scenarios."
+}

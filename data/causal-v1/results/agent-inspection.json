@@ -1,0 +1,10 @@
+{
+  "reviewer": "Codex agent",
+  "humanReleaseApproval": false,
+  "inspectedConversations": 50,
+  "developmentTurns": 23,
+  "sampleSha256": "828f19f11bd6463bedd3cebb8e8adb108d50da01fc739af70f897e2831a5ed11",
+  "observations": "agent-inspection.md",
+  "method": "Inspected all 50 original paired conversations and 23 development turns; compared final replay behavior after the allocation fix.",
+  "originalToFinalReplay": "BEHAVIOR_UNCHANGED"
+}

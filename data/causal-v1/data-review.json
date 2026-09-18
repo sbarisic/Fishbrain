@@ -1,0 +1,24 @@
+{
+  "status": "REVIEWED_FOR_BOUNDED_PILOT",
+  "reviewer": "Agent inspection; not independent human release approval",
+  "reviewedIds": [
+    "PUBLIC:BST:train:4436:9",
+    "PUBLIC:BST:train:1591:9",
+    "PUBLIC:BST:train:111:7",
+    "CAUSAL-AUTHORED-047",
+    "CAUSAL-AUTHORED-007",
+    "CAUSAL-AUTHORED-001",
+    "CAUSAL-AUTHORED-264",
+    "CAUSAL-AUTHORED-092",
+    "CAUSAL-AUTHORED-066"
+  ],
+  "findings": [
+    "Original public casing restored from all 2350 eligible source rows. Public histories retain contemporary settings and some biographical statements; only the vetted final assistant reply is supervised.",
+    "Rejected the first social draft after finding repeated episodes and disconnected turns. Final social paths contain connected follow-ups, history recall, and explicit topic changes.",
+    "Reduced nested JSON escaping to preserve Unicode and avoid wasting the active-exchange context budget.",
+    "300 composed four-turn episodes have 264 families. Reused components and the limited social pool remain material diversity limitations.",
+    "Tool trajectories are replayed against native validation and typed rendering. Oversized required exchanges are rejected and audited."
+  ],
+  "corpusHash": "d0e214a1c6d19163e4005aa0907af98e7b0642d2d9548778a3e1d100a749890f",
+  "independentHumanApproval": false
+}

@@ -6,6 +6,6 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Fishbrain\Fishbrain.csproj" />
+    <ProjectReference Include="..\Fishbrain.LegacyCli\Fishbrain.LegacyCli.csproj" />
   </ItemGroup>
 </Project>

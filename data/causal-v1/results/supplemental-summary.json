@@ -1,0 +1,24 @@
+{
+  "suiteSha256": "6fe606f902d6014b6392be17d31a26b91cb50a9eeaff4f49114fa69f766d7264",
+  "cases": 12,
+  "turns": 34,
+  "exactCalls": {
+    "correct": 8,
+    "applicable": 30,
+    "accuracy": 0.26666666666666666
+  },
+  "completion": {
+    "correct": 8,
+    "applicable": 30,
+    "accuracy": 0.26666666666666666
+  },
+  "memory": {
+    "correct": 0,
+    "applicable": 10,
+    "accuracy": 0.0
+  },
+  "unintendedMutations": 0,
+  "unexpectedMemoryChanges": 0,
+  "elapsedSeconds": 94.13119460083544,
+  "note": "Separate supplemental evidence. Does not replace the pre-training frozen challenge or constitute independent human review."
+}

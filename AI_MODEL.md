@@ -1,5 +1,8 @@
 # Contextual Fishbrain model
 
+> Historical architecture. The production CLI now uses the
+> [causal language model](CAUSAL_MODEL.md). This document describes preserved `.fbm` candidates.
+
 ## Architecture
 
 ```mermaid

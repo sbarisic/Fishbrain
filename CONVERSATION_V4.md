@@ -1,5 +1,9 @@
 # Conversation-v4 dataset and bounded pilot
 
+Historical structured-model workflow. The current architecture and commands are
+in [the causal model guide](CAUSAL_MODEL.md). This dataset remains preserved and
+supplies vetted public conversation to the separate causal experiment.
+
 This experiment replaces response-template training with vetted public dialogue and
 authored NPC conversations. It keeps the model architecture, typed authoritative
 responses, caller-owned state, and dependency-free C# inference. It does not promote
@@ -107,7 +111,7 @@ from the repository root. Separate CLI output avoids overwriting a DLL used by a
 open chat session.
 
 ```powershell
-dotnet build Fishbrain/Fishbrain.csproj -c Release -o data/training/conversation-v4-tools
+dotnet build Fishbrain.LegacyCli/Fishbrain.LegacyCli.csproj -c Release -o data/training/conversation-v4-tools
 $python = 'data/training/torch-env/Scripts/python.exe'
 $cli = 'data/training/conversation-v4-tools/Fishbrain.dll'
 & $python scripts/conversation_data/fetch.py

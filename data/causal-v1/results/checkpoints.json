@@ -1,0 +1,236 @@
+[
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-00500.pt",
+    "bytes": 212509871,
+    "sha256": "d6ce9939762f053d1bf6298c2a5d814d983899d254983e957be5144aa0c8f3ff",
+    "elapsed": [
+      373.3678338993341,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-01000.pt",
+    "bytes": 212509935,
+    "sha256": "2a259ca30ca5747c33e132a150ba19e0240ec6a2bff56d5d880f54a0a43161d9",
+    "elapsed": [
+      737.4168167999014,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-01500.pt",
+    "bytes": 212509935,
+    "sha256": "9a947f1a37634a48cc47c3cb248cd4c722c2424f4caa51d57e0ab82dbd5ec477",
+    "elapsed": [
+      1104.2241525994614,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-02000.pt",
+    "bytes": 212509999,
+    "sha256": "dabaf4b87e1488aecfe5d22be3fab5a6d196d99924326f9f46869a34549be5b0",
+    "elapsed": [
+      1468.7907661991194,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-02500.pt",
+    "bytes": 212509999,
+    "sha256": "13e9af6b7c753ab3b4ef320f9e157f27beeb318082fff2dcdae39c522f3293a9",
+    "elapsed": [
+      1837.1473031993955,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-03000.pt",
+    "bytes": 212510063,
+    "sha256": "1ea8f088f3de3064f686c2f725f579f165fc271048a21dfd887098861347b37d",
+    "elapsed": [
+      2382.007607699372,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-03500.pt",
+    "bytes": 212510127,
+    "sha256": "aeff154290e5f0f95feee95e2a4c0c9ad599df4daf7cbe170937f56f4252920c",
+    "elapsed": [
+      2899.5930499006063,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-04000.pt",
+    "bytes": 212510191,
+    "sha256": "d031e489e499b0f6c8f555e49843d00afbf1bb8bd71ba141c97aee8b774f7df7",
+    "elapsed": [
+      3252.6242097001523,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-04500.pt",
+    "bytes": 212510191,
+    "sha256": "7c5058a63d7324c8b257bda26943cde95c315775cc0f236e022bfeb7a4d9bb9d",
+    "elapsed": [
+      3608.2244143001735,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-05000.pt",
+    "bytes": 212510255,
+    "sha256": "bcf858c1b0a3d49e2085a93b0e6015f6ac656c0ee13130b522d58f825588b0db",
+    "elapsed": [
+      3961.6719970004633,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-05500.pt",
+    "bytes": 212510255,
+    "sha256": "0959a36a5231845439182a7ef5f0fdbd58a575bfd2bdd92cb792f6f82c5125a8",
+    "elapsed": [
+      4314.812113599852,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-06000.pt",
+    "bytes": 212510319,
+    "sha256": "4e169c157f6408a9fcc7c5de308a74621afb82b12433cdadfdd3353b3922160d",
+    "elapsed": [
+      4667.83641250059,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-06500.pt",
+    "bytes": 212510319,
+    "sha256": "a9ad0c2683ba803491d778ce1b12fe8b972e3a672a442dc6a56ed4f4aacfe391",
+    "elapsed": [
+      5022.189177500084,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-07000.pt",
+    "bytes": 212510447,
+    "sha256": "d365d77c135bad0f2f745dcc491c0510ae199e1d9f27f05a5cdeffaf86b93611",
+    "elapsed": [
+      5376.707129300572,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-07500.pt",
+    "bytes": 212510447,
+    "sha256": "5d8b351ad55f425ffdc3e3df0dc8cb68259c4b134b9978d1a768ed77a4d436fb",
+    "elapsed": [
+      5730.727743700147,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-08000.pt",
+    "bytes": 212510511,
+    "sha256": "3f2a59ee0396cb8c8413d049aac4298e9fdd75072c9bad82d812594612ebf6dd",
+    "elapsed": [
+      6081.127414800227,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\language-final-08000.pt",
+    "bytes": 212512231,
+    "sha256": "8e9627ad4b3a3deef120d9e5b4ccf10808c3a8d6cdf9c0a35aa71846ac0fd5d8",
+    "elapsed": [
+      6081.838746100664,
+      0.0
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-00500.pt",
+    "bytes": 212512231,
+    "sha256": "e23569fad65d20776708657c282c46adf3bf8b642c8adb7cbd86d5a1f1e7509d",
+    "elapsed": [
+      6082.168757700361,
+      292.6827082000673
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-01000.pt",
+    "bytes": 212512295,
+    "sha256": "276720a7e8fb7a3059e4fb62727bd8497c648267bd16d4cd634d72ea2b95ec8f",
+    "elapsed": [
+      6082.168757700361,
+      584.280398699455
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-01500.pt",
+    "bytes": 212512295,
+    "sha256": "1d81842d7489e96f0c120c7695431425a7d152b71fbe859224221eec83852c7d",
+    "elapsed": [
+      6082.168757700361,
+      875.4500323999673
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-02000.pt",
+    "bytes": 212512359,
+    "sha256": "5683b46d0b0b201e64d05298805d2eb39a97d98dfb196ca51ebdb66386651f3f",
+    "elapsed": [
+      6082.168757700361,
+      1166.7115567000583
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-02500.pt",
+    "bytes": 212512359,
+    "sha256": "fa534312cce99b92d7bee3acf5e88af3e4e5ce83ec1ca172646e160b6c458f61",
+    "elapsed": [
+      6082.168757700361,
+      1456.2226312998682
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-03000.pt",
+    "bytes": 212512487,
+    "sha256": "24f8cda1d999d3cc2e4cf8342e108311fa93192429fe76a70de7a96d537cc9c1",
+    "elapsed": [
+      6082.168757700361,
+      1747.248979699798
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-03500.pt",
+    "bytes": 212512487,
+    "sha256": "8eb723dcaf06f44c826bc08f94c75fefd290470b10294ddd63813b533e9afb19",
+    "elapsed": [
+      6082.168757700361,
+      2037.2338140998036
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-04000.pt",
+    "bytes": 212512551,
+    "sha256": "0ac1311d4477a187198f52e029d8b0a4099cc339c0b0f58f95c5bc2a2d7bf3f4",
+    "elapsed": [
+      6082.168757700361,
+      2326.8706956999376
+    ]
+  },
+  {
+    "path": "data\\training\\causal-v1\\pilot\\specialization-final-04000.pt",
+    "bytes": 212514335,
+    "sha256": "d175f00d015c4a9010267410bcdcdd3e02a003c3949cacbf9d90b77e90a16676",
+    "elapsed": [
+      6082.168757700361,
+      2327.6422285996377
+    ]
+  }
+]

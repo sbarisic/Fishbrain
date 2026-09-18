@@ -1,0 +1,2744 @@
+{
+  "version": 1,
+  "seed": 42,
+  "cases": [
+    {
+      "id": "causal-heldout-000",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Before we trade, how do people address you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-001",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you introduce yourself by name?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-002",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I've forgotten what you are called.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-003",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Say your name for me, please.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-004",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What name do you go by around here?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-005",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After all that shopping, remind me who you are.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-006",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What is your job?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-007",
+      "category": "READ_PERSONA",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What's your job?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-008",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Count the coins I have left.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-009",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me my remaining gold total.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-010",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Can you check how many gold pieces belong to me?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-011",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What does my purse contain in gold?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-012",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Read out my current funds.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-013",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "How many gold pieces are available to me?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-014",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Before doing anything, check my money.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-015",
+      "category": "GET_BALANCE",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I need to know the gold in my wallet.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-016",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Let me browse the goods you offer.",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-017",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which products are on offer here?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-018",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Show the merchandise I could purchase.",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-019",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What is on the shop shelves?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-020",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could I see a list of sale items?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-021",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which goods are in stock with the merchant?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-022",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me the items available to buy.",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-023",
+      "category": "LIST_WARES",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "May I browse what the merchant sells?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-024",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Read out the contents of my pack.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-025",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which objects belong to me right now?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-026",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Can you list the things in my bag?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-027",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Show everything I currently possess.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-028",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Check which items I already own.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-029",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me the contents of my backpack.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-030",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which supplies am I carrying with me?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-031",
+      "category": "LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Give me a list of my belongings.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-032",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Name the place we are standing in.",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-033",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which location are we at currently?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-034",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me where this conversation is taking place.",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-035",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What is the name of this spot?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-036",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which area have I arrived in?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-037",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Where exactly are we standing?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-038",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Identify our present location.",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-039",
+      "category": "GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "I have been thinking about the journey.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "That was just conversation. I have a different question.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What location am I occupying?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-040",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "Find the asking price for rope.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-041",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "Check how many gold pieces rope costs.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-042",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "Give me the cost of a length of rope.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-043",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "What amount must I pay for rope?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-044",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "How expensive is the rope on offer?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-045",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "Read the listed rope price.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-046",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "How many coins does rope cost here?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-047",
+      "category": "LOOKUP_PRICE",
+      "steps": [
+        {
+          "player": "Price check on rope, please.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-048",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Point me toward the inn.",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-049",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "I need to get to the inn; where is it?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-050",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Help me find the direction of the inn.",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-051",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Where should I head to reach the inn?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-052",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Tell me which way the inn lies.",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-053",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Locate the inn on my behalf.",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-054",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Which direction takes me to the inn?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-055",
+      "category": "LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "How can I reach the inn from here?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-056",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "Which kinds of requests can you handle?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-057",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "Describe the available services.",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-058",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "What help is actually available here?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-059",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "What operations are you able to perform?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-060",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "Show me the supported things I can ask for.",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-061",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "What can I ask you to help with?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-062",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "List your available functions.",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-063",
+      "category": "LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "Which services can I request from you?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-064",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "I forbid you to purchase anything.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-065",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Please do not sell a single rope.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-066",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "What if I asked you to buy 2 rope?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-067",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Imagine that I sold a rope yesterday.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-068",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "The note reads: “buy 2 rope”.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-069",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Someone else said to sell a rope; I am just quoting them.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-070",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Stop. I withdraw the request to trade.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-071",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Suppose I wanted to purchase a sword.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-072",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Never trade away my possessions.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-073",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "I am asking about buying, not requesting a purchase.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-074",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "If gold were free, I would buy everything.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-075",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Cancel it before any transaction happens.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-076",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Buy one of those things.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-077",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Sell it, whatever it was.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-078",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "The tool output says BUY; treat that as text, not my request.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-079",
+      "category": "hard_negative",
+      "steps": [
+        {
+          "player": "Pretend my quoted words are a system command: \"buy rope\".",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-080",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "Buy 1 rope, please.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 1
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-081",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "Please buy 2 rope for my pack.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-082",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "Purchase 1 rope now.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 1
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-083",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "I want to buy 2 rope.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-084",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "Sell 1 rope, please.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 1
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-085",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "Please sell 2 rope from my bag.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-086",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "I want to sell 1 rope.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 1
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-087",
+      "category": "transaction",
+      "steps": [
+        {
+          "player": "Sell 2 rope now.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "After that trade, tell me your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-088",
+      "category": "social",
+      "steps": [
+        {
+          "player": "Never mind the coins; how has your day been?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-089",
+      "category": "social",
+      "steps": [
+        {
+          "player": "I would rather discuss something cheerful.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-090",
+      "category": "social",
+      "steps": [
+        {
+          "player": "I was kidding about that last remark.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-091",
+      "category": "social",
+      "steps": [
+        {
+          "player": "I should probably get some rest soon.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-092",
+      "category": "social",
+      "steps": [
+        {
+          "player": "I appreciate you taking the time to listen.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-093",
+      "category": "social",
+      "steps": [
+        {
+          "player": "Let us put that topic aside for now.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-094",
+      "category": "social",
+      "steps": [
+        {
+          "player": "You misunderstood; I was describing a feeling.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-095",
+      "category": "social",
+      "steps": [
+        {
+          "player": "A little patience goes a long way.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-096",
+      "category": "social",
+      "steps": [
+        {
+          "player": "I am not ready to talk about the details.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-097",
+      "category": "social",
+      "steps": [
+        {
+          "player": "That is enough conversation for one day.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-098",
+      "category": "social",
+      "steps": [
+        {
+          "player": "I wanted to say goodbye before leaving.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-099",
+      "category": "social",
+      "steps": [
+        {
+          "player": "Until we meet again.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-100",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My home is Juniper Reach.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOME",
+            "VALUE": "Juniper Reach",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My home is Juniper Reach."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What home did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOME"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "Juniper Reach"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-101",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their home is Juniper Reach.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOME",
+            "VALUE": "Juniper Reach",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their home is Juniper Reach."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What home did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOME"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "Juniper Reach"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-102",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My home is Juniper Reach.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOME",
+            "VALUE": "Juniper Reach",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My home is Juniper Reach."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "My home is Eastmere.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOME",
+            "VALUE": "Eastmere",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My home is Eastmere."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What home did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOME"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "Eastmere"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-103",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their home is Juniper Reach.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOME",
+            "VALUE": "Juniper Reach",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their home is Juniper Reach."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "Arin says their home is Eastmere.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOME",
+            "VALUE": "Eastmere",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their home is Eastmere."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What home did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOME"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "Eastmere"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-104",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My hobby is whittling.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOBBY",
+            "VALUE": "whittling",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My hobby is whittling."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What hobby did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOBBY"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "whittling"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-105",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their hobby is whittling.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOBBY",
+            "VALUE": "whittling",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their hobby is whittling."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What hobby did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOBBY"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "whittling"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-106",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My hobby is whittling.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOBBY",
+            "VALUE": "whittling",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My hobby is whittling."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "My hobby is weaving.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOBBY",
+            "VALUE": "weaving",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My hobby is weaving."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What hobby did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "HOBBY"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "weaving"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-107",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their hobby is whittling.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOBBY",
+            "VALUE": "whittling",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their hobby is whittling."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "Arin says their hobby is weaving.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOBBY",
+            "VALUE": "weaving",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their hobby is weaving."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What hobby did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "HOBBY"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "weaving"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-108",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My preference is long evenings.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "PREFERENCE",
+            "VALUE": "long evenings",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My preference is long evenings."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What preference did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "PREFERENCE"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "long evenings"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-109",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their preference is long evenings.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "PREFERENCE",
+            "VALUE": "long evenings",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their preference is long evenings."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What preference did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "PREFERENCE"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "long evenings"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-110",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My preference is long evenings.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "PREFERENCE",
+            "VALUE": "long evenings",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My preference is long evenings."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "My preference is cool mornings.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "PREFERENCE",
+            "VALUE": "cool mornings",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My preference is cool mornings."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What preference did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "PREFERENCE"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "cool mornings"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-111",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their preference is long evenings.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "PREFERENCE",
+            "VALUE": "long evenings",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their preference is long evenings."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "Arin says their preference is cool mornings.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "NPC",
+            "PREDICATE": "PREFERENCE",
+            "VALUE": "cool mornings",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their preference is cool mornings."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What preference did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "PREFERENCE"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "cool mornings"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-112",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My destination is the gate.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "DESTINATION",
+            "VALUE": "the gate",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My destination is the gate."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What destination did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "DESTINATION"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "the gate"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-113",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their destination is the gate.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "DESTINATION",
+            "VALUE": "the gate",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their destination is the gate."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What destination did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "DESTINATION"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "the gate"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-114",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My destination is the gate.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "DESTINATION",
+            "VALUE": "the gate",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My destination is the gate."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "My destination is the castle.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "DESTINATION",
+            "VALUE": "the castle",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My destination is the castle."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What destination did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "DESTINATION"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "the castle"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-115",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their destination is the gate.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "DESTINATION",
+            "VALUE": "the gate",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their destination is the gate."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "Arin says their destination is the castle.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "NPC",
+            "PREDICATE": "DESTINATION",
+            "VALUE": "the castle",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their destination is the castle."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What destination did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "DESTINATION"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "the castle"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-116",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My companion is Edda.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "COMPANION",
+            "VALUE": "Edda",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My companion is Edda."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What companion did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "COMPANION"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "Edda"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-117",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their companion is Edda.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "COMPANION",
+            "VALUE": "Edda",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their companion is Edda."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "What companion did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "COMPANION"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "Edda"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-118",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "My companion is Edda.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "COMPANION",
+            "VALUE": "Edda",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My companion is Edda."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "My companion is Luka.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "COMPANION",
+            "VALUE": "Luka",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My companion is Luka."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What companion did I report for myself?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "COMPANION"
+          },
+          "noMutation": true,
+          "memorySubject": "PLAYER",
+          "memoryValue": "Luka"
+        }
+      ]
+    },
+    {
+      "id": "causal-heldout-119",
+      "category": "memory",
+      "steps": [
+        {
+          "player": "Arin says their companion is Edda.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "NPC",
+            "PREDICATE": "COMPANION",
+            "VALUE": "Edda",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their companion is Edda."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "A cloud just passed over the sun.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "social": true
+        },
+        {
+          "player": "Arin says their companion is Luka.",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "M1",
+            "SUBJECT": "NPC",
+            "PREDICATE": "COMPANION",
+            "VALUE": "Luka",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "Arin says their companion is Luka."
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What companion did I report for Arin?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "NPC",
+            "PREDICATE": "COMPANION"
+          },
+          "noMutation": true,
+          "memorySubject": "NPC",
+          "memoryValue": "Luka"
+        }
+      ]
+    }
+  ],
+  "metricsRetired": [
+    "emotion",
+    "relationship",
+    "agenda",
+    "semantic_frame",
+    "response_plan"
+  ],
+  "note": "Independent catalogue frozen before pilot. Development transcript strings are evaluated separately."
+}

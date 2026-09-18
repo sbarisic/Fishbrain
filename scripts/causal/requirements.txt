@@ -1,0 +1,5 @@
+# Training/data tooling only; the native runtime has no package dependencies.
+numpy==2.5.3
+tokenizers==0.23.2
+pyarrow==25.0.1
+# Use the project's existing ROCm torch environment (2.13.0+rocm10.0.0).

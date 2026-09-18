@@ -1,0 +1,34 @@
+{
+  "status": "COMPLETE_NOT_PROMOTED",
+  "updates": 12000,
+  "elapsedSeconds": [
+    6082.168757700361,
+    2328.0096036000177
+  ],
+  "checkpoints": [
+    "data\\training\\causal-v1\\pilot\\language-03500.pt",
+    "data\\training\\causal-v1\\pilot\\language-04000.pt",
+    "data\\training\\causal-v1\\pilot\\language-04500.pt",
+    "data\\training\\causal-v1\\pilot\\language-05000.pt",
+    "data\\training\\causal-v1\\pilot\\language-05500.pt",
+    "data\\training\\causal-v1\\pilot\\language-06000.pt",
+    "data\\training\\causal-v1\\pilot\\language-06500.pt",
+    "data\\training\\causal-v1\\pilot\\language-07000.pt",
+    "data\\training\\causal-v1\\pilot\\language-07500.pt",
+    "data\\training\\causal-v1\\pilot\\language-08000.pt",
+    "data\\training\\causal-v1\\pilot\\language-final-08000.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-00500.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-01000.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-01500.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-02000.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-02500.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-03000.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-03500.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-04000.pt",
+    "data\\training\\causal-v1\\pilot\\specialization-final-04000.pt"
+  ],
+  "fingerprint": "c81e66feca4e763aaa02c66e97bc17dfe1aee3e44103f17c834556b3e3d5d104",
+  "parameterCount": 17701248,
+  "bounded": true,
+  "qualityGates": "NOT_YET_EVALUATED"
+}

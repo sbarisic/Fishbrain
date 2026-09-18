@@ -174,6 +174,42 @@ internal sealed class TensorGraph(bool training, bool vectorized = true)
         return y;
     }
 
+    public Tensor ScaleColumns(Tensor x, Tensor scale)
+    {
+        if (scale.Rows != 1 || scale.Columns != x.Columns) throw new ArgumentException("Scale shape mismatch.");
+        var y = Result(x.Rows, x.Columns);
+        for (var i = 0; i < y.Data.Length; i++) y.Data[i] = x.Data[i] * scale.Data[i % x.Columns];
+        if (Training) Record(() =>
+        {
+            for (var i = 0; i < y.Data.Length; i++)
+            {
+                Accumulate(x, i, y.Gradient![i] * scale.Data[i % x.Columns]);
+                Accumulate(scale, i % x.Columns, y.Gradient![i] * x.Data[i]);
+            }
+        });
+        return y;
+    }
+
+    public Tensor Gelu(Tensor x)
+    {
+        var y = Result(x.Rows, x.Columns);
+        const float a = 0.7978845608028654f, b = 0.044715f;
+        for (var i = 0; i < y.Data.Length; i++)
+        {
+            var v = x.Data[i];
+            y.Data[i] = .5f * v * (1 + MathF.Tanh(a * (v + b * v * v * v)));
+        }
+        if (Training) Record(() =>
+        {
+            for (var i = 0; i < y.Data.Length; i++)
+            {
+                var v = x.Data[i]; var t = MathF.Tanh(a * (v + b * v * v * v));
+                Accumulate(x, i, y.Gradient![i] * (.5f * (1 + t) + .5f * v * (1 - t * t) * a * (1 + 3 * b * v * v)));
+            }
+        });
+        return y;
+    }
+
     public Tensor Mean(Tensor x)
     {
         if (x.Rows == 0) throw new ArgumentException("Cannot average an empty tensor.");

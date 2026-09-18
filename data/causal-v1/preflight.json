@@ -1,0 +1,30 @@
+{
+  "status": "PASS",
+  "forwardMaxError": 1.2425842282892674e-07,
+  "cachedMaxError": 9.425842284471742e-08,
+  "gradientMaxError": 1.084759635922028e-06,
+  "gpuForwardMaxError": 1.1920928955078125e-07,
+  "gpuGradientMaxError": 1.0281801223754883e-06,
+  "finiteDifferenceMaxError": 0.0004668427864089608,
+  "fixtureInitialLoss": 9.029377937316895,
+  "fixtureFinalLoss": 0.035048022866249084,
+  "fixtureAccuracy": 1.0,
+  "fixtureUpdates": 100,
+  "elapsedSeconds": 15.357085599564016,
+  "tokenizerHash": "3e1a5266548c5d78e35bc9e58b48020e65dbf270fbce79c8b998780cdca3eb6d",
+  "toolsHash": "22736d3dd93f841dad57207c60b6c6cb82ee8eba4c5c1f71ac6d0378881aebed",
+  "codeHashes": {
+    "scripts\\causal\\curriculum.py": "a0438b446862bb9794f694b2f7743f56c0a22d5814c47c310173183f1f5f4d2a",
+    "scripts\\causal\\evaluation.py": "f8c2d9f4d69f53c7a1c76fa09e64bdebb74edb76502c1a157da61430b745b577",
+    "scripts\\causal\\freeze_suite.py": "2e0bc7eb62f255ce8e38776ef53e53cbd2812be5ea0ce30440ffff115f8640a5",
+    "scripts\\causal\\model.py": "81adb4d24f9b4225ec5fd0a5e40832a55a89a688d67f08e96c37a8537ab233ad",
+    "scripts\\causal\\preflight.py": "c7e60afa3e689e8148075a0bb13167b0d88cae1956307ae74a5777087a0e5ebe",
+    "scripts\\causal\\prepare.py": "b59fc6ac2d4d796ab5ceb6ac4cbe843af6d1fa83c7e16540d15e931935abecb4",
+    "scripts\\causal\\sources.py": "533f54bf902ee1ab25454718df8b169494e52dde0fb930e5ec02e79b6e6278e2",
+    "scripts\\causal\\specialization.py": "868c541f8cbbac1168b007d73811be2909dc4379da63455d0a111889a0cbb889",
+    "scripts\\causal\\tokenizer.py": "a5fec7e6c30e470a7b5d728417608a887be8952436ca44849b9cfa68d9773824",
+    "scripts\\causal\\train.py": "9ffff3d2cab91d7ce7877c2a5bfabc305e353be733dd3127da75524ac4ca22f0"
+  },
+  "device": "AMD Radeon RX 9070 XT",
+  "torch": "2.13.0+rocm10.0.0"
+}

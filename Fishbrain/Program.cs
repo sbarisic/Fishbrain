@@ -21,6 +21,10 @@ internal static class Program
 
             switch (args[0].ToLowerInvariant())
             {
+                case "causal-baseline":
+                    Count(args, 4, 4);
+                    CausalBaseline.Run(args[1], args[2], args[3]);
+                    break;
                 case "train":
                     Count(args, 3, 4);
                     LegacyBrain.TrainNew(args[1], args[2], args.Length == 4 ? Steps(args[3]) : 260_000);

@@ -1,0 +1,46 @@
+{
+  "sources": [
+    {
+      "attribution": "OpenAssistant Conversations Dataset (OASST1), OpenAssistant contributors",
+      "files": [
+        {
+          "path": "oasst1.jsonl.gz",
+          "sha256": "2ff4aa8999c911ffec7972ddf70359f220b3da184b731f3649f68b1391e19341",
+          "url": "https://huggingface.co/datasets/OpenAssistant/oasst1/resolve/fd7dd3fc13915d6a3bba7e4e854b940b651a4032/2023-04-12_oasst_all.messages.jsonl.gz"
+        }
+      ],
+      "license": "Apache-2.0",
+      "name": "OASST1",
+      "revision": "fd7dd3fc13915d6a3bba7e4e854b940b651a4032"
+    },
+    {
+      "attribution": "OpenAssistant Conversations Dataset (OASST2), OpenAssistant contributors",
+      "files": [
+        {
+          "path": "oasst2-ready.jsonl.gz",
+          "sha256": "a9f240c4c77aa1378364f70d37e753c07ba284e247b019d700e1947a0e5da751",
+          "url": "https://huggingface.co/datasets/OpenAssistant/oasst2/resolve/179dd21fc55192153d94adb0e0ce8f69e222bf75/2023-11-05_oasst2_ready.messages.jsonl.gz?download=true"
+        }
+      ],
+      "license": "Apache-2.0",
+      "name": "OASST2",
+      "revision": "179dd21fc55192153d94adb0e0ce8f69e222bf75"
+    },
+    {
+      "attribution": "Blended Skill Talk, Smith et al., Facebook AI Research; conversation contributors",
+      "documentation": "https://raw.githubusercontent.com/facebookresearch/ParlAI/main/parlai/tasks/blended_skill_talk/README.md",
+      "files": [
+        {
+          "path": "blended_skill_talk.tar.gz",
+          "sha256": "5fbed0068ee89e2d43b93c3ecb341e784617033efa5e8e911a219d4eda6134a6",
+          "url": "https://parl.ai/downloads/blended_skill_talk/blended_skill_talk.tar.gz"
+        }
+      ],
+      "license": "CC-BY-4.0",
+      "name": "BLENDED_SKILL_TALK",
+      "revision": "5fbed0068ee89e2d43b93c3ecb341e784617033efa5e8e911a219d4eda6134a6"
+    }
+  ],
+  "curationManifest": "data/conversation-v4/conversation-v4.json",
+  "allArchiveChecksumsVerified": true
+}

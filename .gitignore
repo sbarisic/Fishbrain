@@ -17,6 +17,8 @@ data/raw/
 data/compiled/
 data/compiled-*/
 data/training/
+*.fbc
+*.pt
 data/telemetry/training*.jsonl
 
 # User-specific files

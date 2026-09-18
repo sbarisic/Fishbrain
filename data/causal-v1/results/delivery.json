@@ -1,0 +1,34 @@
+{
+  "status": "EXPERIMENTAL_NOT_PROMOTED",
+  "trainingFingerprint": "c81e66feca4e763aaa02c66e97bc17dfe1aee3e44103f17c834556b3e3d5d104",
+  "updates": 12000,
+  "phaseElapsedSeconds": [
+    6082.168757700361,
+    2328.0096036000177
+  ],
+  "trainingElapsedSeconds": 8410.178361300379,
+  "languagePreparationSeconds": 1936.8313342006877,
+  "finalEvaluationSeconds": 804.9750346001238,
+  "experimentStorageBytes": 9971357289,
+  "experimentStorageLimitBytes": 12884901888,
+  "automatedQualityPassed": false,
+  "rawGenerationGate": true,
+  "memoryGate": true,
+  "sampledReplyMemoryGate": true,
+  "humanReview": "PENDING_TWO_INDEPENDENT_HUMANS",
+  "promoted": false,
+  "checkpointCount": 26,
+  "modelSha256": "d41434a0a512ff43a73b5441e981d2023bf33a9d7a0d8cb3c7f4d7c661c14752",
+  "packageManifestSha256": "6bf9156e4fa44dfcb7c59097aabfa51ed6e59af45822c8454cac03ac53e66062",
+  "collectedUtc": "2026-09-18T23:36:06Z",
+  "notes": [
+    "Training elapsed budgets include checkpoint and validation overhead; the requested pause is excluded.",
+    "The pause discarded 165 unsaved language updates. Resume retained their elapsed cost and replayed from update 3000.",
+    "Preparation timing covers the measured language preparation pass; source download, authoring and review are separate.",
+    "Raw 64-token decoding and end-to-end reply latency are different measurements. Read both resource and quality reports.",
+    "Agent conversation inspection is separate from the pending human release gate."
+  ],
+  "originalEvaluationSeconds": 443.9171614004299,
+  "totalEvaluationSeconds": 1248.8921960005537,
+  "runtimeComparison": "BEHAVIOR_UNCHANGED"
+}

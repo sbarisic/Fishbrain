@@ -1,0 +1,209 @@
+{
+  "cases": [
+    {
+      "id": "user-development-0",
+      "category": "development",
+      "steps": [
+        {
+          "player": "hi",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "who are you",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "what is your job?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "what's your job?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "how are you?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "how much gold do i have?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "what do you have for sale?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "user-development-1",
+      "category": "development",
+      "steps": [
+        {
+          "player": "hello",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "where are we?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "What does a rope cost?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Buy 2 rope please.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "What is your name?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "What should I call you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "user-development-2",
+      "category": "development",
+      "steps": [
+        {
+          "player": "Hello",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "How are you?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "How did we get here?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Hello. Who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "user-development-3",
+      "category": "development",
+      "steps": [
+        {
+          "player": "Do you have anything for sale?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "What do you sell?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "where are you?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "kill yourself",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "lmao",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    }
+  ],
+  "note": "User transcript regressions, not unseen evidence."
+}

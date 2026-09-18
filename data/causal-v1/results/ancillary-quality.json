@@ -1,0 +1,252 @@
+{
+  "preserved": {
+    "turns": 68,
+    "tool": {
+      "correct": 0,
+      "applicable": 3,
+      "accuracy": 0.0
+    },
+    "completion": {
+      "correct": 0,
+      "applicable": 3,
+      "accuracy": 0.0
+    },
+    "memory": {
+      "correct": 0,
+      "applicable": 0,
+      "accuracy": null
+    },
+    "categories": {
+      "preserved-acceptance": {
+        "tool": {
+          "correct": 0,
+          "applicable": 3,
+          "accuracy": 0.0
+        },
+        "completion": {
+          "correct": 0,
+          "applicable": 3,
+          "accuracy": 0.0
+        },
+        "memory": {
+          "correct": 0,
+          "applicable": 0,
+          "accuracy": null
+        }
+      }
+    },
+    "unintendedMutations": 0,
+    "authoritativeAlterations": 0,
+    "possibleUnsupportedClaims": 0,
+    "validRequestsUnanswered": 3,
+    "unexpectedToolTurns": 0,
+    "unexpectedSuccessfulToolTurns": 0,
+    "memoryChangesOutsideExpectedOperations": 0,
+    "errors": 0,
+    "repetitionFraction": 0.7794117647058824,
+    "mostCommonResponses": [
+      [
+        "Hello! It's good to have some company.",
+        40
+      ],
+      [
+        "Hello, \nHow was your favorite BY THE ORCHARD.",
+        14
+      ],
+      [
+        "Sounds like a pause would do you good.",
+        2
+      ],
+      [
+        "BUY",
+        1
+      ],
+      [
+        "THE CASTLER.",
+        1
+      ],
+      [
+        "Would you rather keep this conversation short?",
+        1
+      ],
+      [
+        "That sounds uncomfortable after a long walk.",
+        1
+      ],
+      [
+        "What do you like to do for fun?",
+        1
+      ],
+      [
+        "We can move on if you'd like.",
+        1
+      ],
+      [
+        "Sure. What would you like to do for fun?",
+        1
+      ],
+      [
+        "I'm glad to hear it. What made the day better?",
+        1
+      ],
+      [
+        "Oh really, what did you do with your authorities?",
+        1
+      ],
+      [
+        "That sounds reasonable.",
+        1
+      ],
+      [
+        "Oh really, what did he do for work?",
+        1
+      ],
+      [
+        "That's great! Do you play any instruments?",
+        1
+      ]
+    ],
+    "replyP95Milliseconds": 1553.2529,
+    "automatedQualityPassed": false,
+    "freeResponseRepetitionFraction": 0.7794117647058824,
+    "runtimeResources": {
+      "maxSampledIncrementalResidentMiB": 197.01171875,
+      "replyAllocatedP95Bytes": 9101896,
+      "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+    },
+    "metricDefinitions": {
+      "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+      "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+      "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+      "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+      "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+    },
+    "releaseEligible": false,
+    "humanReview": "Two independent human reviews remain required"
+  },
+  "development": {
+    "turns": 23,
+    "tool": {
+      "correct": 10,
+      "applicable": 15,
+      "accuracy": 0.6666666666666666
+    },
+    "completion": {
+      "correct": 10,
+      "applicable": 15,
+      "accuracy": 0.6666666666666666
+    },
+    "memory": {
+      "correct": 0,
+      "applicable": 0,
+      "accuracy": null
+    },
+    "categories": {
+      "development": {
+        "tool": {
+          "correct": 10,
+          "applicable": 15,
+          "accuracy": 0.6666666666666666
+        },
+        "completion": {
+          "correct": 10,
+          "applicable": 15,
+          "accuracy": 0.6666666666666666
+        },
+        "memory": {
+          "correct": 0,
+          "applicable": 0,
+          "accuracy": null
+        }
+      }
+    },
+    "unintendedMutations": 0,
+    "authoritativeAlterations": 0,
+    "possibleUnsupportedClaims": 0,
+    "validRequestsUnanswered": 5,
+    "unexpectedToolTurns": 2,
+    "unexpectedSuccessfulToolTurns": 2,
+    "memoryChangesOutsideExpectedOperations": 0,
+    "errors": 0,
+    "repetitionFraction": 0.30434782608695654,
+    "mostCommonResponses": [
+      [
+        "road warden",
+        3
+      ],
+      [
+        "I HAVE HEALTH POTION: 50 IN STOCK, IRON SWORD: 20 IN STOCK, ROPE: 30 IN STOCK.",
+        3
+      ],
+      [
+        "Arin",
+        3
+      ],
+      [
+        "YOU HAVE 100 GOLD.",
+        2
+      ],
+      [
+        "hilow",
+        1
+      ],
+      [
+        "What do you like to do for fun?",
+        1
+      ],
+      [
+        "there's job to be more concise.",
+        1
+      ],
+      [
+        "Hello to you as well",
+        1
+      ],
+      [
+        "What do you do for work?",
+        1
+      ],
+      [
+        "ROPE COSTS 3 GOLD.",
+        1
+      ],
+      [
+        "YOU BOUGHT 2 ROPE FOR 6 GOLD. YOUR BALANCE IS 94 GOLD.",
+        1
+      ],
+      [
+        "Hello. Simple is fine.",
+        1
+      ],
+      [
+        "Hello! It's good to have some company.",
+        1
+      ],
+      [
+        "the old mill",
+        1
+      ],
+      [
+        "You can let yourself enjoy that relief.",
+        1
+      ]
+    ],
+    "replyP95Milliseconds": 3446.7782,
+    "automatedQualityPassed": false,
+    "freeResponseRepetitionFraction": 0.0,
+    "runtimeResources": {
+      "maxSampledIncrementalResidentMiB": 202.7890625,
+      "replyAllocatedP95Bytes": 28988432,
+      "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+    },
+    "metricDefinitions": {
+      "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+      "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+      "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+      "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+      "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+    },
+    "releaseEligible": false,
+    "humanReview": "Two independent human reviews remain required"
+  }
+}

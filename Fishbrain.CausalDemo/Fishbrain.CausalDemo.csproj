@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><Optimize>true</Optimize></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Fishbrain.CausalRuntime/Fishbrain.CausalRuntime.csproj" />
+    <Compile Include="../Fishbrain.DemoDomain/DemoGameTools.cs" Link="DemoGameTools.cs" />
+  </ItemGroup>
+</Project>

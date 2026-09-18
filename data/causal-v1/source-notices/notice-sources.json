@@ -1,0 +1,27 @@
+[
+  {
+    "file": "openassistant-license.txt",
+    "url": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+  },
+  {
+    "file": "blended-skill-talk.md",
+    "url": "https://raw.githubusercontent.com/facebookresearch/ParlAI/main/parlai/tasks/blended_skill_talk/README.md",
+    "sha256": "26b839171ef0e01afc0d8ebdb0c4794e767191dba272d2099968bbe103b9220d"
+  },
+  {
+    "file": "openassistant.md",
+    "url": "https://huggingface.co/datasets/OpenAssistant/oasst2/resolve/179dd21fc55192153d94adb0e0ce8f69e222bf75/README.md",
+    "sha256": "52bd472cf3cae04a4b21ecd5316f929741c47d991d4763b041c3a94de072dc31"
+  },
+  {
+    "file": "blended-skill-talk-license.txt",
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/CC-BY-4.0.txt",
+    "sha256": "d557539df68e771cc1eedcc91d13f70fca930e508d11eedcafa4b15db49e3744"
+  },
+  {
+    "file": "tinystories-license.txt",
+    "url": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/CDLA-Sharing-1.0.txt",
+    "sha256": "6419d7a7245cb8a9da6e3dd925d05d824ea0268e3527095f68dec091f84f75da"
+  }
+]

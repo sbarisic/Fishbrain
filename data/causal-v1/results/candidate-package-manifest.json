@@ -1,0 +1,31 @@
+{
+  "status": "EXPERIMENTAL_NOT_PROMOTED",
+  "trainingFingerprint": "c81e66feca4e763aaa02c66e97bc17dfe1aee3e44103f17c834556b3e3d5d104",
+  "files": {
+    "candidate.fbc": "d41434a0a512ff43a73b5441e981d2023bf33a9d7a0d8cb3c7f4d7c661c14752",
+    "CANDIDATE.txt": "3464e46a0911cd8dfd235577960165d51a914708649d5c39a9571962d4d90c30",
+    "final-parity.json": "9afdde2714393c0a921693c628e8635ac2339c0874301b6b0f731c93da268fd6",
+    "Fishbrain.CausalDemo.dll": "b24b0274b37dd99904e5a187cb64acdffeae057b7dc215e7392ab84f9c216260",
+    "Fishbrain.CausalDemo.pdb": "051205be8fdab2f86f6488830691d50a7696733063e44bcd00962d8b10572b5b",
+    "Fishbrain.CausalRuntime.dll": "0b382af9e9dabe629def7b75d5ee246293171982d62769d3f9d47d928f8c6776",
+    "Fishbrain.CausalRuntime.pdb": "3f313afd1fc74f5da3ed60a86dd9054d2f92329d7764faf8d8bdee8f1b868bb1",
+    "Fishbrain.deps.json": "4b3dbbf44394a54446188f1bae4b9fc15b8573161eaf972af1d6d99a4833b949",
+    "Fishbrain.dll": "7e977d88a2356d04795c88b61782eb810b30c8ddfad02f5d11fd58d6247a8b86",
+    "Fishbrain.exe": "faf339a0476c9fd4c66a9c887d1fcb15d4412ffdc785bc919e78934608ab722e",
+    "Fishbrain.pdb": "13ddb8286323befaec181959d890c7657d5fc55e3a16c436630e6ddbeba560ad",
+    "Fishbrain.runtimeconfig.json": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097",
+    "public-sources.json": "e8ab50adee27049f8615becaa8c85fc4b0c831e4e024b52bf49b95c3663947e9",
+    "quality.json": "ccdcb3c14bb15682eb5a128d517f8386bc6cb71cc9219a85d353a41abe15a1f7",
+    "resources.json": "8a43ee5960fc770e985557f4ac089f44844c166b6188d942b8442f03b790c7f6",
+    "source-notices\\blended-skill-talk-license.txt": "d557539df68e771cc1eedcc91d13f70fca930e508d11eedcafa4b15db49e3744",
+    "source-notices\\blended-skill-talk.md": "26b839171ef0e01afc0d8ebdb0c4794e767191dba272d2099968bbe103b9220d",
+    "source-notices\\notice-sources.json": "3d8ee71242df74737b3e16d0a89cfdd052c75adba348c935bfb2e62a367fb0f9",
+    "source-notices\\NOTICE.md": "1ffe0e7407fab4816bfc13fac332d5505c6578fa102202380aab9723f6ce7261",
+    "source-notices\\openassistant-license.txt": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "source-notices\\openassistant.md": "52bd472cf3cae04a4b21ecd5316f929741c47d991d4763b041c3a94de072dc31",
+    "source-notices\\tinystories-license.txt": "6419d7a7245cb8a9da6e3dd925d05d824ea0268e3527095f68dec091f84f75da",
+    "source-notices\\tinystories.md": "f67b71c3ffe761795b9428222444bfc1ec447d45cb13b00821b7e6c1ceecf7c5",
+    "source-notices\\wikitext.md": "d5aabf145d341366745ac703b5844c442c143943b6c77929481395c822b1c28c",
+    "sources.json": "b88f1c620bf0b19f98ae8f784092676f326ba08de10a56cd729dbfbd5b80693b"
+  }
+}

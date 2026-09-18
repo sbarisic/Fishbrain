@@ -1,0 +1,76 @@
+{
+  "status": "COMPLETE_NOT_PROMOTED",
+  "elapsedSeconds": 804.9750346001238,
+  "completed": [
+    {
+      "stage": "final-build",
+      "seconds": 3.7506857998669147
+    },
+    {
+      "stage": "final-runtime-tests",
+      "seconds": 1.6038471003994346
+    },
+    {
+      "stage": "reporting-tests",
+      "seconds": 0.43717539962381124
+    },
+    {
+      "stage": "final-parity",
+      "seconds": 24.53773120045662
+    },
+    {
+      "stage": "gpu-checkpoint-probe",
+      "seconds": 16.064624699763954
+    },
+    {
+      "stage": "resources",
+      "seconds": 30.307085799984634
+    },
+    {
+      "stage": "pilot-challenge",
+      "seconds": 402.7213720995933
+    },
+    {
+      "stage": "pilot-preserved",
+      "seconds": 87.9775115000084
+    },
+    {
+      "stage": "pilot-development",
+      "seconds": 53.26766450051218
+    },
+    {
+      "stage": "derive-invariance",
+      "seconds": 0.3100174004212022
+    },
+    {
+      "stage": "pilot-invariance",
+      "seconds": 79.1499693999067
+    },
+    {
+      "stage": "supplemental-stress",
+      "seconds": 94.44787630066276
+    },
+    {
+      "stage": "quality-report",
+      "seconds": 0.436744200065732
+    },
+    {
+      "stage": "review-template",
+      "seconds": 0.3047962002456188
+    },
+    {
+      "stage": "candidate-publish",
+      "seconds": 1.14646689966321
+    },
+    {
+      "stage": "packaged-inspect",
+      "seconds": 0.35858629923313856
+    },
+    {
+      "stage": "packaged-chat",
+      "seconds": 7.885909699834883
+    }
+  ],
+  "package": "data\\training\\causal-v1\\candidate-package",
+  "packageManifestSha256": "6bf9156e4fa44dfcb7c59097aabfa51ed6e59af45822c8454cac03ac53e66062"
+}

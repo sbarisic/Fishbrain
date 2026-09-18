@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "checkpoint": "data\\training\\causal-v1\\pilot\\language-03000.pt",
+  "checkpointSha256": "1ea8f088f3de3064f686c2f725f579f165fc271048a21dfd887098861347b37d",
+  "step": 3000,
+  "restoredUpdateBitwiseEqual": true,
+  "completeState": true,
+  "probeLoss": 3.921095371246338,
+  "device": "cuda",
+  "elapsedSeconds": 12.670354699715972,
+  "scope": "Two discarded short updates from independently loaded complete checkpoints; pilot weights untouched."
+}

@@ -10,5 +10,14 @@ data/teaching-diagnostic/results/*.jsonl -text whitespace=blank-at-eol,blank-at-
 data/game-teaching/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 data/game-teaching/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 scripts/conversation_data/game_lessons.py text eol=lf
+scripts/causal/*.py text eol=lf
+Fishbrain.CausalRuntime/*.cs text eol=lf
+data/causal-v1/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/causal-v1/*.jsonl -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/causal-v1/*.sha256 -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/causal-v1/source-notices/*.md -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Preserve upstream notices verbatim, including their trailing spaces.
+data/causal-v1/source-notices/* -text whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/causal-v1/results/* -text whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Captured terminal transcripts include the trailing space in the final "> " prompt.
 data/game-teaching/*-chat.txt -text whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

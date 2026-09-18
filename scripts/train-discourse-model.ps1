@@ -30,7 +30,7 @@ try {
     Invoke-DotNet build Fishbrain.slnx -c Release --no-restore
     # Resume only a matching contextual checkpoint. The first 40000 updates are MLM pretraining;
     # a semantic gate after 20000 updates would test an untrained planner.
-    Invoke-DotNet run -c Release --no-build --project Fishbrain -- teach `
+    Invoke-DotNet run -c Release --no-build --project Fishbrain.LegacyCli -- teach `
         $corpusFull $full --planned 260000 --until $Until
     Write-Host "Checkpoint retained at $full. Completion does not promote a model."
 }

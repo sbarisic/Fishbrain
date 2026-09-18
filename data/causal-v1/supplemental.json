@@ -1,0 +1,580 @@
+{
+  "note": "Supplemental stress inputs frozen during language pretraining, before candidate conversation evaluation. Separate from the original 120-case suite and never added to training.",
+  "frozenUtc": "2026-09-18T22:19:50Z",
+  "trainingProgressAtFreeze": {
+    "status": "RUNNING",
+    "processId": 34428,
+    "fingerprint": "c81e66feca4e763aaa02c66e97bc17dfe1aee3e44103f17c834556b3e3d5d104",
+    "phase": "language",
+    "phaseUpdates": 7845,
+    "totalUpdates": 7845,
+    "elapsed": [
+      5972.120235900395,
+      0.0
+    ],
+    "loss": 3.147336572408676,
+    "secondsPerUpdate": 0.6951011000201106,
+    "updatedUtc": 1789769990.266617
+  },
+  "cases": [
+    {
+      "id": "supplemental-00",
+      "category": "compound",
+      "steps": [
+        {
+          "player": "Check my remaining gold and then tell me the price of rope.",
+          "expectedCalls": [
+            {
+              "name": "GET_BALANCE",
+              "arguments": {}
+            },
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "ROPE"
+              }
+            }
+          ],
+          "expectedMemory": null
+        }
+      ]
+    },
+    {
+      "id": "supplemental-01",
+      "category": "compound",
+      "steps": [
+        {
+          "player": "Tell me your name, then list what is in my inventory.",
+          "expectedCalls": [
+            {
+              "name": "READ_PERSONA",
+              "arguments": {
+                "FIELD": "NAME"
+              }
+            },
+            {
+              "name": "LIST_INVENTORY",
+              "arguments": {}
+            }
+          ],
+          "expectedMemory": null
+        }
+      ]
+    },
+    {
+      "id": "supplemental-02",
+      "category": "compound",
+      "steps": [
+        {
+          "player": "Buy 2 rope please, then check my balance.",
+          "expectedCalls": [
+            {
+              "name": "BUY",
+              "arguments": {
+                "ITEM": "ROPE",
+                "QUANTITY": 2
+              }
+            },
+            {
+              "name": "GET_BALANCE",
+              "arguments": {}
+            }
+          ],
+          "expectedMemory": null
+        }
+      ]
+    },
+    {
+      "id": "supplemental-03",
+      "category": "same_final_reference",
+      "steps": [
+        {
+          "player": "What is the price of rope?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "ROPE"
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "How much does it cost?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "ROPE"
+              }
+            }
+          ],
+          "expectedMemory": null
+        }
+      ]
+    },
+    {
+      "id": "supplemental-04",
+      "category": "same_final_reference",
+      "steps": [
+        {
+          "player": "What is the price of rope?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "ROPE"
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "A cart just rolled past. Anyway, back to that item.",
+          "expectedCalls": null,
+          "expectedMemory": null
+        },
+        {
+          "player": "How much does it cost?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "ROPE"
+              }
+            }
+          ],
+          "expectedMemory": null
+        }
+      ]
+    },
+    {
+      "id": "supplemental-05",
+      "category": "same_final_reference",
+      "steps": [
+        {
+          "player": "What is the price of a health potion?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "HEALTH POTION"
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "How much does it cost?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "HEALTH POTION"
+              }
+            }
+          ],
+          "expectedMemory": null
+        }
+      ]
+    },
+    {
+      "id": "supplemental-06",
+      "category": "same_final_reference",
+      "steps": [
+        {
+          "player": "What is the price of a health potion?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "HEALTH POTION"
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "A cart just rolled past. Anyway, back to that item.",
+          "expectedCalls": null,
+          "expectedMemory": null
+        },
+        {
+          "player": "How much does it cost?",
+          "expectedCalls": [
+            {
+              "name": "LOOKUP_PRICE",
+              "arguments": {
+                "ITEM": "HEALTH POTION"
+              }
+            }
+          ],
+          "expectedMemory": null
+        }
+      ]
+    },
+    {
+      "id": "supplemental-07",
+      "category": "ownership_correction",
+      "steps": [
+        {
+          "player": "My home is Alder Ford.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME",
+                "VALUE": "Alder Ford",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "My home is Alder Ford."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Arin says their home is Stonewatch.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "NPC",
+                "PREDICATE": "HOME",
+                "VALUE": "Stonewatch",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "Arin says their home is Stonewatch."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "My home is Willow End.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "M1",
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME",
+                "VALUE": "Willow End",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "My home is Willow End."
+              }
+            }
+          ],
+          "expectedMemory": {
+            "PLAYER": "Willow End",
+            "NPC": "Stonewatch"
+          }
+        },
+        {
+          "player": "What home did I report for the other person?",
+          "expectedCalls": null,
+          "expectedMemory": null
+        },
+        {
+          "player": "What home did I report for myself?",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_SEARCH",
+              "arguments": {
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME"
+              }
+            }
+          ],
+          "expectedMemory": {
+            "PLAYER": "Willow End",
+            "NPC": "Stonewatch"
+          }
+        }
+      ]
+    },
+    {
+      "id": "supplemental-08",
+      "category": "ownership_correction",
+      "steps": [
+        {
+          "player": "My home is Alder Ford.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME",
+                "VALUE": "Alder Ford",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "My home is Alder Ford."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Arin says their home is Stonewatch.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "NPC",
+                "PREDICATE": "HOME",
+                "VALUE": "Stonewatch",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "Arin says their home is Stonewatch."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Arin says their home is Willow End.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "M2",
+                "SUBJECT": "NPC",
+                "PREDICATE": "HOME",
+                "VALUE": "Willow End",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "Arin says their home is Willow End."
+              }
+            }
+          ],
+          "expectedMemory": {
+            "PLAYER": "Alder Ford",
+            "NPC": "Willow End"
+          }
+        },
+        {
+          "player": "What home did I report for the other person?",
+          "expectedCalls": null,
+          "expectedMemory": null
+        },
+        {
+          "player": "What home did I report for myself?",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_SEARCH",
+              "arguments": {
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME"
+              }
+            }
+          ],
+          "expectedMemory": {
+            "PLAYER": "Alder Ford",
+            "NPC": "Willow End"
+          }
+        }
+      ]
+    },
+    {
+      "id": "supplemental-09",
+      "category": "owned_deletion",
+      "steps": [
+        {
+          "player": "My home is Alder Ford.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME",
+                "VALUE": "Alder Ford",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "My home is Alder Ford."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Arin says their home is Stonewatch.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "NPC",
+                "PREDICATE": "HOME",
+                "VALUE": "Stonewatch",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "Arin says their home is Stonewatch."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Forget M1.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_DELETE",
+              "arguments": {
+                "ID": "M1",
+                "SUBJECT": "PLAYER",
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "Forget M1."
+              }
+            }
+          ],
+          "expectedMemory": {
+            "NPC": "Stonewatch"
+          }
+        },
+        {
+          "player": "What home did I report for Arin?",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_SEARCH",
+              "arguments": {
+                "SUBJECT": "NPC",
+                "PREDICATE": "HOME"
+              }
+            }
+          ],
+          "expectedMemory": {
+            "NPC": "Stonewatch"
+          }
+        }
+      ]
+    },
+    {
+      "id": "supplemental-10",
+      "category": "owned_deletion",
+      "steps": [
+        {
+          "player": "My home is Alder Ford.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME",
+                "VALUE": "Alder Ford",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "My home is Alder Ford."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Arin says their home is Stonewatch.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "NPC",
+                "PREDICATE": "HOME",
+                "VALUE": "Stonewatch",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "Arin says their home is Stonewatch."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Forget M2.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_DELETE",
+              "arguments": {
+                "ID": "M2",
+                "SUBJECT": "NPC",
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "Forget M2."
+              }
+            }
+          ],
+          "expectedMemory": {
+            "PLAYER": "Alder Ford"
+          }
+        },
+        {
+          "player": "What home did I report for myself?",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_SEARCH",
+              "arguments": {
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME"
+              }
+            }
+          ],
+          "expectedMemory": {
+            "PLAYER": "Alder Ford"
+          }
+        }
+      ]
+    },
+    {
+      "id": "supplemental-11",
+      "category": "negated_deletion",
+      "steps": [
+        {
+          "player": "My home is Alder Ford.",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_UPSERT",
+              "arguments": {
+                "ID": "NEW",
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME",
+                "VALUE": "Alder Ford",
+                "POLARITY": true,
+                "SOURCE_TURN": "CURRENT",
+                "QUOTE": "My home is Alder Ford."
+              }
+            }
+          ],
+          "expectedMemory": null
+        },
+        {
+          "player": "Do not forget M1.",
+          "expectedCalls": [],
+          "expectedMemory": {
+            "PLAYER": "Alder Ford"
+          }
+        },
+        {
+          "player": "What home did I report for myself?",
+          "expectedCalls": [
+            {
+              "name": "MEMORY_SEARCH",
+              "arguments": {
+                "SUBJECT": "PLAYER",
+                "PREDICATE": "HOME"
+              }
+            }
+          ],
+          "expectedMemory": {
+            "PLAYER": "Alder Ford"
+          }
+        }
+      ]
+    }
+  ]
+}

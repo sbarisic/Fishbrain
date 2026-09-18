@@ -1,0 +1,1 @@
+Expected a causal V1 model. Older Fishbrain weights need their matching legacy runtime; no migration is supported.

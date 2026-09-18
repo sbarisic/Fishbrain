@@ -1,0 +1,21 @@
+{
+  "status": "PAUSED",
+  "processId": 42212,
+  "fingerprint": "c81e66feca4e763aaa02c66e97bc17dfe1aee3e44103f17c834556b3e3d5d104",
+  "phase": "language",
+  "phaseUpdates": 3165,
+  "totalUpdates": 3165,
+  "elapsed": [
+    2533.585212999955,
+    0.0
+  ],
+  "loss": 3.496153473854065,
+  "secondsPerUpdate": 2.503228299319744,
+  "updatedUtc": 1789763909.2038093,
+  "pausedAtUtc": "2026-09-18T20:38:29.6692569+00:00",
+  "resumeCheckpoint": "data/training/causal-v1/pilot/language-03000.pt",
+  "durableUpdates": 3000,
+  "updatesSinceCheckpoint": 165,
+  "checkpointSha256": "1ea8f088f3de3064f686c2f725f579f165fc271048a21dfd887098861347b37d",
+  "automaticEvaluationStopped": true
+}

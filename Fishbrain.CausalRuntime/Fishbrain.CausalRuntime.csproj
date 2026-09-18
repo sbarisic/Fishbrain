@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net10.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><Optimize>true</Optimize></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Fishbrain/Neural/Tensor.cs;../Fishbrain/Neural/TensorKernels.cs;../Fishbrain/Neural/TensorParallelism.cs;../Fishbrain/Neural/InferenceScratch.cs" LinkBase="Neural" />
+  </ItemGroup>
+</Project>

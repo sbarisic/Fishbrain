@@ -40,7 +40,7 @@ try {
     Invoke-DotNet format Fishbrain.slnx --no-restore --verify-no-changes
     Invoke-DotNet build Fishbrain.slnx -c Release --artifacts-path $artifactsFull
 
-    $brain = Join-Path $artifactsFull "bin/Fishbrain/release/Fishbrain.dll"
+    $brain = Join-Path $artifactsFull "bin/Fishbrain.LegacyCli/release/Fishbrain.dll"
     $runtimeTests = Join-Path $artifactsFull "bin/Fishbrain.Tests/release/Fishbrain.Tests.dll"
     $generator = Join-Path $artifactsFull "bin/Fishbrain.DataGenerator/release/Fishbrain.DataGenerator.dll"
     $generatorTests = Join-Path $artifactsFull "bin/Fishbrain.DataGenerator.Tests/release/Fishbrain.DataGenerator.Tests.dll"
@@ -83,7 +83,7 @@ try {
 
     $modelHash = (Get-FileHash -LiteralPath $candidateFull -Algorithm SHA256).Hash.ToLowerInvariant()
     $package = Join-Path $root "data/releases/contextual-$($modelHash.Substring(0, 12))"
-    Invoke-DotNet publish Fishbrain/Fishbrain.csproj -c Release --no-build --artifacts-path $artifactsFull -o $package
+    Invoke-DotNet publish Fishbrain.LegacyCli/Fishbrain.LegacyCli.csproj -c Release --no-build --artifacts-path $artifactsFull -o $package
     $packagedModels = Join-Path $package "data/models"
     New-Item -ItemType Directory -Path $packagedModels -Force | Out-Null
     Copy-Item -LiteralPath $candidateFull -Destination (Join-Path $packagedModels "model-latest.fbm")

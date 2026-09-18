@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "checkpoint": "data\\training\\causal-v1\\pilot\\language-00500.pt",
+  "checkpointSha256": "d6ce9939762f053d1bf6298c2a5d814d983899d254983e957be5144aa0c8f3ff",
+  "step": 500,
+  "restoredUpdateBitwiseEqual": true,
+  "completeState": true,
+  "probeLoss": 5.495326042175293,
+  "elapsedSeconds": 9.744890499860048,
+  "scope": "Two discarded short CPU updates from independently loaded complete checkpoints; pilot/GPU untouched."
+}

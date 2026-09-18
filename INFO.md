@@ -1,5 +1,9 @@
 # Fishbrain engineering boundaries
 
+> These sections describe the preserved contextual runtime. Current production
+> ownership, tool validation, memory and release boundaries are documented in
+> [CAUSAL_MODEL.md](CAUSAL_MODEL.md). The causal runtime has no reducer or agenda.
+
 ## Authority
 
 The host owns persona, approved player profiles and world state. The state reducer

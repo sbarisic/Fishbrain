@@ -1,0 +1,63 @@
+{
+  "config": {
+    "layers": 8,
+    "width": 384,
+    "heads": 6,
+    "feedForward": 1536,
+    "context": 1024,
+    "vocabulary": 8192,
+    "seed": 42
+  },
+  "schedule": [
+    {
+      "name": "language",
+      "updates": 8000,
+      "seconds": 7200,
+      "lr": 0.0003
+    },
+    {
+      "name": "specialization",
+      "updates": 4000,
+      "seconds": 7200,
+      "lr": 0.0001
+    }
+  ],
+  "sampler": {
+    "seed": 42,
+    "batch": 32,
+    "microbatch": 4,
+    "languageTokens": {
+      "wikitext": 0.5,
+      "tinystories": 0.5
+    },
+    "specialization": {
+      "public": 0.4,
+      "tools": 0.4,
+      "social": 0.2
+    }
+  },
+  "files": {
+    "data\\training\\causal-v1\\sources.json": "b88f1c620bf0b19f98ae8f784092676f326ba08de10a56cd729dbfbd5b80693b",
+    "data\\training\\causal-v1\\tools.json": "22736d3dd93f841dad57207c60b6c6cb82ee8eba4c5c1f71ac6d0378881aebed",
+    "data\\training\\causal-v1\\prepared\\tokenizer.json": "3e1a5266548c5d78e35bc9e58b48020e65dbf270fbce79c8b998780cdca3eb6d",
+    "data\\training\\causal-v1\\prepared\\specialization.jsonl": "d0e214a1c6d19163e4005aa0907af98e7b0642d2d9548778a3e1d100a749890f",
+    "data\\training\\causal-v1\\prepared\\language-audit.json": "083dcba3864cba9fc9b7485bd36678088edc95d6d428e4aad871bbb3c5486aec",
+    "data\\training\\causal-v1\\prepared\\episodes.jsonl": "89b7dc404242536526b791a26eabc23b99b18273b7773282b503f6696bfe7e17",
+    "data\\training\\causal-v1\\prepared\\specialization-audit.json": "c9fb26a36dbfbea7a108356b131de02f322c7f841dca4b983be99a0388dd3ed2",
+    "data\\training\\causal-v1\\data-review.json": "def8ecfa5661e16611fb16e860709dc435feb16d0d01ecb7e90a81a450725cee",
+    "data\\causal-v1\\challenge.json": "b35af205ec6f37f9d74596f2bb835da9955d13c31a0f0f5fbe14038f978b9b1b",
+    "data\\causal-v1\\preserved-acceptance.json": "4ca7370f9a369fa7d26758646df0b632650ee97007bca6336e2409d3e2b1b664",
+    "data\\training\\causal-v1\\prepared\\wikitext-train.bin": "594d014f32fcb070a8e2ae146789a366e54d7106f14ea9574fd76066252b6b2e",
+    "data\\training\\causal-v1\\prepared\\wikitext-validation.bin": "80839134a19e1bf4eb753a4b6a303c12cf31da18b4e9bc2793b2a3cd45401cef",
+    "data\\training\\causal-v1\\prepared\\tinystories-train.bin": "a4793730de10b46bc1745fc0a82c2913ff7b6578d0199c2c497be206beed8d02",
+    "data\\training\\causal-v1\\prepared\\tinystories-validation.bin": "26cd1ead97f1d73d0104aadc8c8f62b9b676093a19da46685ca515cd5eed386c",
+    "E:\\Projects\\Fishbrain\\scripts\\causal\\train.py": "867410efa25ccb3414fb4c96b9bd2cde83b0cdf3faedbd32428c9dc50b9a547e",
+    "E:\\Projects\\Fishbrain\\scripts\\causal\\model.py": "81adb4d24f9b4225ec5fd0a5e40832a55a89a688d67f08e96c37a8537ab233ad",
+    "E:\\Projects\\Fishbrain\\scripts\\causal\\prepare.py": "d32dac12d67b2d669f01c03645cc15b23296fc59f58b9cd81187ff57b7fb3163",
+    "Fishbrain.CausalRuntime\\PromptPacker.cs": "d570ed10e43657f58dd4b266c53a63112465016af8d16e857f1e516967ff550b",
+    "Fishbrain.CausalRuntime\\ByteBpe.cs": "172cc3c0a120e2155d4334aa76d8e4eb0202ac71e2895d2e1a2ebd7bc2bd13e7",
+    "Fishbrain.CausalRuntime\\Contracts.cs": "ee1fcc4f5181b40d2ab31e70e463088b036ae6d0c0a43107239bb0ae2ad1ec07"
+  },
+  "torch": "2.13.0+rocm10.0.0",
+  "device": "AMD Radeon RX 9070 XT"
+}

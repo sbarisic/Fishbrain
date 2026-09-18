@@ -1,5 +1,8 @@
 # GPU training with C# inference
 
+This guide describes the preserved structured-model backend. Use the
+[causal model guide](../../CAUSAL_MODEL.md) for the current runtime and trainer.
+
 This optional Windows training backend keeps tensors on an AMD GPU throughout an
 update. Python and PyTorch are training dependencies only. Exported `.fbm` files
 load in the existing dependency-free .NET CPU runtime. The native C# trainer remains
@@ -40,7 +43,7 @@ exports exact structured inputs, tokenizer IDs, utterance positions, typed targe
 and missing-supervision masks. Python does not infer roles or retokenize text.
 
 ```powershell
-$cli = 'Fishbrain/bin/Release/net10.0/Fishbrain.dll'
+$cli = 'Fishbrain.LegacyCli/bin/Release/net10.0/Fishbrain.dll'
 dotnet $cli prepare-torch data/compiled-contextual-v3 data/training/torch-corpus-v1
 dotnet $cli torch-reference data/compiled-contextual-v3 data/training/torch-corpus-v1/initial.fbm data/training/torch-reference.jsonl
 & $python scripts/torch_training/parity.py data/training/torch-corpus-v1 data/training/torch-reference.jsonl data/training/torch-parity.json

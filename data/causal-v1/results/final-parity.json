@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "maxAbsoluteErrors": {
+    "short.csharpForward": 1.6864303894054133e-05,
+    "short.cachedDecoding": 8.719309997573532e-06,
+    "short.blockPrefill": 1.4174215698270487e-05,
+    "short.gpuForward": 1.8805265426635742e-05,
+    "long.csharpForward": 0.00016994006347736956,
+    "long.cachedDecoding": 6.01004028322194e-06,
+    "long.blockPrefill": 1.0873992919879782e-05,
+    "long.gpuForward": 0.00021982192993164062
+  },
+  "threshold": 0.0005,
+  "promptLengths": {
+    "short": 9,
+    "long": 612
+  },
+  "exportedWeightsBitwiseEqual": true,
+  "modelSha256": "d41434a0a512ff43a73b5441e981d2023bf33a9d7a0d8cb3c7f4d7c661c14752",
+  "checkpointSha256": "d175f00d015c4a9010267410bcdcdd3e02a003c3949cacbf9d90b77e90a16676",
+  "elapsedSeconds": 21.754880900494754,
+  "parameterCount": 17701248
+}

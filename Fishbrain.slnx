@@ -1,4 +1,8 @@
 <Solution>
+  <Project Path="Fishbrain.CausalRuntime/Fishbrain.CausalRuntime.csproj" />
+  <Project Path="Fishbrain.CausalDemo/Fishbrain.CausalDemo.csproj" />
+  <Project Path="Fishbrain.CausalTests/Fishbrain.CausalTests.csproj" />
+  <Project Path="Fishbrain.LegacyCli/Fishbrain.LegacyCli.csproj" />
   <Project Path="Fishbrain.DemoDomain/Fishbrain.DemoDomain.csproj" />
   <Project Path="Fishbrain.Runtime/Fishbrain.Runtime.csproj" />
   <Project Path="Fishbrain.DataGenerator/Fishbrain.DataGenerator.csproj" />
