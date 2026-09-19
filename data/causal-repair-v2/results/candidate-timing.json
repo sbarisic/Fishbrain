@@ -1,0 +1,11 @@
+{
+  "seconds": 724.844225499779,
+  "modelSha256": "04c4506f1cf82474e138975c56005c1e240803ebc565eb3f4f0d204b642eab8f",
+  "suiteHashes": {
+    "focused": "25d86fa9dc9b0090c330cee8d7068f284eb79fccded8a6df18488dcde2a0fd08",
+    "frozen": "b35af205ec6f37f9d74596f2bb835da9955d13c31a0f0f5fbe14038f978b9b1b",
+    "preserved": "4ca7370f9a369fa7d26758646df0b632650ee97007bca6336e2409d3e2b1b664",
+    "development": "6924d366f4d151c8c241208ce5df17bef4a142e0d29454f73d434a45276fec0b"
+  },
+  "note": "Diagnostic timings; baseline may overlap GPU training."
+}

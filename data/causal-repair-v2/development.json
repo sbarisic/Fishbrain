@@ -1,0 +1,114 @@
+{
+  "cases": [
+    {
+      "id": "user-development",
+      "category": "development",
+      "steps": [
+        {
+          "player": "hi",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "you're hiange?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "what?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "what do you have for sale?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "how much money for iron sword?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "how much do i have?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "how much gold do i have?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "sell me 10 rope",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 10
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "I would like to buy 10 rope",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 10
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Where are we?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "My name is Steve",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "NAME",
+            "VALUE": "Steve",
+            "POLARITY": true,
+            "SOURCE_TURN": "CURRENT",
+            "QUOTE": "My name is Steve"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    }
+  ]
+}

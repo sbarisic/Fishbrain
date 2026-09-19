@@ -1,0 +1,780 @@
+{
+  "cases": [
+    {
+      "id": "context-heldout-000",
+      "category": "price-context",
+      "steps": [
+        {
+          "player": "Could you tell me the unit price of rope?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I prefer to compare before choosing.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What was that price again?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "And the gold in my purse?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-001",
+      "category": "quantity",
+      "steps": [
+        {
+          "player": "Please buy 2 rope for me.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "I'd like to sell 2 rope back.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Before we go on, who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-002",
+      "category": "quantity",
+      "steps": [
+        {
+          "player": "Please buy 3 rope for me.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "I'd like to sell 3 rope back.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Before we go on, who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-003",
+      "category": "price-context",
+      "steps": [
+        {
+          "player": "Could you tell me the unit price of health potion?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I prefer to compare before choosing.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What was that price again?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "And the gold in my purse?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-004",
+      "category": "quantity",
+      "steps": [
+        {
+          "player": "Please buy 2 health potion for me.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "I'd like to sell 2 health potion back.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Before we go on, who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-005",
+      "category": "quantity",
+      "steps": [
+        {
+          "player": "Please buy 3 health potion for me.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "I'd like to sell 3 health potion back.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Before we go on, who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-006",
+      "category": "price-context",
+      "steps": [
+        {
+          "player": "Could you tell me the unit price of iron sword?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I prefer to compare before choosing.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What was that price again?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "And the gold in my purse?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-007",
+      "category": "quantity",
+      "steps": [
+        {
+          "player": "Please buy 2 iron sword for me.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "I'd like to sell 2 iron sword back.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 2
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Before we go on, who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-008",
+      "category": "quantity",
+      "steps": [
+        {
+          "player": "Please buy 3 iron sword for me.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "I'd like to sell 3 iron sword back.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Before we go on, who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-009",
+      "category": "topic-switch",
+      "steps": [
+        {
+          "player": "Greetings.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I was thinking about the road.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Can you supply me with goods?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-010",
+      "category": "topic-switch",
+      "steps": [
+        {
+          "player": "Greetings.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I was thinking about the road.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Where is this conversation taking place?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-011",
+      "category": "topic-switch",
+      "steps": [
+        {
+          "player": "Greetings.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I was thinking about the road.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What name do you go by?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-012",
+      "category": "topic-switch",
+      "steps": [
+        {
+          "player": "Greetings.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I was thinking about the road.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which occupation is yours?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-013",
+      "category": "topic-switch",
+      "steps": [
+        {
+          "player": "Greetings.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I was thinking about the road.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "How much currency belongs to me?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-014",
+      "category": "topic-switch",
+      "steps": [
+        {
+          "player": "Greetings.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I was thinking about the road.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which possessions am I carrying?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-015",
+      "category": "hard-negative",
+      "steps": [
+        {
+          "player": "I would like to buy 10 rope, unless the price went up.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Check the gold still in my purse.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-016",
+      "category": "hard-negative",
+      "steps": [
+        {
+          "player": "Sell me 10 rope, only as an example.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Check the gold still in my purse.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-017",
+      "category": "hard-negative",
+      "steps": [
+        {
+          "player": "He told me to buy 3 rope.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Check the gold still in my purse.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-018",
+      "category": "hard-negative",
+      "steps": [
+        {
+          "player": "Buy 2 rope. Actually, stop.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Check the gold still in my purse.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-019",
+      "category": "hard-negative",
+      "steps": [
+        {
+          "player": "I might buy 2 rope.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Check the gold still in my purse.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-020",
+      "category": "hard-negative",
+      "steps": [
+        {
+          "player": "Can we imagine buying 3 rope?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Check the gold still in my purse.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-021",
+      "category": "social",
+      "steps": [
+        {
+          "player": "Hello again.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I just want to chat, not shop.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me what you meant.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-022",
+      "category": "social",
+      "steps": [
+        {
+          "player": "Sorry, I missed your meaning.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I just want to chat, not shop.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me what you meant.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-023",
+      "category": "social",
+      "steps": [
+        {
+          "player": "That reply sounded strange.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I just want to chat, not shop.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me what you meant.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-024",
+      "category": "social",
+      "steps": [
+        {
+          "player": "Can we just have a conversation?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I just want to chat, not shop.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Tell me what you meant.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-025",
+      "category": "memory-owner",
+      "steps": [
+        {
+          "player": "My name is Nadia",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "NAME",
+            "VALUE": "Nadia",
+            "POLARITY": true,
+            "SOURCE_TURN": 0,
+            "QUOTE": "My name is Nadia"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Tell me your own name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Let us talk about the weather for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Can you recall my name?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-026",
+      "category": "memory-owner",
+      "steps": [
+        {
+          "player": "My name is Evan",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "NAME",
+            "VALUE": "Evan",
+            "POLARITY": true,
+            "SOURCE_TURN": 0,
+            "QUOTE": "My name is Evan"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Tell me your own name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Let us talk about the weather for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Can you recall my name?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "context-heldout-027",
+      "category": "memory-owner",
+      "steps": [
+        {
+          "player": "My name is Iris",
+          "tool": "MEMORY_UPSERT",
+          "arguments": {
+            "ID": "NEW",
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "NAME",
+            "VALUE": "Iris",
+            "POLARITY": true,
+            "SOURCE_TURN": 0,
+            "QUOTE": "My name is Iris"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Tell me your own name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Let us talk about the weather for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Can you recall my name?",
+          "tool": "MEMORY_SEARCH",
+          "arguments": {
+            "SUBJECT": "PLAYER",
+            "PREDICATE": "NAME"
+          },
+          "noMutation": true
+        }
+      ]
+    }
+  ],
+  "note": "New frozen wording checks. Hand-authored, not independent human review; variants share category families."
+}

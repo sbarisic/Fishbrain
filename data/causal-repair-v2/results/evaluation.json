@@ -1,0 +1,1659 @@
+{
+  "status": "EXPERIMENTAL_NOT_PROMOTED",
+  "suites": {
+    "focused": {
+      "candidate": {
+        "turns": 84,
+        "tool": {
+          "correct": 31,
+          "applicable": 48,
+          "accuracy": 0.6458333333333334
+        },
+        "completion": {
+          "correct": 31,
+          "applicable": 48,
+          "accuracy": 0.6458333333333334
+        },
+        "memory": {
+          "correct": 1,
+          "applicable": 6,
+          "accuracy": 0.16666666666666666
+        },
+        "categories": {
+          "hard-negative": {
+            "tool": {
+              "correct": 6,
+              "applicable": 6,
+              "accuracy": 1.0
+            },
+            "completion": {
+              "correct": 6,
+              "applicable": 6,
+              "accuracy": 1.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "memory-owner": {
+            "tool": {
+              "correct": 4,
+              "applicable": 9,
+              "accuracy": 0.4444444444444444
+            },
+            "completion": {
+              "correct": 4,
+              "applicable": 9,
+              "accuracy": 0.4444444444444444
+            },
+            "memory": {
+              "correct": 1,
+              "applicable": 6,
+              "accuracy": 0.16666666666666666
+            }
+          },
+          "price-context": {
+            "tool": {
+              "correct": 9,
+              "applicable": 9,
+              "accuracy": 1.0
+            },
+            "completion": {
+              "correct": 9,
+              "applicable": 9,
+              "accuracy": 1.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "quantity": {
+            "tool": {
+              "correct": 12,
+              "applicable": 18,
+              "accuracy": 0.6666666666666666
+            },
+            "completion": {
+              "correct": 12,
+              "applicable": 18,
+              "accuracy": 0.6666666666666666
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "social": {
+            "tool": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "topic-switch": {
+            "tool": {
+              "correct": 0,
+              "applicable": 6,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 6,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 0,
+        "validRequestsUnanswered": 17,
+        "unexpectedToolTurns": 7,
+        "unexpectedSuccessfulToolTurns": 4,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.4642857142857143,
+        "mostCommonResponses": [
+          [
+            "YOU HAVE 100 GOLD.",
+            10
+          ],
+          [
+            "Greetings?",
+            6
+          ],
+          [
+            "A small change can make a familiar walk feel new.",
+            6
+          ],
+          [
+            "Available tools: balance, buy, capabilities, current location, inventory, location, memory delete, memory search, memory upsert, persona, price, sell, wares, world fact.",
+            4
+          ],
+          [
+            "All right. We can leave it there.",
+            4
+          ],
+          [
+            "IRON SWORD COSTS 25 GOLD.",
+            3
+          ],
+          [
+            "I have not taken that action. Please clarify your request.",
+            3
+          ],
+          [
+            "Arin",
+            3
+          ],
+          [
+            "ROPE COSTS 3 GOLD.",
+            2
+          ],
+          [
+            "What do you enjoy about it?",
+            2
+          ],
+          [
+            "HEALTH POTION COSTS 8 GOLD.",
+            2
+          ],
+          [
+            "That sounds like a lot of fun.  What do you do for work?",
+            2
+          ],
+          [
+            "the old mill",
+            2
+          ],
+          [
+            "Please clarify your request. I have not made a transaction.",
+            2
+          ],
+          [
+            "We can take this slowly.",
+            2
+          ]
+        ],
+        "replyP95Milliseconds": 4041.9106,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.4444444444444444,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 210.5390625,
+          "replyAllocatedP95Bytes": 31275472,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "baseline": {
+        "turns": 84,
+        "tool": {
+          "correct": 22,
+          "applicable": 48,
+          "accuracy": 0.4583333333333333
+        },
+        "completion": {
+          "correct": 22,
+          "applicable": 48,
+          "accuracy": 0.4583333333333333
+        },
+        "memory": {
+          "correct": 0,
+          "applicable": 6,
+          "accuracy": 0.0
+        },
+        "categories": {
+          "hard-negative": {
+            "tool": {
+              "correct": 6,
+              "applicable": 6,
+              "accuracy": 1.0
+            },
+            "completion": {
+              "correct": 6,
+              "applicable": 6,
+              "accuracy": 1.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "memory-owner": {
+            "tool": {
+              "correct": 3,
+              "applicable": 9,
+              "accuracy": 0.3333333333333333
+            },
+            "completion": {
+              "correct": 3,
+              "applicable": 9,
+              "accuracy": 0.3333333333333333
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 6,
+              "accuracy": 0.0
+            }
+          },
+          "price-context": {
+            "tool": {
+              "correct": 7,
+              "applicable": 9,
+              "accuracy": 0.7777777777777778
+            },
+            "completion": {
+              "correct": 7,
+              "applicable": 9,
+              "accuracy": 0.7777777777777778
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "quantity": {
+            "tool": {
+              "correct": 6,
+              "applicable": 18,
+              "accuracy": 0.3333333333333333
+            },
+            "completion": {
+              "correct": 6,
+              "applicable": 18,
+              "accuracy": 0.3333333333333333
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "social": {
+            "tool": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "topic-switch": {
+            "tool": {
+              "correct": 0,
+              "applicable": 6,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 6,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 1,
+        "validRequestsUnanswered": 26,
+        "unexpectedToolTurns": 11,
+        "unexpectedSuccessfulToolTurns": 8,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.6309523809523809,
+        "mostCommonResponses": [
+          [
+            "YOU HAVE 100 GOLD.",
+            9
+          ],
+          [
+            "I have not taken that action. Please clarify your request.",
+            8
+          ],
+          [
+            "Take your time.",
+            7
+          ],
+          [
+            "Available tools: balance, buy, capabilities, current location, inventory, location, memory delete, memory search, memory upsert, persona, price, sell, wares, world fact.",
+            7
+          ],
+          [
+            "Greetings.",
+            6
+          ],
+          [
+            "I HAVE HEALTH POTION: 50 IN STOCK, IRON SWORD: 20 IN STOCK, ROPE: 30 IN STOCK.",
+            5
+          ],
+          [
+            "HEALTH POTION COSTS 8 GOLD.",
+            4
+          ],
+          [
+            "That sounds like a good way to have fun and get some exercise!",
+            4
+          ],
+          [
+            "IRON SWORD COSTS 25 GOLD.",
+            4
+          ],
+          [
+            "What kind of music do you like?",
+            3
+          ],
+          [
+            "Arin",
+            3
+          ],
+          [
+            "What would you like to discuss?",
+            3
+          ],
+          [
+            "THE REACTOR POWERS THE STATION.",
+            2
+          ],
+          [
+            "the old mill",
+            2
+          ],
+          [
+            "ROPE COSTS 3 GOLD.",
+            1
+          ]
+        ],
+        "replyP95Milliseconds": 3957.9703,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.625,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 207.68359375,
+          "replyAllocatedP95Bytes": 29328088,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "pairedByCategory": {
+        "exactTool": {
+          "applicable": 48,
+          "families": 5,
+          "candidate": 0.6458333333333334,
+          "baseline": 0.4583333333333333,
+          "difference95Interval": [
+            0.030303030303030304,
+            0.2898550724637681
+          ]
+        },
+        "completed": {
+          "applicable": 48,
+          "families": 5,
+          "candidate": 0.6458333333333334,
+          "baseline": 0.4583333333333333,
+          "difference95Interval": [
+            0.030303030303030304,
+            0.2898550724637681
+          ]
+        }
+      }
+    },
+    "frozen": {
+      "candidate": {
+        "turns": 258,
+        "tool": {
+          "correct": 54,
+          "applicable": 130,
+          "accuracy": 0.4153846153846154
+        },
+        "completion": {
+          "correct": 54,
+          "applicable": 130,
+          "accuracy": 0.4153846153846154
+        },
+        "memory": {
+          "correct": 4,
+          "applicable": 50,
+          "accuracy": 0.08
+        },
+        "categories": {
+          "GET_BALANCE": {
+            "tool": {
+              "correct": 5,
+              "applicable": 8,
+              "accuracy": 0.625
+            },
+            "completion": {
+              "correct": 5,
+              "applicable": 8,
+              "accuracy": 0.625
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "GET_CURRENT_LOCATION": {
+            "tool": {
+              "correct": 2,
+              "applicable": 8,
+              "accuracy": 0.25
+            },
+            "completion": {
+              "correct": 2,
+              "applicable": 8,
+              "accuracy": 0.25
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LIST_CAPABILITIES": {
+            "tool": {
+              "correct": 4,
+              "applicable": 8,
+              "accuracy": 0.5
+            },
+            "completion": {
+              "correct": 4,
+              "applicable": 8,
+              "accuracy": 0.5
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LIST_INVENTORY": {
+            "tool": {
+              "correct": 5,
+              "applicable": 8,
+              "accuracy": 0.625
+            },
+            "completion": {
+              "correct": 5,
+              "applicable": 8,
+              "accuracy": 0.625
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LIST_WARES": {
+            "tool": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LOOKUP_LOCATION": {
+            "tool": {
+              "correct": 6,
+              "applicable": 8,
+              "accuracy": 0.75
+            },
+            "completion": {
+              "correct": 6,
+              "applicable": 8,
+              "accuracy": 0.75
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LOOKUP_PRICE": {
+            "tool": {
+              "correct": 7,
+              "applicable": 8,
+              "accuracy": 0.875
+            },
+            "completion": {
+              "correct": 7,
+              "applicable": 8,
+              "accuracy": 0.875
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "READ_PERSONA": {
+            "tool": {
+              "correct": 3,
+              "applicable": 8,
+              "accuracy": 0.375
+            },
+            "completion": {
+              "correct": 3,
+              "applicable": 8,
+              "accuracy": 0.375
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "hard_negative": {
+            "tool": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "memory": {
+            "tool": {
+              "correct": 6,
+              "applicable": 50,
+              "accuracy": 0.12
+            },
+            "completion": {
+              "correct": 6,
+              "applicable": 50,
+              "accuracy": 0.12
+            },
+            "memory": {
+              "correct": 4,
+              "applicable": 50,
+              "accuracy": 0.08
+            }
+          },
+          "social": {
+            "tool": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "transaction": {
+            "tool": {
+              "correct": 16,
+              "applicable": 16,
+              "accuracy": 1.0
+            },
+            "completion": {
+              "correct": 16,
+              "applicable": 16,
+              "accuracy": 1.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 1,
+        "validRequestsUnanswered": 76,
+        "unexpectedToolTurns": 44,
+        "unexpectedSuccessfulToolTurns": 41,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.7131782945736435,
+        "mostCommonResponses": [
+          [
+            "THIS VILLAGE GUARDS THE EASTERN ROAD.",
+            45
+          ],
+          [
+            "All right. We can leave it there.",
+            45
+          ],
+          [
+            "I could not update or retrieve that memory.",
+            21
+          ],
+          [
+            "Arin",
+            9
+          ],
+          [
+            "That sounds okay.",
+            8
+          ],
+          [
+            "YOU HAVE 100 GOLD.",
+            7
+          ],
+          [
+            "ROPE COSTS 3 GOLD.",
+            7
+          ],
+          [
+            "YOU CARRY 1 HEALTH POTION, 2 ROPE.",
+            6
+          ],
+          [
+            "INN IS NORTH BY THE FOUNTAIN.",
+            6
+          ],
+          [
+            "I HAVE HEALTH POTION: 50 IN STOCK, IRON SWORD: 20 IN STOCK, ROPE: 30 IN STOCK.",
+            5
+          ],
+          [
+            "Available tools: balance, buy, capabilities, current location, inventory, location, memory delete, memory search, memory upsert, persona, price, sell, wares, world fact.",
+            5
+          ],
+          [
+            "No matching reported facts.",
+            5
+          ],
+          [
+            "Reported memory saved.",
+            4
+          ],
+          [
+            "Sounds like a plan",
+            4
+          ],
+          [
+            "I have not taken that action. Please clarify your request.",
+            3
+          ]
+        ],
+        "replyP95Milliseconds": 3229.4088,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.6170212765957447,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 210.51953125,
+          "replyAllocatedP95Bytes": 42273176,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "baseline": {
+        "turns": 258,
+        "tool": {
+          "correct": 48,
+          "applicable": 130,
+          "accuracy": 0.36923076923076925
+        },
+        "completion": {
+          "correct": 46,
+          "applicable": 130,
+          "accuracy": 0.35384615384615387
+        },
+        "memory": {
+          "correct": 3,
+          "applicable": 50,
+          "accuracy": 0.06
+        },
+        "categories": {
+          "GET_BALANCE": {
+            "tool": {
+              "correct": 5,
+              "applicable": 8,
+              "accuracy": 0.625
+            },
+            "completion": {
+              "correct": 5,
+              "applicable": 8,
+              "accuracy": 0.625
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "GET_CURRENT_LOCATION": {
+            "tool": {
+              "correct": 1,
+              "applicable": 8,
+              "accuracy": 0.125
+            },
+            "completion": {
+              "correct": 1,
+              "applicable": 8,
+              "accuracy": 0.125
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LIST_CAPABILITIES": {
+            "tool": {
+              "correct": 4,
+              "applicable": 8,
+              "accuracy": 0.5
+            },
+            "completion": {
+              "correct": 4,
+              "applicable": 8,
+              "accuracy": 0.5
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LIST_INVENTORY": {
+            "tool": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LIST_WARES": {
+            "tool": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LOOKUP_LOCATION": {
+            "tool": {
+              "correct": 7,
+              "applicable": 8,
+              "accuracy": 0.875
+            },
+            "completion": {
+              "correct": 7,
+              "applicable": 8,
+              "accuracy": 0.875
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "LOOKUP_PRICE": {
+            "tool": {
+              "correct": 7,
+              "applicable": 8,
+              "accuracy": 0.875
+            },
+            "completion": {
+              "correct": 7,
+              "applicable": 8,
+              "accuracy": 0.875
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "READ_PERSONA": {
+            "tool": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 8,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "hard_negative": {
+            "tool": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "memory": {
+            "tool": {
+              "correct": 8,
+              "applicable": 50,
+              "accuracy": 0.16
+            },
+            "completion": {
+              "correct": 6,
+              "applicable": 50,
+              "accuracy": 0.12
+            },
+            "memory": {
+              "correct": 3,
+              "applicable": 50,
+              "accuracy": 0.06
+            }
+          },
+          "social": {
+            "tool": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          },
+          "transaction": {
+            "tool": {
+              "correct": 16,
+              "applicable": 16,
+              "accuracy": 1.0
+            },
+            "completion": {
+              "correct": 16,
+              "applicable": 16,
+              "accuracy": 1.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 91,
+        "validRequestsUnanswered": 84,
+        "unexpectedToolTurns": 9,
+        "unexpectedSuccessfulToolTurns": 4,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.7596899224806202,
+        "mostCommonResponses": [
+          [
+            "Do you have any favorite cleats?",
+            45
+          ],
+          [
+            "What kind of things do you have in mind?",
+            40
+          ],
+          [
+            "Good evening. How is your day going?",
+            18
+          ],
+          [
+            "I could not update or retrieve that memory. Please continue in another turn.",
+            17
+          ],
+          [
+            "YOU HAVE 100 GOLD.",
+            8
+          ],
+          [
+            "I HAVE HEALTH POTION: 50 IN STOCK, IRON SWORD: 20 IN STOCK, ROPE: 30 IN STOCK.",
+            8
+          ],
+          [
+            "I have not made a purchase.",
+            8
+          ],
+          [
+            "Available tools: balance, buy, capabilities, current location, inventory, location, memory delete, memory search, memory upsert, persona, price, sell, wares, world fact.",
+            8
+          ],
+          [
+            "Arin",
+            8
+          ],
+          [
+            "No matching reported facts.",
+            8
+          ],
+          [
+            "ROPE COSTS 3 GOLD.",
+            7
+          ],
+          [
+            "INN IS NORTH BY THE FOUNTAIN.",
+            7
+          ],
+          [
+            "I have not taken that action. Please clarify your request.",
+            6
+          ],
+          [
+            "HEALTH POTION COSTS 8 GOLD.",
+            5
+          ],
+          [
+            "Sure. What would you like to discuss?",
+            4
+          ]
+        ],
+        "replyP95Milliseconds": 3610.8495,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.7627118644067796,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 210.13671875,
+          "replyAllocatedP95Bytes": 33574416,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "pairedByCategory": {
+        "exactTool": {
+          "applicable": 130,
+          "families": 10,
+          "candidate": 0.4153846153846154,
+          "baseline": 0.36923076923076925,
+          "difference95Interval": [
+            -0.028987613751263904,
+            0.2
+          ]
+        },
+        "completed": {
+          "applicable": 130,
+          "families": 10,
+          "candidate": 0.4153846153846154,
+          "baseline": 0.35384615384615387,
+          "difference95Interval": [
+            -0.00819672131147541,
+            0.2
+          ]
+        }
+      }
+    },
+    "preserved": {
+      "candidate": {
+        "turns": 68,
+        "tool": {
+          "correct": 0,
+          "applicable": 3,
+          "accuracy": 0.0
+        },
+        "completion": {
+          "correct": 0,
+          "applicable": 3,
+          "accuracy": 0.0
+        },
+        "memory": {
+          "correct": 0,
+          "applicable": 0,
+          "accuracy": null
+        },
+        "categories": {
+          "preserved-acceptance": {
+            "tool": {
+              "correct": 0,
+              "applicable": 3,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 3,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 1,
+        "validRequestsUnanswered": 3,
+        "unexpectedToolTurns": 0,
+        "unexpectedSuccessfulToolTurns": 0,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.7647058823529411,
+        "mostCommonResponses": [
+          [
+            "I hope you get a quiet moment now.",
+            37
+          ],
+          [
+            "Good evening. How has your day been?",
+            14
+          ],
+          [
+            "Of course.",
+            2
+          ],
+          [
+            "I was answering your question.",
+            2
+          ],
+          [
+            "What do you like to do for work?",
+            2
+          ],
+          [
+            "Sounds like you're enjoying the day.",
+            1
+          ],
+          [
+            "Hello! It's good to have some company.",
+            1
+          ],
+          [
+            "I understand.",
+            1
+          ],
+          [
+            "Sometimes it helps just to talk about it?",
+            1
+          ],
+          [
+            "YOU BOUGHT 2 HEALTER.",
+            1
+          ],
+          [
+            "I CASTLE.",
+            1
+          ],
+          [
+            "Could you clarify your request?",
+            1
+          ],
+          [
+            "I HAVE HEALTH POTION",
+            1
+          ],
+          [
+            "YOU ARE AT VE HEALTH POTION",
+            1
+          ],
+          [
+            "You're welcome.",
+            1
+          ]
+        ],
+        "replyP95Milliseconds": 1058.9361,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.7647058823529411,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 201.05859375,
+          "replyAllocatedP95Bytes": 8426264,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "baseline": {
+        "turns": 68,
+        "tool": {
+          "correct": 0,
+          "applicable": 3,
+          "accuracy": 0.0
+        },
+        "completion": {
+          "correct": 0,
+          "applicable": 3,
+          "accuracy": 0.0
+        },
+        "memory": {
+          "correct": 0,
+          "applicable": 0,
+          "accuracy": null
+        },
+        "categories": {
+          "preserved-acceptance": {
+            "tool": {
+              "correct": 0,
+              "applicable": 3,
+              "accuracy": 0.0
+            },
+            "completion": {
+              "correct": 0,
+              "applicable": 3,
+              "accuracy": 0.0
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 0,
+              "accuracy": null
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 2,
+        "validRequestsUnanswered": 3,
+        "unexpectedToolTurns": 0,
+        "unexpectedSuccessfulToolTurns": 0,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.8382352941176471,
+        "mostCommonResponses": [
+          [
+            "Hello. How can I help?",
+            29
+          ],
+          [
+            "I HAVE HEALTE.",
+            23
+          ],
+          [
+            "I have not made a purchase.",
+            5
+          ],
+          [
+            "Do you have a favorite club band in califor?",
+            2
+          ],
+          [
+            "Sure. What would you like to discuss?",
+            2
+          ],
+          [
+            "Is there anything on your mind?",
+            2
+          ],
+          [
+            "Could you clarify your request?",
+            1
+          ],
+          [
+            "PLEST HEALTH POTION.",
+            1
+          ],
+          [
+            "Sounds like a pause would do you good.",
+            1
+          ],
+          [
+            "I HAVE HEALTIN.",
+            1
+          ],
+          [
+            "Sounds like a pause would do you ME.",
+            1
+          ]
+        ],
+        "replyP95Milliseconds": 1898.8365,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.8382352941176471,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 200.984375,
+          "replyAllocatedP95Bytes": 8962784,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "pairedByCategory": {
+        "exactTool": {
+          "applicable": 3,
+          "families": 1,
+          "candidate": 0.0,
+          "baseline": 0.0,
+          "difference95Interval": [
+            0.0,
+            0.0
+          ]
+        },
+        "completed": {
+          "applicable": 3,
+          "families": 1,
+          "candidate": 0.0,
+          "baseline": 0.0,
+          "difference95Interval": [
+            0.0,
+            0.0
+          ]
+        }
+      }
+    },
+    "development": {
+      "candidate": {
+        "turns": 12,
+        "tool": {
+          "correct": 7,
+          "applicable": 10,
+          "accuracy": 0.7
+        },
+        "completion": {
+          "correct": 7,
+          "applicable": 10,
+          "accuracy": 0.7
+        },
+        "memory": {
+          "correct": 0,
+          "applicable": 1,
+          "accuracy": 0.0
+        },
+        "categories": {
+          "development": {
+            "tool": {
+              "correct": 7,
+              "applicable": 10,
+              "accuracy": 0.7
+            },
+            "completion": {
+              "correct": 7,
+              "applicable": 10,
+              "accuracy": 0.7
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 1,
+              "accuracy": 0.0
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 0,
+        "validRequestsUnanswered": 3,
+        "unexpectedToolTurns": 0,
+        "unexpectedSuccessfulToolTurns": 0,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.16666666666666666,
+        "mostCommonResponses": [
+          [
+            "I HAVE HEALTH POTION: 50 IN STOCK, IRON SWORD: 20 IN STOCK, ROPE: 30 IN STOCK.",
+            2
+          ],
+          [
+            "YOU HAVE 100 GOLD.",
+            2
+          ],
+          [
+            "Hi!",
+            1
+          ],
+          [
+            "Arin",
+            1
+          ],
+          [
+            "What do you like about it?",
+            1
+          ],
+          [
+            "I was saying hello.",
+            1
+          ],
+          [
+            "YOU BOUGHT 10 ROPE FOR 30 GOLD. YOUR BALANCE IS 70 GOLD.",
+            1
+          ],
+          [
+            "YOU BOUGHT 10 ROPE FOR 30 GOLD. YOUR BALANCE IS 40 GOLD.",
+            1
+          ],
+          [
+            "YOU ARE AT VILLAGE MARKET.",
+            1
+          ],
+          [
+            "I could not update or retrieve that memory.",
+            1
+          ]
+        ],
+        "replyP95Milliseconds": 3981.9142,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.0,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 196.39453125,
+          "replyAllocatedP95Bytes": 44133304,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "baseline": {
+        "turns": 12,
+        "tool": {
+          "correct": 3,
+          "applicable": 10,
+          "accuracy": 0.3
+        },
+        "completion": {
+          "correct": 3,
+          "applicable": 10,
+          "accuracy": 0.3
+        },
+        "memory": {
+          "correct": 0,
+          "applicable": 1,
+          "accuracy": 0.0
+        },
+        "categories": {
+          "development": {
+            "tool": {
+              "correct": 3,
+              "applicable": 10,
+              "accuracy": 0.3
+            },
+            "completion": {
+              "correct": 3,
+              "applicable": 10,
+              "accuracy": 0.3
+            },
+            "memory": {
+              "correct": 0,
+              "applicable": 1,
+              "accuracy": 0.0
+            }
+          }
+        },
+        "unintendedMutations": 0,
+        "authoritativeAlterations": 0,
+        "possibleUnsupportedClaims": 0,
+        "validRequestsUnanswered": 7,
+        "unexpectedToolTurns": 0,
+        "unexpectedSuccessfulToolTurns": 0,
+        "memoryChangesOutsideExpectedOperations": 0,
+        "errors": 0,
+        "repetitionFraction": 0.08333333333333333,
+        "mostCommonResponses": [
+          [
+            "IRON SWORD COSTS 25 GOLD.",
+            2
+          ],
+          [
+            "hiange.",
+            1
+          ],
+          [
+            "I said.",
+            1
+          ],
+          [
+            "What do you like to do for fun?",
+            1
+          ],
+          [
+            "That sounds like a nice sunday",
+            1
+          ],
+          [
+            "I HAVE HEALTH POTION: 50 IN STOCK, IRON SWORD: 20 IN STOCK, ROPE: 30 IN STOCK.",
+            1
+          ],
+          [
+            "YOU CARRY 1 HEALTH POTION, 2 ROPE.",
+            1
+          ],
+          [
+            "YOU HAVE 100 GOLD.",
+            1
+          ],
+          [
+            "I have not taken that action. Please clarify your request.",
+            1
+          ],
+          [
+            "What do you like to discuss?",
+            1
+          ],
+          [
+            "Available tools: balance, buy, capabilities, current location, inventory, location, memory delete, memory search, memory upsert, persona, price, sell, wares, world fact.",
+            1
+          ]
+        ],
+        "replyP95Milliseconds": 5094.2142,
+        "automatedQualityPassed": false,
+        "freeResponseRepetitionFraction": 0.0,
+        "runtimeResources": {
+          "maxSampledIncrementalResidentMiB": 196.03125,
+          "replyAllocatedP95Bytes": 33512576,
+          "note": "One loaded Brain, sequential real replies, process resident memory sampled after each reply relative to the pre-load process. Includes retained scratch and execution journals; not a within-call allocation peak."
+        },
+        "metricDefinitions": {
+          "tool": "One proposed call with the exact expected name and complete argument map, without a veto; applicable labeled tool turns only.",
+          "completion": "Exact call succeeds and its authoritative reply is not omitted by the display limit. Social relevance requires conversation review.",
+          "memory": "Expected memory call plus resulting records, ownership, polarity, source evidence and recall content; applicable memory turns only.",
+          "repetition": "Duplicate displayed responses divided by displayed turns. Includes legitimate repeated typed answers; free-response repetition is also reported.",
+          "latency": "End-to-end Brain.Reply time, including packing, constrained decoding and tools; cold first replies are retained."
+        },
+        "releaseEligible": false,
+        "humanReview": "Two independent human reviews remain required"
+      },
+      "pairedByCategory": {
+        "exactTool": {
+          "applicable": 10,
+          "families": 1,
+          "candidate": 0.7,
+          "baseline": 0.3,
+          "difference95Interval": [
+            0.4,
+            0.4
+          ]
+        },
+        "completed": {
+          "applicable": 10,
+          "families": 1,
+          "candidate": 0.7,
+          "baseline": 0.3,
+          "difference95Interval": [
+            0.4,
+            0.4
+          ]
+        }
+      }
+    }
+  },
+  "training": {
+    "status": "COMPLETE_NOT_PROMOTED",
+    "updates": 1200,
+    "elapsedSeconds": 751.9990961002186,
+    "limits": {
+      "updates": 1200,
+      "seconds": 900,
+      "batch": 32,
+      "microbatch": 4,
+      "seed": 42
+    },
+    "validation": [
+      {
+        "step": 300,
+        "exact": 0,
+        "rows": 96,
+        "tokenAccuracy": 0.7835714285714286,
+        "loss": 1.4731424467904226
+      },
+      {
+        "step": 600,
+        "exact": 0,
+        "rows": 96,
+        "tokenAccuracy": 0.7842857142857143,
+        "loss": 1.4931412778581892
+      },
+      {
+        "step": 900,
+        "exact": 0,
+        "rows": 96,
+        "tokenAccuracy": 0.785,
+        "loss": 1.4825383186340333
+      },
+      {
+        "step": 1200,
+        "exact": 0,
+        "rows": 96,
+        "tokenAccuracy": 0.7892857142857143,
+        "loss": 1.4730170004708427
+      }
+    ],
+    "sampler": {
+      "calls": 0.5,
+      "memory": 0.15,
+      "social": 0.2,
+      "continuation": 0.05,
+      "public": 0.1
+    },
+    "poolRows": {
+      "calls": 1164,
+      "memory": 43,
+      "social": 400,
+      "continuation": 1565,
+      "public": 1668
+    },
+    "draws": {
+      "calls": 19170,
+      "memory": 5735,
+      "social": 7790,
+      "continuation": 1884,
+      "public": 3821
+    },
+    "modelSha256": "04c4506f1cf82474e138975c56005c1e240803ebc565eb3f4f0d204b642eab8f",
+    "fingerprint": "c910eb30266c4083aaf4f0c703b48bff5023847edf6ebfd4eff40b350fa2bbb8"
+  },
+  "storageBytes": 11337224490
+}

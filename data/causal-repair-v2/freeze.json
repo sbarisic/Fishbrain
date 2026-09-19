@@ -1,0 +1,6 @@
+{
+  "corpusSha256": "9d60f164d5fae0b0a6bc689113f31019f4d11665a90216f0bf1c80f515ab1592",
+  "plansSha256": "a32e4d2ce2f2857a458213771f77615988a77ce5a6946ad24495c6f219e789fa",
+  "challengeSha256": "25d86fa9dc9b0090c330cee8d7068f284eb79fccded8a6df18488dcde2a0fd08",
+  "promptFormat": "COMPACT_TOOL_HISTORY_V2"
+}

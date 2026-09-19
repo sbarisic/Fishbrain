@@ -7,13 +7,18 @@ agenda, or learned memory-selection system.
 
 **No replacement model has been promoted.** Historical `.fbm` candidates remain
 available with their matching legacy runtime. The new runtime accepts only causal
-V1 `.fbc` artifacts. See [the causal implementation and pilot](CAUSAL_MODEL.md)
+artifacts bound to the runtime's compact V2 prompt format. Older causal
+weights still require their preserved matching package. See [the causal implementation and pilot](CAUSAL_MODEL.md)
 for the architecture, commands and safeguards, and [the measured pilot results](CAUSAL_RESULTS.md)
 for quality, resources and paired conversations.
 
 A later [focused data-repair check](data/causal-repair-v1/RESULTS.md) improves the
 reported shop conversation and identifies lost reference context in packed inputs.
 It also remains unpromoted; use its separate test command to inspect that candidate.
+
+The [second repair](data/causal-repair-v2/README.md) fixes prompt context loss and
+polite transaction validation, adds authored conversations, and uses a separate
+bounded training run. It does not replace the shipped model.
 
 ## Build and test
 

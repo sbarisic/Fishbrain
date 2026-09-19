@@ -30,8 +30,7 @@ try
                 playerSequences.Add(messages[^1].Sequence);
                 if ((step.RequiredSteps ?? []).Any(i => i < 0 || i >= playerSequences.Count))
                     throw new InvalidDataException("Required history must reference an existing player step.");
-                var requiredSequences = step.RequiredSteps is null ? playerSequences.ToArray()
-                    : step.RequiredSteps.Select(i => playerSequences[i]).ToArray();
+                var requiredSequences = (step.RequiredSteps ?? []).Select(i => playerSequences[i]).ToArray();
                 var teacherCalls = step.Calls ?? (step.Call is null ? [] : [step.Call]);
                 if (teacherCalls.Length > 0)
                 {

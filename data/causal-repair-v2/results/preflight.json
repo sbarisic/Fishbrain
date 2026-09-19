@@ -1,0 +1,20 @@
+{
+  "status": "PASS",
+  "parityErrors": {
+    "full": 4.349438476580758e-05,
+    "gpu": 4.38690185546875e-05,
+    "cached": 8.059509277735799e-06,
+    "prefilled": 1.9028076170712893e-05
+  },
+  "fixture": {
+    "exact": 16,
+    "rows": 16,
+    "tokenAccuracy": 1.0,
+    "loss": 0.0007719737471607508
+  },
+  "updates": 40,
+  "elapsedSeconds": 23.36783459968865,
+  "validationSha256": "df3192b04d24f22913b3f5a8715242788b5ce621cde106e7d5e722b9234127be",
+  "fixtureWeightsDiscarded": true,
+  "note": "Teacher-forced overfit verifies learnability only, not conversation quality."
+}

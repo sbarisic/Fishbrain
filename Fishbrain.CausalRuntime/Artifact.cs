@@ -5,7 +5,7 @@ using System.Text.Json;
 namespace Fishbrain;
 
 internal sealed record CausalHeader(string Architecture, CausalConfig Config, BpeDefinition Tokenizer, ToolSchema[] Tools,
-    WeightShape[] Parameters, string TrainingFingerprint, int Updates, string Phase, JsonElement Training);
+    WeightShape[] Parameters, string TrainingFingerprint, int Updates, string Phase, JsonElement Training, string? PromptFormat = null);
 internal static class CausalArtifact
 {
     internal static readonly byte[] Magic = "FISHBRAIN CAUSAL V1\n"u8.ToArray();
@@ -33,6 +33,8 @@ internal static class CausalArtifact
             header.TrainingFingerprint.Any(c => !Uri.IsHexDigit(c)) || header.Config is null || header.Tokenizer is null || header.Parameters is null ||
             header.Tools is null || header.Training.ValueKind != JsonValueKind.Object || header.Updates < 0 || string.IsNullOrWhiteSpace(header.Phase))
             throw new InvalidDataException("Invalid causal architecture or training binding.");
+        if (header.PromptFormat != PromptPacker.Format)
+            throw new InvalidDataException("Model prompt format differs from this runtime. Use the model's preserved matching package; repacking requires a separately trained candidate.");
         header.Config.Validate(); var tokenizer = new ByteBpe(header.Tokenizer);
         if (tokenizer.Count != header.Config.Vocabulary) throw new InvalidDataException("Tokenizer and model vocabulary differ.");
         var shapes = CausalNetwork.Layout(header.Config).ToArray();

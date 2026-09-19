@@ -1,0 +1,65 @@
+{
+  "status": "COMPLETE_NOT_PROMOTED",
+  "updates": 1200,
+  "elapsedSeconds": 751.9990961002186,
+  "limits": {
+    "updates": 1200,
+    "seconds": 900,
+    "batch": 32,
+    "microbatch": 4,
+    "seed": 42
+  },
+  "validation": [
+    {
+      "step": 300,
+      "exact": 0,
+      "rows": 96,
+      "tokenAccuracy": 0.7835714285714286,
+      "loss": 1.4731424467904226
+    },
+    {
+      "step": 600,
+      "exact": 0,
+      "rows": 96,
+      "tokenAccuracy": 0.7842857142857143,
+      "loss": 1.4931412778581892
+    },
+    {
+      "step": 900,
+      "exact": 0,
+      "rows": 96,
+      "tokenAccuracy": 0.785,
+      "loss": 1.4825383186340333
+    },
+    {
+      "step": 1200,
+      "exact": 0,
+      "rows": 96,
+      "tokenAccuracy": 0.7892857142857143,
+      "loss": 1.4730170004708427
+    }
+  ],
+  "sampler": {
+    "calls": 0.5,
+    "memory": 0.15,
+    "social": 0.2,
+    "continuation": 0.05,
+    "public": 0.1
+  },
+  "poolRows": {
+    "calls": 1164,
+    "memory": 43,
+    "social": 400,
+    "continuation": 1565,
+    "public": 1668
+  },
+  "draws": {
+    "calls": 19170,
+    "memory": 5735,
+    "social": 7790,
+    "continuation": 1884,
+    "public": 3821
+  },
+  "modelSha256": "04c4506f1cf82474e138975c56005c1e240803ebc565eb3f4f0d204b642eab8f",
+  "fingerprint": "c910eb30266c4083aaf4f0c703b48bff5023847edf6ebfd4eff40b350fa2bbb8"
+}

@@ -1,0 +1,101 @@
+{
+  "poolRows": {
+    "calls": 1164,
+    "memory": 43,
+    "social": 400,
+    "continuation": 1565,
+    "public": 1668
+  },
+  "weights": {
+    "calls": 0.5,
+    "memory": 0.15,
+    "social": 0.2,
+    "continuation": 0.05,
+    "public": 0.1
+  },
+  "mostFrequentTargets": [
+    [
+      "{\"type\":\"tool_call\",\"name\":\"GET_BALANCE\",\"arguments\":{}}",
+      0.11125429553264572
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"NAME\"}}",
+      0.08848797250859082
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}",
+      0.024054982817869393
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}",
+      0.021907216494845345
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"ROPE\"}}",
+      0.021477663230240536
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"GET_CURRENT_LOCATION\",\"arguments\":{}}",
+      0.020618556701030917
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"OCCUPATION\"}}",
+      0.016752577319587632
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_INVENTORY\",\"arguments\":{}}",
+      0.01460481099656358
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"BUY\",\"arguments\":{\"ITEM\":\"ROPE\",\"QUANTITY\":2}}",
+      0.014175257731958768
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"MEMORY_SEARCH\",\"arguments\":{\"SUBJECT\":\"PLAYER\",\"PREDICATE\":\"NAME\"}}",
+      0.013953488372093023
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}",
+      0.013316151202749146
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"READ_PERSONA\",\"arguments\":{\"FIELD\":\"HOME\"}}",
+      0.012886597938144334
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}",
+      0.012457044673539523
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"INN\"}}",
+      0.0115979381443299
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"CASTLE\"}}",
+      0.010738831615120278
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"SELL\",\"arguments\":{\"ITEM\":\"ROPE\",\"QUANTITY\":1}}",
+      0.010309278350515467
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"YOU HAVE 100 GOLD.\"}",
+      0.007651757188498435
+    ],
+    [
+      "{\"type\":\"text\",\"text\":\"Of course.\"}",
+      0.007479233226837069
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"MEMORY_SEARCH\",\"arguments\":{\"SUBJECT\":\"PLAYER\",\"PREDICATE\":\"HOME\"}}",
+      0.0069767441860465115
+    ],
+    [
+      "{\"type\":\"tool_call\",\"name\":\"MEMORY_UPSERT\",\"arguments\":{\"ID\":\"NEW\",\"SUBJECT\":\"PLAYER\",\"PREDICATE\":\"HOME\",\"VALUE\":\"Cedar Hollow\",\"POLARITY\":true,\"SOURCE_TURN\":0,\"QUOTE\":\"My home is Cedar Hollow.\"}}",
+      0.0069767441860465115
+    ]
+  ],
+  "systemTokensBefore": 558,
+  "systemTokensAfter": 382,
+  "note": "Effective per-row sampling probability; repeated typed responses are included. Augmentation identity comes from the canonical frozen plans.jsonl."
+}

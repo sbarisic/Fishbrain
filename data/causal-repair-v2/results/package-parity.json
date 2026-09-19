@@ -1,0 +1,9 @@
+{
+  "status": "PASS",
+  "displayedRepliesIdentical": true,
+  "inferenceAssemblyIdentical": true,
+  "modelSha256": "04c4506f1cf82474e138975c56005c1e240803ebc565eb3f4f0d204b642eab8f",
+  "storageBytes": 11408899942,
+  "toolOutcomesAndWorldStateIdentical": true,
+  "turns": 10
+}

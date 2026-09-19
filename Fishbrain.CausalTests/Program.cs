@@ -44,6 +44,34 @@ foreach (var text in new[] { "Buy 2 rope. No, wait!", "Buy 2 rope. I changed my 
     Check(Brain.ActionVeto(text) is not null, "Trailing cancellation or illustrative command escaped the veto");
 Check(Brain.ActionVeto("Buy 2 rope please.") is null, "Affirmative veto");
 ReplyRequest Request(string text, long seq = 0) => new("test", "turn", [new(MessageRole.Player, text, seq)], NpcPersona.Default, Tools: registry);
+foreach (var text in new[] { "I would like to buy 10 rope", "I'd like to buy ten rope", "Sell me 10 rope", "Please sell me ten rope" })
+{
+    Check(Brain.ActionVeto(text) is null, "Polite affirmative incorrectly vetoed");
+    Check(DemoAuthorization.Allow(Request(text), new("BUY", new Dictionary<string, string> { ["ITEM"] = "ROPE", ["QUANTITY"] = "10" }, "auth")), "Affirmative purchase authorization");
+    Check(!DemoAuthorization.Allow(Request(text), new("SELL", new Dictionary<string, string> { ["ITEM"] = "ROPE", ["QUANTITY"] = "10" }, "auth")), "Purchase misauthorized as sale");
+}
+foreach (var text in new[] { "I would like to buy 10 rope if it is free", "I would like to buy 10 rope. Nevermind.", "I would like to buy 10 rope as an example" })
+    Check(Brain.ActionVeto(text) is not null, "Polite prefix bypassed conditional/cancellation veto");
+foreach (var quantity in new[] { "-1", "0", "invalid", "999999999999", "+1", " 1", "1 " })
+    Check(!DemoAuthorization.Allow(Request("Buy 10 rope"), new("BUY", new Dictionary<string, string> { ["ITEM"] = "ROPE", ["QUANTITY"] = quantity }, "auth")), "Invalid quantity authorization");
+var compactCall = new ChatMessage(MessageRole.AssistantToolCall, calls[2], 1, "BUY");
+using (var compact = JsonDocument.Parse(PromptPacker.MessageText(compactCall)))
+    Check(compact.RootElement[1].GetProperty("QUANTITY").GetInt32() == 2, "Compact history changed tool arguments");
+Check(PromptPacker.MessageText(new(MessageRole.Player, calls[2], 0)) == calls[2], "Player tool-looking text acquired authority");
+var contextTokenizer = new ByteBpe(JsonDefaults.Read<BpeDefinition>(File.ReadAllText("data/causal-v1/tokenizer.json")));
+var priceHistory = new ChatMessage[] {
+    new(MessageRole.Player, "What does an iron sword cost?", 0),
+    new(MessageRole.AssistantToolCall, "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}", 1, "LOOKUP_PRICE"),
+    new(MessageRole.ToolResult, "{\"name\":\"LOOKUP_PRICE\",\"result\":{\"success\":true,\"fields\":{\"ITEM\":\"IRON SWORD\",\"PRICE\":\"25\",\"CURRENCY\":\"GOLD\"},\"errorCode\":null}}", 2, "LOOKUP_PRICE"),
+    new(MessageRole.Assistant, "IRON SWORD COSTS 25 GOLD.", 3),
+    new(MessageRole.Player, "I am comparing prices.", 4),
+    new(MessageRole.Assistant, "That makes sense.", 5),
+    new(MessageRole.Player, "Could you repeat that price?", 6) };
+var productionPacked = PromptPacker.Pack(contextTokenizer, new(), Request("ignored") with { Messages = priceHistory }, []);
+Check(productionPacked.Retained.Count == priceHistory.Length, "Production packing lost the price antecedent after a distraction");
+Check(productionPacked.Tokens.Length + 256 <= 1024, "Production packing exceeded reserved output space");
+var resultData = PromptPacker.MessageText(priceHistory[2]);
+Check(resultData.Contains("25", StringComparison.Ordinal) && resultData.Contains("IRON SWORD", StringComparison.Ordinal), "Compact result changed authoritative values");
 GameToolResult Invoke(string name, Dictionary<string, string> args, ReplyRequest req, string key)
 {
     registry.TryGet(name, out var tool); return GameToolRegistry.InvokeValidated(tool, new(name, args, key), new(req, req.Messages));
@@ -146,7 +174,20 @@ using (var blockedCache = new CausalNetwork.Session(cacheModel))
     expected = cacheModel.Forward(new(false), cacheModel.Parameters(), prefix.Append(13).ToArray(), true).Data;
     Check(blockedCache.Next(13).Zip(expected).Max(p => Math.Abs(p.First - p.Second)) < .00001f, "Decoding after block prefill lost past keys or positions");
 }
-var header = new CausalHeader(CausalArtifact.Architecture, config, definition, subset.Schemas.ToArray(), network.Shapes.ToArray(), new string('0', 64), 0, "test", JsonSerializer.SerializeToElement(new { }));
+var header = new CausalHeader(CausalArtifact.Architecture, config, definition, subset.Schemas.ToArray(), network.Shapes.ToArray(), new string('0', 64), 0, "test", JsonSerializer.SerializeToElement(new { }), PromptPacker.Format);
+foreach (var (utterance, expectedBalance) in new[] { ("sell me 10 rope", 70), ("I would like to buy 10 rope", 70),
+    ("I would like to buy 10 rope if it is free", 100), ("Sell me 10 rope. Nevermind.", 100) })
+{
+    var isolatedWorld = new DemoWorldState();
+    DemoGameTools.CreateMerchant(isolatedWorld).TryGet("BUY", out var isolatedBuy);
+    var isolatedTools = new GameToolRegistry([isolatedBuy]);
+    var count = 0;
+    var isolatedBrain = Brain.Fixture(header with { Tools = isolatedTools.Schemas.ToArray() }, network, tokenizer, isolatedTools, new(),
+        (_, _, _) => (count++ == 0 ? calls[2].Replace(":2}", ":10}") : calls[0], 1), DemoAuthorization.Allow);
+    var actual = isolatedBrain.Reply(Request(utterance) with { Tools = isolatedTools });
+    Check(isolatedWorld.Balance == expectedBalance, "Complete execution pipeline mishandled polite or cancelled purchase");
+    Check(expectedBalance == 100 || actual.ToolOutcomes.Single().Result?.Success == true, "Authorized purchase did not complete");
+}
 Brain Script(params string[] outputs)
 {
     var counter = 0; return Brain.Fixture(header, network, tokenizer, subset, new(), (_, _, _) => (outputs[Math.Min(counter++, outputs.Length - 1)], 1), (_, _) => true);
@@ -221,6 +262,8 @@ try
         writer.Flush(); var content = stream.ToArray(); File.WriteAllBytes(temporaryArtifact, content.Concat(System.Security.Cryptography.SHA256.HashData(content)).ToArray());
     }
     Save(header); Check(CausalArtifact.Load(temporaryArtifact).Model.ParameterCount == network.ParameterCount, "Artifact round trip");
+    Save(header with { PromptFormat = null }); Reject(() => CausalArtifact.Load(temporaryArtifact), "Unbound prompt format accepted");
+    Save(header);
     var corrupt = File.ReadAllBytes(temporaryArtifact); corrupt[^40] ^= 1; File.WriteAllBytes(temporaryArtifact, corrupt);
     Reject(() => CausalArtifact.Load(temporaryArtifact), "Corrupt weights accepted");
     Save(header with { Parameters = [] }); Reject(() => CausalArtifact.Load(temporaryArtifact), "Wrong parameter layout accepted");

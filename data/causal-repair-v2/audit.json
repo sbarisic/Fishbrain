@@ -1,0 +1,28 @@
+{
+  "authoredEpisodes": 211,
+  "authoredFamilies": 73,
+  "distinctSocialEpisodes": 30,
+  "augmentationEpisodes": 150,
+  "replayedEpisodes": 2048,
+  "rows": 4840,
+  "pools": {
+    "social": 324,
+    "context": 1005,
+    "memory": 56,
+    "safety": 60,
+    "public": 1668,
+    "tools": 1691,
+    "repair": 36
+  },
+  "conflictingPackedCalls": [],
+  "nativePacking": {
+    "accepted": 4840,
+    "excluded": {
+      "REQUIRED_HISTORY_EVICTED": 593,
+      "RESPONSE_TOO_LONG": 21
+    }
+  },
+  "maxPromptTokens": 768,
+  "promptFormat": "COMPACT_TOOL_HISTORY_V2",
+  "storageBytes": 10654232265
+}

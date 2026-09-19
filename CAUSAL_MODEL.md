@@ -6,6 +6,12 @@ This is a bounded experiment, not a released conversational assistant. No model
 is promoted automatically. Previous models and evidence remain preserved.
 Reports live in data/causal-v1; large files remain in data/training/causal-v1.
 
+The current runtime requires promptFormat COMPACT_TOOL_HISTORY_V2 in the artifact
+header. Original causal V1 and first-repair weights must use their preserved
+runtime packages. The numerical architecture is unchanged. See
+[the second repair](data/causal-repair-v2/README.md) for the compact input format,
+history-dependency supervision, and bounded experiment commands.
+
 ## Model
 
 | Property | Value |

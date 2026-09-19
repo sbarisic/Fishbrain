@@ -1,0 +1,53 @@
+{
+  "baseSha256": "d393ec32f33872559056c77d46a8303ba1417010b46fce289d0cf807d0e1b092",
+  "freeze": {
+    "corpusSha256": "9d60f164d5fae0b0a6bc689113f31019f4d11665a90216f0bf1c80f515ab1592",
+    "plansSha256": "a32e4d2ce2f2857a458213771f77615988a77ce5a6946ad24495c6f219e789fa",
+    "challengeSha256": "25d86fa9dc9b0090c330cee8d7068f284eb79fccded8a6df18488dcde2a0fd08",
+    "promptFormat": "COMPACT_TOOL_HISTORY_V2"
+  },
+  "limits": {
+    "updates": 1200,
+    "seconds": 900,
+    "batch": 32,
+    "microbatch": 4,
+    "seed": 42
+  },
+  "sampler": {
+    "calls": 0.5,
+    "memory": 0.15,
+    "social": 0.2,
+    "continuation": 0.05,
+    "public": 0.1
+  },
+  "preflight": {
+    "status": "PASS",
+    "parityErrors": {
+      "full": 4.349438476580758e-05,
+      "gpu": 4.38690185546875e-05,
+      "cached": 8.059509277735799e-06,
+      "prefilled": 1.9028076170712893e-05
+    },
+    "fixture": {
+      "exact": 16,
+      "rows": 16,
+      "tokenAccuracy": 1.0,
+      "loss": 0.0007719737471607508
+    },
+    "updates": 40,
+    "elapsedSeconds": 23.36783459968865,
+    "validationSha256": "df3192b04d24f22913b3f5a8715242788b5ce621cde106e7d5e722b9234127be",
+    "fixtureWeightsDiscarded": true,
+    "note": "Teacher-forced overfit verifies learnability only, not conversation quality."
+  },
+  "code": {
+    "E:\\Projects\\Fishbrain\\scripts\\causal\\context_train.py": "2ffce7d62e6b185ffac386bfdfe47c91398bfcdc873ba8eb45656675e4434e56",
+    "scripts\\causal\\context_data.py": "8008bcff0bf0d54819e61e37cff4fde65b6c46a390b8dd884959d808a3e47fe1",
+    "scripts\\causal\\model.py": "81adb4d24f9b4225ec5fd0a5e40832a55a89a688d67f08e96c37a8537ab233ad",
+    "scripts\\causal\\repair_train.py": "2df89af549cad3f47004df1c18c281b10f961e5e7e57eed50ca5c872a4742f02",
+    "Fishbrain.CausalRuntime\\PromptPacker.cs": "d19f6389cb5968086ad9216f2754f43c87a188db334ab988aa582b6c0c6c97bd",
+    "Fishbrain.CausalCli\\Program.cs": "8fb3f9347cdebd32a7a1c1e48b84d8854903ccf88d4ef7cb0ca43cf27acffc64",
+    "Fishbrain.CausalRuntime\\Brain.cs": "ccff9fdf9a57ffd71a381f5b2d591d63df6fa1e1643bd4187ef976d9405caba4",
+    "Fishbrain.CausalDemo\\Authorization.cs": "de0add1106b4c8f965670fc550fefb08f877f3e5b8f6ad20a1423e6294a3896d"
+  }
+}

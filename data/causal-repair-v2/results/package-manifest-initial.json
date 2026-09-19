@@ -1,0 +1,19 @@
+{
+  "status": "EXPERIMENTAL_NOT_PROMOTED",
+  "modelSha256": "04c4506f1cf82474e138975c56005c1e240803ebc565eb3f4f0d204b642eab8f",
+  "files": {
+    "candidate.fbc": "04c4506f1cf82474e138975c56005c1e240803ebc565eb3f4f0d204b642eab8f",
+    "Fishbrain.CausalDemo.deps.json": "cd61a186a97bd4004abf54a460e1d036e946ecdd7f1fcd18da6dbcdd61460d3d",
+    "Fishbrain.CausalDemo.dll": "688410a2f73d36c6a2d24ee9a58dac26d19df046393217264f07113c43d6284a",
+    "Fishbrain.CausalDemo.pdb": "705335626e7b009fa6fec76743970cb10af4dd35fa454a12319bd1f04d8d31da",
+    "Fishbrain.CausalRuntime.deps.json": "6e7ce87a42adcb8d116fab23d5ab4f6c2d69fab5cc301a0388f515d3290a0731",
+    "Fishbrain.CausalRuntime.dll": "a41381075d0361efed9b07cd11892b6e3e0f6bca2c70af2a1d24859279a24e36",
+    "Fishbrain.CausalRuntime.pdb": "2bb2701e5a3d232dbd9eaa2218a791fa85032207142f19a6cebe846d6da3aa3f",
+    "Fishbrain.deps.json": "4b3dbbf44394a54446188f1bae4b9fc15b8573161eaf972af1d6d99a4833b949",
+    "Fishbrain.dll": "37ffa3ccef207062498bd9b994f7b9677bc51fd3de0e53ebffc23ea844bc62de",
+    "Fishbrain.exe": "99f4eff8594779bb7eb4668902393a68efa058e4a5ed0e2692dba1e6ecc7dfd8",
+    "Fishbrain.pdb": "4cbb137d712cd6595f2380126982630379693d351b05325ee741f515836a4b83",
+    "Fishbrain.runtimeconfig.json": "c230a317a54dd960bcbeb5f347f52e18dc665a26f7efda2159fced9a5ac7e097"
+  },
+  "smokeSha256": "9886ca4769da0ef9af17426993cb6edd0ef428522a94ad18ce5d8ba319cb8b65"
+}

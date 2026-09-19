@@ -1,0 +1,15 @@
+{
+  "status": "PREPARED_NOT_TRAINED",
+  "episodes": 16,
+  "families": 16,
+  "rows": 166,
+  "packing": {
+    "accepted": 166,
+    "excluded": {
+      "REQUIRED_HISTORY_EVICTED": 7
+    }
+  },
+  "sourceSha256": "6c104039c64e50f21e93bccfd438bff16c5c2c3132cc388f59c7af03e2b0c65b",
+  "packedSha256": "f885718930fbbc13fe23e25663601517febdf47c99b3c3dc898e54d43f90058c",
+  "note": "Authored after the V2 smoke test. Does not alter the frozen corpus, candidate, or held-out evaluation. No further training authorized by this script."
+}

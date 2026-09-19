@@ -124,6 +124,8 @@ public sealed class Brain
     internal static string? ActionVeto(string text)
     {
         text = text.Replace('’', '\'');
+        // This polite affirmative form is not a conditional. All remaining veto terms still apply.
+        text = Regex.Replace(text, "^\\s*(?:please\\s+)?I would like to\\b", "I want to", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         // Veto only: this never chooses a tool or supplies arguments.
         return Regex.IsMatch(text, "(?:\\b(?:not|never|don't|dont|do not|won't|wouldn't|can't|cannot|cancel|stop|nevermind|never mind|forget it|scratch that|hold off|withdraw|retract|" +
             "if|unless|when|until|provided|assuming|suppose|imagine|pretend|hypothetical|hypothetically|theoretical|theoretically|in theory|" +

@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "checkpointSha256": "6901346a38e344d4eeef9b197d6d1eb8f6f5b8df19ad9ab62a49cfee84362de9",
+  "modelSha256": "04c4506f1cf82474e138975c56005c1e240803ebc565eb3f4f0d204b642eab8f",
+  "updates": 1200,
+  "parameters": 17701248,
+  "allWeightsBitwiseEqual": true,
+  "optimizerStepsMatch": true,
+  "rngAndSamplerStatePresent": true,
+  "samplerRestoreMatches": true,
+  "trainingElapsedSeconds": 751.9990961002186,
+  "storageBytes": 11336858385,
+  "note": "Verified saved state and export; did not execute an interrupted training resume."
+}

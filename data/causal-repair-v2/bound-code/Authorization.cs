@@ -14,7 +14,7 @@ public static class DemoAuthorization
         if (!invocation.Arguments.TryGetValue("ITEM", out var item) || !invocation.Arguments.TryGetValue("QUANTITY", out var quantity)) return false;
         // Require the quantity and entity together so a multi-clause reply cannot swap arguments.
         var words = new[] { "zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten" };
-        if (!int.TryParse(quantity, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var number) || number <= 0) return false;
+        if (!int.TryParse(quantity, out var number) || number <= 0) return false;
         var count = quantity == "1" ? "(?:1|one|a|an)" : number < words.Length ? "(?:" + quantity + "|" + words[number] + ")" : Regex.Escape(quantity);
         return Regex.IsMatch(text, verb + "\\s+" + count + "\\s+" + Regex.Escape(item) + "s?\\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     }

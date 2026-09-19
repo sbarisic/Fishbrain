@@ -1,0 +1,14 @@
+{
+  "status": "PASS",
+  "exactConversationLeakage": [],
+  "nearConversationLeakage": [],
+  "mixedTextToolTargets": [],
+  "finalUtteranceOverlap": {
+    "data\\causal-repair-v2\\challenge.json": 0,
+    "data\\causal-v1\\challenge.json": 2
+  },
+  "dependencyTargets": 3726,
+  "lostDependencies": 0,
+  "corpusSha256": "9d60f164d5fae0b0a6bc689113f31019f4d11665a90216f0bf1c80f515ab1592",
+  "note": "Final-utterance overlap is reported separately. Different complete histories are contextual tests, not automatically leakage."
+}
