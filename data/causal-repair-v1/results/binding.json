@@ -1,0 +1,32 @@
+{
+  "baseSha256": "d41434a0a512ff43a73b5441e981d2023bf33a9d7a0d8cb3c7f4d7c661c14752",
+  "freeze": {
+    "challengeSha256": "ab89d462f22598206d17e5945d18d4f71c9ef95d7be4ac55d42af797c6046758",
+    "plansSha256": "4e7e6ae7c940cfe1105b892a2cb87e88e35bbca721945964ecf5fdc7c37357a2",
+    "corpusSha256": "4549372fa201d0b6cb1eb281613ff8f7ab11fcbd603d5b0eb1c7c0c17efe0a0d",
+    "seed": 42
+  },
+  "limits": {
+    "overfitUpdates": 200,
+    "overfitSeconds": 120,
+    "focusedUpdates": 400,
+    "focusedSeconds": 600,
+    "batch": 32,
+    "microbatch": 4,
+    "seed": 42
+  },
+  "sampler": {
+    "calls": 0.5,
+    "repair": 0.2,
+    "continuations": 0.1,
+    "public": 0.1,
+    "memory": 0.1
+  },
+  "priorCorpusSha256": "d0e214a1c6d19163e4005aa0907af98e7b0642d2d9548778a3e1d100a749890f",
+  "code": {
+    "E:\\Projects\\Fishbrain\\scripts\\causal\\repair_train.py": "2df89af549cad3f47004df1c18c281b10f961e5e7e57eed50ca5c872a4742f02",
+    "scripts\\causal\\repair_data.py": "e645304c1427038f6fd222e358247dd69daf9343f4c98fcb81510031470519d2",
+    "scripts\\causal\\model.py": "81adb4d24f9b4225ec5fd0a5e40832a55a89a688d67f08e96c37a8537ab233ad",
+    "Fishbrain.CausalRuntime\\PromptPacker.cs": "d570ed10e43657f58dd4b266c53a63112465016af8d16e857f1e516967ff550b"
+  }
+}

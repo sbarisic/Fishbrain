@@ -1,0 +1,697 @@
+{
+  "status": "PREPARATION_FAILED",
+  "originalCorpusSha256": "4549372fa201d0b6cb1eb281613ff8f7ab11fcbd603d5b0eb1c7c0c17efe0a0d",
+  "identicalInputConflictGroups": 4,
+  "conflictingTrainingRows": 40,
+  "lostReferenceRows": [
+    {
+      "row": 2,
+      "id": "repair-0000",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 9,
+      "id": "repair-0003",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 23,
+      "id": "repair-0009",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 44,
+      "id": "repair-0012",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 85,
+      "id": "repair-0018",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 106,
+      "id": "repair-0021",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 147,
+      "id": "repair-0027",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 166,
+      "id": "repair-0030",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 207,
+      "id": "repair-0036",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 226,
+      "id": "repair-0039",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 267,
+      "id": "repair-0045",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 288,
+      "id": "repair-0048",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 329,
+      "id": "repair-0054",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 348,
+      "id": "repair-0057",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 389,
+      "id": "repair-0063",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 409,
+      "id": "repair-0066",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 450,
+      "id": "repair-0072",
+      "split": "validation",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 469,
+      "id": "repair-0075",
+      "split": "validation",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 510,
+      "id": "repair-0081",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 529,
+      "id": "repair-0084",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 570,
+      "id": "repair-0090",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"IRON SWORD\"}}"
+    },
+    {
+      "row": 589,
+      "id": "repair-0093",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_PRICE\",\"arguments\":{\"ITEM\":\"HEALTH POTION\"}}"
+    },
+    {
+      "row": 630,
+      "id": "repair-0099",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}"
+    },
+    {
+      "row": 638,
+      "id": "repair-0100",
+      "split": "train",
+      "sourceSequence": 2,
+      "retainedSequences": [
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}"
+    },
+    {
+      "row": 643,
+      "id": "repair-0101",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}"
+    },
+    {
+      "row": 651,
+      "id": "repair-0102",
+      "split": "train",
+      "sourceSequence": 2,
+      "retainedSequences": [
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}"
+    },
+    {
+      "row": 656,
+      "id": "repair-0103",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_WARES\",\"arguments\":{}}"
+    },
+    {
+      "row": 762,
+      "id": "repair-0119",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}"
+    },
+    {
+      "row": 770,
+      "id": "repair-0120",
+      "split": "train",
+      "sourceSequence": 2,
+      "retainedSequences": [
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}"
+    },
+    {
+      "row": 775,
+      "id": "repair-0121",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}"
+    },
+    {
+      "row": 783,
+      "id": "repair-0122",
+      "split": "train",
+      "sourceSequence": 2,
+      "retainedSequences": [
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}"
+    },
+    {
+      "row": 788,
+      "id": "repair-0123",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LIST_CAPABILITIES\",\"arguments\":{}}"
+    },
+    {
+      "row": 886,
+      "id": "repair-0139",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"INN\"}}"
+    },
+    {
+      "row": 892,
+      "id": "repair-0140",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"INN\"}}"
+    },
+    {
+      "row": 898,
+      "id": "repair-0141",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"INN\"}}"
+    },
+    {
+      "row": 904,
+      "id": "repair-0142",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"MARKET\"}}"
+    },
+    {
+      "row": 910,
+      "id": "repair-0143",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"MARKET\"}}"
+    },
+    {
+      "row": 916,
+      "id": "repair-0144",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"MARKET\"}}"
+    },
+    {
+      "row": 922,
+      "id": "repair-0145",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"CASTLE\"}}"
+    },
+    {
+      "row": 928,
+      "id": "repair-0146",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"CASTLE\"}}"
+    },
+    {
+      "row": 934,
+      "id": "repair-0147",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"CASTLE\"}}"
+    },
+    {
+      "row": 940,
+      "id": "repair-0148",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"HELL\"}}"
+    },
+    {
+      "row": 946,
+      "id": "repair-0149",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"HELL\"}}"
+    },
+    {
+      "row": 952,
+      "id": "repair-0150",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"HELL\"}}"
+    },
+    {
+      "row": 958,
+      "id": "repair-0151",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"ZAGREB\"}}"
+    },
+    {
+      "row": 964,
+      "id": "repair-0152",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"ZAGREB\"}}"
+    },
+    {
+      "row": 970,
+      "id": "repair-0153",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_LOCATION\",\"arguments\":{\"PLACE\":\"ZAGREB\"}}"
+    },
+    {
+      "row": 976,
+      "id": "repair-0154",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"CASTLE\"}}"
+    },
+    {
+      "row": 982,
+      "id": "repair-0155",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"CASTLE\"}}"
+    },
+    {
+      "row": 988,
+      "id": "repair-0156",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"CASTLE\"}}"
+    },
+    {
+      "row": 994,
+      "id": "repair-0157",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"VILLAGE\"}}"
+    },
+    {
+      "row": 1000,
+      "id": "repair-0158",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"VILLAGE\"}}"
+    },
+    {
+      "row": 1006,
+      "id": "repair-0159",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"VILLAGE\"}}"
+    },
+    {
+      "row": 1012,
+      "id": "repair-0160",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"REACTOR\"}}"
+    },
+    {
+      "row": 1018,
+      "id": "repair-0161",
+      "split": "train",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"REACTOR\"}}"
+    },
+    {
+      "row": 1024,
+      "id": "repair-0162",
+      "split": "test",
+      "sourceSequence": 0,
+      "retainedSequences": [
+        4,
+        5,
+        6
+      ],
+      "target": "{\"type\":\"tool_call\",\"name\":\"LOOKUP_WORLD_FACT\",\"arguments\":{\"TOPIC\":\"REACTOR\"}}"
+    }
+  ],
+  "exclusions": {
+    "2": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "9": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "23": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "44": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "85": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "106": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "147": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "166": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "207": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "226": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "267": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "288": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "329": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "348": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "389": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "409": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "630": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "643": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "762": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "775": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "638": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "651": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "770": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "783": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "886": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "892": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "904": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "910": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "922": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "928": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "940": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "946": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "958": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "964": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "976": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "982": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "994": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "1000": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "1012": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "1018": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "450": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "469": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "510": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "529": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "570": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "589": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "656": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "788": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "898": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "916": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "934": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "952": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "970": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "988": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "1006": "REQUIRED_REFERENCE_EXCHANGE_DROPPED",
+    "1024": "REQUIRED_REFERENCE_EXCHANGE_DROPPED"
+  },
+  "cleanRows": 1091,
+  "cleanCorpusSha256": "a780f8cdaf58c6de43e56b2935aa6b52a8244025ef96be7843b5efc443ece01f",
+  "cleanPriorReplaySha256": "3d468238dbd155dfcd829dc4c9ab34703ac5f6d64e305d8ad04d12f2a1c39f4d",
+  "priorConflictGroups": 2,
+  "priorConflictingRows": 4,
+  "cleanItemActionCoverage": {
+    "LOOKUP_PRICE:IRON SWORD": 15,
+    "LOOKUP_PRICE:HEALTH POTION": 15,
+    "LOOKUP_PRICE:ROPE": 23,
+    "BUY:IRON SWORD": 14,
+    "SELL:IRON SWORD": 7,
+    "BUY:HEALTH POTION": 14,
+    "SELL:HEALTH POTION": 7,
+    "BUY:ROPE": 14,
+    "SELL:ROPE": 7
+  },
+  "notes": [
+    "The completed 400-update diagnostic used the original corpus; the historical weights and evidence are preserved.",
+    "Clean files are separately fingerprinted, untrained inputs. They exclude inconsistent tool targets and annotated references whose source exchange was dropped.",
+    "Removing training rows cannot recover missing history at inference. End-to-end reference tests remain failures.",
+    "The original frozen challenge and its expectations are unchanged. Fix context packing before another full pilot.",
+    "Multiple valid social responses are not classified as contradictory tool supervision."
+  ]
+}

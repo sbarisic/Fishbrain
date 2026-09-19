@@ -1,0 +1,73 @@
+OVERFIT 20 {'exact': 8, 'rows': 17, 'tokenAccuracy': 0.9823899371069182, 'loss': 0.10266369436896822}
+OVERFIT 40 {'exact': 6, 'rows': 17, 'tokenAccuracy': 0.9861635220125786, 'loss': 0.026593912884874164}
+OVERFIT 60 {'exact': 16, 'rows': 17, 'tokenAccuracy': 0.9987421383647799, 'loss': 0.010236942899302116}
+OVERFIT 80 {'exact': 17, 'rows': 17, 'tokenAccuracy': 1.0, 'loss': 0.0015063116420646133}
+FOCUSED 100 {'exact': 46, 'rows': 64, 'tokenAccuracy': 0.9904273504273504, 'loss': 0.0495359647172129}
+FOCUSED 200 {'exact': 50, 'rows': 64, 'tokenAccuracy': 0.9924786324786324, 'loss': 0.049339636271325954}
+FOCUSED 300 {'exact': 49, 'rows': 64, 'tokenAccuracy': 0.9928205128205129, 'loss': 0.04218479850098618}
+FOCUSED 400 {'exact': 49, 'rows': 64, 'tokenAccuracy': 0.9924786324786324, 'loss': 0.04040119161717912}
+{
+  "status": "COMPLETE_NOT_PROMOTED",
+  "updates": 400,
+  "elapsedSeconds": 256.3424996994436,
+  "initialValidation": {
+    "exact": 25,
+    "rows": 64,
+    "tokenAccuracy": 0.9473504273504274,
+    "loss": 0.35636117483210616
+  },
+  "validation": [
+    {
+      "step": 100,
+      "trainingLoss": 0.011903351085493341,
+      "exact": 46,
+      "rows": 64,
+      "tokenAccuracy": 0.9904273504273504,
+      "loss": 0.0495359647172129
+    },
+    {
+      "step": 200,
+      "trainingLoss": 0.002784058970064507,
+      "exact": 50,
+      "rows": 64,
+      "tokenAccuracy": 0.9924786324786324,
+      "loss": 0.049339636271325954
+    },
+    {
+      "step": 300,
+      "trainingLoss": 0.002634352220411529,
+      "exact": 49,
+      "rows": 64,
+      "tokenAccuracy": 0.9928205128205129,
+      "loss": 0.04218479850098618
+    },
+    {
+      "step": 400,
+      "trainingLoss": 0.0037134081503609195,
+      "exact": 49,
+      "rows": 64,
+      "tokenAccuracy": 0.9924786324786324,
+      "loss": 0.04040119161717912
+    }
+  ],
+  "poolDraws": {
+    "calls": 6376,
+    "repair": 2602,
+    "continuations": 1283,
+    "public": 1267,
+    "memory": 1272
+  },
+  "modelSha256": "d393ec32f33872559056c77d46a8303ba1417010b46fce289d0cf807d0e1b092",
+  "fingerprint": "5ce3fd94a288a73bfc192a2160e1f1749939fd6455cbad8e474846d0c586f6d6",
+  "limits": {
+    "overfitUpdates": 200,
+    "overfitSeconds": 120,
+    "focusedUpdates": 400,
+    "focusedSeconds": 600,
+    "batch": 32,
+    "microbatch": 4,
+    "seed": 42
+  },
+  "quality": "NOT_YET_EVALUATED",
+  "note": "Focused fine-tuning check from the preserved causal candidate, not a fresh full pilot. No shipped artifact changed."
+}

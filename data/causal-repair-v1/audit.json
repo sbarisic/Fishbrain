@@ -1,0 +1,45 @@
+{
+  "episodes": 181,
+  "families": 81,
+  "heldoutConversations": 38,
+  "rejectedFamilies": {
+    "buy-style-0": "PRIOR_FROZEN_INPUT",
+    "sell-style-0": "PRIOR_FROZEN_INPUT"
+  },
+  "nearDuplicateCrossSplit": [],
+  "entitySubstitutionsAreAugmentation": true,
+  "rows": {
+    "train:tools": 806,
+    "validation:tools": 60,
+    "test:tools": 233,
+    "train:repair": 36,
+    "validation:repair": 4,
+    "test:repair": 8
+  },
+  "itemActionCoverage": {
+    "LOOKUP_PRICE:IRON SWORD": 23,
+    "LOOKUP_PRICE:HEALTH POTION": 23,
+    "LOOKUP_PRICE:ROPE": 23,
+    "BUY:IRON SWORD": 14,
+    "SELL:IRON SWORD": 7,
+    "BUY:HEALTH POTION": 14,
+    "SELL:HEALTH POTION": 7,
+    "BUY:ROPE": 14,
+    "SELL:ROPE": 7
+  },
+  "packing": {
+    "accepted": 1147,
+    "excluded": {
+      "Required input exceeds the model context. Shorten the current utterance, persona, tool declarations or active exchange.": 53
+    }
+  },
+  "sharedFinalUtterancesAcrossSplits": 5,
+  "limitations": [
+    "Authored compositional experiment, not independent human conversations.",
+    "Wording families and complete episodes stay together; shared contextual follow-ups are intentional.",
+    "Existing approved training rows may be replayed; no previous validation/test row is eligible."
+  ],
+  "corpusSha256": "4549372fa201d0b6cb1eb281613ff8f7ab11fcbd603d5b0eb1c7c0c17efe0a0d",
+  "challengeSha256": "ab89d462f22598206d17e5945d18d4f71c9ef95d7be4ac55d42af797c6046758",
+  "combinedStorageBytes": 9977803315
+}

@@ -19,5 +19,6 @@ data/causal-v1/source-notices/*.md -text whitespace=blank-at-eol,blank-at-eof,sp
 # Preserve upstream notices verbatim, including their trailing spaces.
 data/causal-v1/source-notices/* -text whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 data/causal-v1/results/* -text whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+data/causal-repair-v1/** -text whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 # Captured terminal transcripts include the trailing space in the final "> " prompt.
 data/game-teaching/*-chat.txt -text whitespace=-blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

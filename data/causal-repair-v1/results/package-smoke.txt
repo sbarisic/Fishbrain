@@ -1,0 +1,5 @@
+Enter dialogue or an empty line to quit.
+> Hello. How can I help?
+> I was saying hello. What would you like to talk about?
+> Hello. How can I help?
+> 

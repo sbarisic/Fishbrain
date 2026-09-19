@@ -1,0 +1,137 @@
+{
+  "status": "DEVELOPMENT_ONLY_AFTER_TRAINING",
+  "cases": [
+    {
+      "id": "user-shop-history",
+      "category": "development",
+      "steps": [
+        {
+          "player": "Hello",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "What?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Who are you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Where are we?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Do you sell anything?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "What do you sell?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        },
+        {
+          "player": "How much for 1 iron sword?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "fresh-control-0",
+      "category": "development",
+      "steps": [
+        {
+          "player": "How much for 1 iron sword?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "fresh-control-1",
+      "category": "development",
+      "steps": [
+        {
+          "player": "How much is an iron sword?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "fresh-control-2",
+      "category": "development",
+      "steps": [
+        {
+          "player": "What does an iron sword cost?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "fresh-control-3",
+      "category": "development",
+      "steps": [
+        {
+          "player": "What does a rope cost?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "fresh-control-4",
+      "category": "development",
+      "steps": [
+        {
+          "player": "Do you sell anything?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    }
+  ]
+}

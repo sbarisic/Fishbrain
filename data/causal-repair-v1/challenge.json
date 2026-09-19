@@ -1,0 +1,1311 @@
+{
+  "cases": [
+    {
+      "id": "repair-0081",
+      "category": "price-style",
+      "steps": [
+        {
+          "player": "Tell me how much one iron sword sells for here.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that price?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That was a price question, not an order.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Now check the gold I have available.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0082",
+      "category": "buy-style",
+      "steps": [
+        {
+          "player": "Buy 3 iron sword for this trip.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Let us change the subject for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After shopping, remind me of your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Tell me how much one iron sword sells for here.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0083",
+      "category": "sell-style",
+      "steps": [
+        {
+          "player": "Buy 3 iron sword so I can sell it back.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Sell 3 iron sword out of my supplies.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Check what remains in my bag now.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After selling, what work do you do?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0084",
+      "category": "price-style",
+      "steps": [
+        {
+          "player": "Tell me how much one health potion sells for here.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that price?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That was a price question, not an order.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Now check the gold I have available.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0085",
+      "category": "buy-style",
+      "steps": [
+        {
+          "player": "Buy 3 health potion for this trip.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Let us change the subject for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After shopping, remind me of your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Tell me how much one health potion sells for here.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0086",
+      "category": "sell-style",
+      "steps": [
+        {
+          "player": "Buy 3 health potion so I can sell it back.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Sell 3 health potion out of my supplies.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Check what remains in my bag now.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After selling, what work do you do?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0087",
+      "category": "price-style",
+      "steps": [
+        {
+          "player": "Tell me how much one rope sells for here.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that price?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That was a price question, not an order.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Now check the gold I have available.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0088",
+      "category": "buy-style",
+      "steps": [
+        {
+          "player": "Buy 3 rope for this trip.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Let us change the subject for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After shopping, remind me of your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Tell me how much one rope sells for here.",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0089",
+      "category": "sell-style",
+      "steps": [
+        {
+          "player": "Buy 3 rope so I can sell it back.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Sell 3 rope out of my supplies.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Check what remains in my bag now.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After selling, what work do you do?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0090",
+      "category": "price-style",
+      "steps": [
+        {
+          "player": "What price is attached to the iron sword?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that price?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That was a price question, not an order.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Now check the gold I have available.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0091",
+      "category": "buy-style",
+      "steps": [
+        {
+          "player": "Please purchase 3 iron sword for this trip.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Let us change the subject for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After shopping, remind me of your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What price is attached to the iron sword?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "IRON SWORD"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0092",
+      "category": "sell-style",
+      "steps": [
+        {
+          "player": "Buy 3 iron sword so I can sell it back.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Please sell 3 iron sword out of my bag.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Check what remains in my bag now.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After selling, what work do you do?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0093",
+      "category": "price-style",
+      "steps": [
+        {
+          "player": "What price is attached to the health potion?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that price?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That was a price question, not an order.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Now check the gold I have available.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0094",
+      "category": "buy-style",
+      "steps": [
+        {
+          "player": "Please purchase 3 health potion for this trip.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Let us change the subject for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After shopping, remind me of your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What price is attached to the health potion?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "HEALTH POTION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0095",
+      "category": "sell-style",
+      "steps": [
+        {
+          "player": "Buy 3 health potion so I can sell it back.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Please sell 3 health potion out of my bag.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Check what remains in my bag now.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After selling, what work do you do?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0096",
+      "category": "price-style",
+      "steps": [
+        {
+          "player": "What price is attached to the rope?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that price?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That was a price question, not an order.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Now check the gold I have available.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0097",
+      "category": "buy-style",
+      "steps": [
+        {
+          "player": "Please purchase 3 rope for this trip.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Let us change the subject for a moment.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After shopping, remind me of your name.",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "What price is attached to the rope?",
+          "tool": "LOOKUP_PRICE",
+          "arguments": {
+            "ITEM": "ROPE"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0098",
+      "category": "sell-style",
+      "steps": [
+        {
+          "player": "Buy 3 rope so I can sell it back.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Please sell 3 rope out of my bag.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 3
+          },
+          "noMutation": false
+        },
+        {
+          "player": "Check what remains in my bag now.",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "After selling, what work do you do?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0103",
+      "category": "global-LIST_WARES",
+      "steps": [
+        {
+          "player": "Which goods are offered in this shop?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Anyway, I am taking my time today.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which goods are offered in this shop?",
+          "tool": "LIST_WARES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0108",
+      "category": "global-GET_BALANCE",
+      "steps": [
+        {
+          "player": "How much money is available to me right now?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Anyway, I am taking my time today.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "How much money is available to me right now?",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0113",
+      "category": "global-LIST_INVENTORY",
+      "steps": [
+        {
+          "player": "Which items are currently in my possession?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Anyway, I am taking my time today.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which items are currently in my possession?",
+          "tool": "LIST_INVENTORY",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0118",
+      "category": "global-GET_CURRENT_LOCATION",
+      "steps": [
+        {
+          "player": "Which place are we standing in right now?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Anyway, I am taking my time today.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which place are we standing in right now?",
+          "tool": "GET_CURRENT_LOCATION",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0123",
+      "category": "global-LIST_CAPABILITIES",
+      "steps": [
+        {
+          "player": "Which services could you provide here?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Anyway, I am taking my time today.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Which services could you provide here?",
+          "tool": "LIST_CAPABILITIES",
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0126",
+      "category": "persona",
+      "steps": [
+        {
+          "player": "Which name is listed for you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I am asking about you.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "NAME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That is all I needed.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0129",
+      "category": "persona",
+      "steps": [
+        {
+          "player": "Which occupation is listed for you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I am asking about you.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "OCCUPATION"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That is all I needed.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0132",
+      "category": "persona",
+      "steps": [
+        {
+          "player": "Which role is listed for you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "ROLE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I am asking about you.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "ROLE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That is all I needed.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0135",
+      "category": "persona",
+      "steps": [
+        {
+          "player": "Which home is listed for you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "HOME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I am asking about you.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "HOME"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That is all I needed.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0138",
+      "category": "persona",
+      "steps": [
+        {
+          "player": "Which origin is listed for you?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "ORIGIN"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I am asking about you.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "READ_PERSONA",
+          "arguments": {
+            "FIELD": "ORIGIN"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "That is all I needed.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0141",
+      "category": "world-LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Can you give the location of inn?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "INN"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0144",
+      "category": "world-LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Can you give the location of market?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "MARKET"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "MARKET"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0147",
+      "category": "world-LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Can you give the location of castle?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "CASTLE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "CASTLE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0150",
+      "category": "world-LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Can you give the location of hell?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "HELL"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "HELL"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0153",
+      "category": "world-LOOKUP_LOCATION",
+      "steps": [
+        {
+          "player": "Can you give the location of zagreb?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "ZAGREB"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_LOCATION",
+          "arguments": {
+            "PLACE": "ZAGREB"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0156",
+      "category": "world-LOOKUP_WORLD_FACT",
+      "steps": [
+        {
+          "player": "What fact can you find about the castle?",
+          "tool": "LOOKUP_WORLD_FACT",
+          "arguments": {
+            "TOPIC": "CASTLE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_WORLD_FACT",
+          "arguments": {
+            "TOPIC": "CASTLE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0159",
+      "category": "world-LOOKUP_WORLD_FACT",
+      "steps": [
+        {
+          "player": "What fact can you find about the village?",
+          "tool": "LOOKUP_WORLD_FACT",
+          "arguments": {
+            "TOPIC": "VILLAGE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_WORLD_FACT",
+          "arguments": {
+            "TOPIC": "VILLAGE"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0162",
+      "category": "world-LOOKUP_WORLD_FACT",
+      "steps": [
+        {
+          "player": "What fact can you find about the reactor?",
+          "tool": "LOOKUP_WORLD_FACT",
+          "arguments": {
+            "TOPIC": "REACTOR"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "I was looking for information.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you repeat that information?",
+          "tool": "LOOKUP_WORLD_FACT",
+          "arguments": {
+            "TOPIC": "REACTOR"
+          },
+          "noMutation": true
+        },
+        {
+          "player": "Thank you for checking.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0173",
+      "category": "repair-social",
+      "steps": [
+        {
+          "player": "Let us start over.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Could you explain that?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Let us talk about something else.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I like a quiet evening.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    },
+    {
+      "id": "repair-0174",
+      "category": "repair-social",
+      "steps": [
+        {
+          "player": "I am confused.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "What was the question?",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "Let us talk about something else.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        },
+        {
+          "player": "I like a quiet evening.",
+          "tool": null,
+          "arguments": {},
+          "noMutation": true
+        }
+      ]
+    }
+  ],
+  "note": "Frozen before this focused learning check; wording families held out, entity substitutions are augmentation."
+}

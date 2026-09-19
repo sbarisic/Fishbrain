@@ -1,0 +1,11 @@
+{
+  "status": "EXPERIMENTAL_NOT_PROMOTED",
+  "focusedToolGatePassed": false,
+  "releaseEligible": false,
+  "modelSha256": "d393ec32f33872559056c77d46a8303ba1417010b46fce289d0cf807d0e1b092",
+  "packageManifestSha256": "64ac5c1a2c884859cde493fd32fcb4dcf44d69c36a39af93bee7a1bfbdd44af5",
+  "combinedStorageBytes": 10616850321,
+  "fullTrainingStarted": false,
+  "packedInputGate": "FAILED_CONTEXT_LOSS_AND_CONTRADICTORY_TARGETS",
+  "humanReview": "NOT_PERFORMED_AGENT_INSPECTION_ONLY"
+}

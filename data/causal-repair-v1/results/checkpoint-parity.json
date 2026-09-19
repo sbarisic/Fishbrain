@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "exportedWeightsBitwiseEqual": true,
+  "checkpointSha256": "56ef6751fb478aa7429dc4654a745c090d38537ffebbce521e314f73b20b98ac",
+  "modelSha256": "d393ec32f33872559056c77d46a8303ba1417010b46fce289d0cf807d0e1b092"
+}

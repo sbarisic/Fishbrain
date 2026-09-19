@@ -1,0 +1,13 @@
+{
+  "reviewer": "Codex agent",
+  "humanReleaseApproval": false,
+  "conversations": 38,
+  "heldoutTurns": 152,
+  "developmentTurns": 12,
+  "positiveControlTurns": 9,
+  "packagedSmokeTurns": 3,
+  "candidateReplaySha256": "29522ef8a27404b003afbe4757a930b19e4bb7ca80e1834fa26cdf84304f2495",
+  "developmentSha256": "22fba1604cfc3731c7e81f19d15ee1385cbae6ecadd8f93afc9b2ff0d23af811",
+  "packageSmokeSha256": "74ed83cb274ee221152001e3b35ab1aa7e0104b1de1c2465a92b5780a4d4ad2c",
+  "notes": "Read all paired replies, controls and smoke outputs; the shortened smoke history fails quality despite successful loading."
+}

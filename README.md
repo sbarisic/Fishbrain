@@ -11,6 +11,10 @@ V1 `.fbc` artifacts. See [the causal implementation and pilot](CAUSAL_MODEL.md)
 for the architecture, commands and safeguards, and [the measured pilot results](CAUSAL_RESULTS.md)
 for quality, resources and paired conversations.
 
+A later [focused data-repair check](data/causal-repair-v1/RESULTS.md) improves the
+reported shop conversation and identifies lost reference context in packed inputs.
+It also remains unpromoted; use its separate test command to inspect that candidate.
+
 ## Build and test
 
 Requires .NET 10. CPU inference has no NuGet or Python dependencies.

@@ -1,0 +1,104 @@
+{
+  "cases": [
+    {
+      "id": "known-quantity-iron-sword",
+      "category": "development-positive-control",
+      "steps": [
+        {
+          "player": "Buy 2 iron sword.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 2
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Sell 1 iron sword.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "IRON SWORD",
+            "QUANTITY": 1
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Check my gold.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "known-quantity-health-potion",
+      "category": "development-positive-control",
+      "steps": [
+        {
+          "player": "Buy 2 health potion.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 2
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Sell 1 health potion.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "HEALTH POTION",
+            "QUANTITY": 1
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Check my gold.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    },
+    {
+      "id": "known-quantity-rope",
+      "category": "development-positive-control",
+      "steps": [
+        {
+          "player": "Buy 2 rope.",
+          "tool": "BUY",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 2
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Sell 1 rope.",
+          "tool": "SELL",
+          "arguments": {
+            "ITEM": "ROPE",
+            "QUANTITY": 1
+          },
+          "noMutation": false,
+          "developmentOverlap": true
+        },
+        {
+          "player": "Check my gold.",
+          "tool": "GET_BALANCE",
+          "arguments": {},
+          "noMutation": true,
+          "developmentOverlap": true
+        }
+      ]
+    }
+  ],
+  "note": "Post-training positive controls using trained wording and quantities; not unseen evidence."
+}
